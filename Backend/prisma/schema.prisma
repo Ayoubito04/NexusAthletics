@@ -1,0 +1,186 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                        Int      @id @default(autoincrement())
+  email                     String   @unique
+  nombre                    String?
+  apellido                  String?
+  password                  String?
+  googleId                  String?  @unique
+  facebookId                String?  @unique
+  instagramId               String?  @unique
+  twitterId                 String?  @unique
+  avatar                    String?
+  plan                      String   @default("Gratis") // Gratis, Pro, Ultimate
+  role                      String   @default("USER")   // USER, ADMIN
+  isVerified                Boolean  @default(false)
+  verificationCode          String?
+  twoFactorEnabled          Boolean  @default(true) // Habilitado por defecto para mayor seguridad
+  twoFactorCode             String?
+  twoFactorExpires          DateTime?
+  referralCode              String?  @unique
+  pushToken                 String?
+  
+  // Referidos y Trial
+  invitacionesExitosas      Int      @default(0)
+  haUsadoTrial              Boolean  @default(false)
+  trialEndDate              DateTime?
+
+  // Datos Biométricos
+  peso                      Float?
+  altura                    Float?
+  edad                      Int?
+  genero                    String?
+  objetivo                  String?
+  nivelActividad            String?
+  healthSynced              Boolean  @default(false)
+  healthService             String?
+  healthCalories            Float?   @default(0)
+  healthSteps               Int?      @default(0)
+
+  mensajesHoy               Int      @default(0)
+  ultimaActualizacionMensajes DateTime @default(now())
+  
+  // Control de rutinas generadas (Canvas)
+  rutinasGeneradasHoy       Int      @default(0)
+  ultimaActualizacionRutinas DateTime @default(now())
+  
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  
+  activities                Activity[]
+  chatMessages              Message[]
+  chatSessions              ChatSession[]
+  posts                     Post[]
+  likes                     Like[]
+  comments                  Comment[]
+  savedPlans                SavedPlan[]
+  
+  // Relaciones de Amistad
+  sentFriendRequests        Friendship[] @relation("SentRequests")
+  receivedFriendRequests    Friendship[] @relation("ReceivedRequests")
+  
+  // Mensajes Directos
+  sentMessages              DirectMessage[] @relation("SentDMs")
+  receivedMessages          DirectMessage[] @relation("ReceivedDMs")
+}
+
+model Friendship {
+  id          Int      @id @default(autoincrement())
+  senderId    Int
+  receiverId  Int
+  status      String   @default("PENDIENTE") // PENDIENTE, ACEPTADA
+  createdAt   DateTime @default(now())
+  
+  sender      User     @relation("SentRequests", fields: [senderId], references: [id])
+  receiver    User     @relation("ReceivedRequests", fields: [receiverId], references: [id])
+
+  @@unique([senderId, receiverId])
+}
+
+model DirectMessage {
+  id          Int      @id @default(autoincrement())
+  text        String
+  senderId    Int
+  receiverId  Int
+  createdAt   DateTime @default(now())
+  
+  sender      User     @relation("SentDMs", fields: [senderId], references: [id])
+  receiver    User     @relation("ReceivedDMs", fields: [receiverId], references: [id])
+}
+
+model ChatSession {
+  id        Int       @id @default(autoincrement())
+  title     String
+  theme     String?
+  config    Json?     // Almacena metodología, intensidad, etc.
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Message {
+  id          Int          @id @default(autoincrement())
+  text        String
+  sender      String       // 'usuario' o 'ia'
+  image       String?  
+  isDM        Boolean      @default(false)
+  isVoice     Boolean      @default(false)  // Para mensajes de voz
+  receiverId  Int?         // Para DMs
+  sessionId   Int?         // Para Chat IA
+  userId      Int          // El remitente
+  createdAt   DateTime     @default(now())
+  
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session     ChatSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model Activity {
+  id            Int      @id @default(autoincrement())
+  tipo          String
+  distancia     Float
+  tiempo        Int
+  calorias      Float?
+  ruta          Json?    
+  fecha         DateTime @default(now())
+  userId        Int
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Post {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activityId    Int?
+  tipo          String?
+  distancia     Float?
+  tiempo        Int?
+  calorias      Float?
+  ruta          Json?
+  descripcion   String?
+  imagen        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  likes         Like[]
+  comments      Comment[]
+}
+
+model Like {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  
+  @@unique([postId, userId])
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  texto     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SavedPlan {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planData  Json
+  createdAt DateTime @default(now())
+}

@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "Nexus Fitness",
+    "slug": "nexus-fitness",
+    "scheme": "nexus-fitness",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMotionUsageDescription": "Esta app necesita acceso a tu actividad física para contar tus pasos automáticamente."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.nexusia.fitness",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACTIVITY_RECOGNITION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-web-browser",
+      "expo-image-picker",
+      "expo-notifications",
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "Esta app necesita acceso a tu actividad física para contar pasos automáticamente."
+        }
+      ],
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.nexusia.fitness",
+          "enableGooglePay": true
+        }
+      ],
+      "react-native-google-fit"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "726f4f3d-bb01-4b3c-abdb-98aac09d7fd4"
+      }
+    }
+  }
+}

@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "mensajesHoy" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "plan" TEXT NOT NULL DEFAULT 'Gratis',
+ADD COLUMN     "ultimaActualizacionMensajes" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

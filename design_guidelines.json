@@ -1,0 +1,171 @@
+{
+  "identity": {
+    "name": "Nexus Athletics",
+    "archetype": "The Performance Pro (Cyberpunk Edition)",
+    "vibe": "High-Voltage, Tactical, Elite, Futuristic",
+    "core_philosophy": "Fusion over Imitation. Mix tactical military precision with cyberpunk neon aesthetics."
+  },
+  "colors": {
+    "palette": {
+      "background": "#0A0A0A",
+      "surface": "#121212",
+      "surface_highlight": "#1E1E1E",
+      "primary": "#63ff15",
+      "primary_dim": "rgba(99, 255, 21, 0.2)",
+      "secondary": "#FFFFFF",
+      "accent_blue": "#00F0FF",
+      "text_primary": "#FFFFFF",
+      "text_secondary": "#A1A1AA",
+      "text_tertiary": "#52525B",
+      "border": "rgba(255, 255, 255, 0.1)",
+      "error": "#FF3B30",
+      "success": "#63ff15"
+    },
+    "gradients": {
+      "primary_glow": ["rgba(99, 255, 21, 0.5)", "transparent"],
+      "dark_overlay": ["transparent", "#0A0A0A"],
+      "card_surface": ["#1A1A1A", "#121212"]
+    }
+  },
+  "typography": {
+    "font_family": {
+      "headings": "System (Platform Default)",
+      "body": "System (Platform Default)"
+    },
+    "styles": {
+      "h1": {
+        "fontSize": 32,
+        "fontWeight": "800",
+        "letterSpacing": -1,
+        "color": "#FFFFFF",
+        "textTransform": "uppercase"
+      },
+      "h2": {
+        "fontSize": 24,
+        "fontWeight": "700",
+        "letterSpacing": -0.5,
+        "color": "#FFFFFF"
+      },
+      "body": {
+        "fontSize": 16,
+        "fontWeight": "400",
+        "color": "#A1A1AA",
+        "lineHeight": 24
+      },
+      "label": {
+        "fontSize": 12,
+        "fontWeight": "700",
+        "letterSpacing": 1,
+        "textTransform": "uppercase",
+        "color": "#63ff15"
+      }
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": {
+        "backgroundColor": "#63ff15",
+        "borderRadius": 4,
+        "paddingVertical": 16,
+        "paddingHorizontal": 24,
+        "alignItems": "center",
+        "justifyContent": "center",
+        "shadowColor": "#63ff15",
+        "shadowOffset": { "width": 0, "height": 4 },
+        "shadowOpacity": 0.3,
+        "shadowRadius": 8,
+        "elevation": 5
+      },
+      "primary_text": {
+        "color": "#000000",
+        "fontWeight": "800",
+        "fontSize": 16,
+        "textTransform": "uppercase"
+      },
+      "secondary": {
+        "backgroundColor": "transparent",
+        "borderWidth": 1,
+        "borderColor": "#333333",
+        "borderRadius": 4,
+        "paddingVertical": 16
+      },
+      "secondary_text": {
+        "color": "#FFFFFF",
+        "fontWeight": "600"
+      }
+    },
+    "cards": {
+      "glass": {
+        "backgroundColor": "rgba(30, 30, 30, 0.6)",
+        "borderColor": "rgba(255, 255, 255, 0.1)",
+        "borderWidth": 1,
+        "borderRadius": 16,
+        "padding": 20,
+        "overflow": "hidden"
+      },
+      "solid": {
+        "backgroundColor": "#121212",
+        "borderRadius": 12,
+        "padding": 16,
+        "borderWidth": 1,
+        "borderColor": "#27272A"
+      }
+    },
+    "inputs": {
+      "default": {
+        "backgroundColor": "#18181B",
+        "borderColor": "#27272A",
+        "borderWidth": 1,
+        "borderRadius": 8,
+        "padding": 16,
+        "color": "#FFFFFF",
+        "fontSize": 16
+      },
+      "focus": {
+        "borderColor": "#63ff15",
+        "shadowColor": "#63ff15",
+        "shadowOpacity": 0.1,
+        "shadowRadius": 4
+      }
+    }
+  },
+  "layout_strategies": {
+    "dashboard_grid": {
+      "type": "Bento Grid (Flexbox Implementation)",
+      "instructions": "Use Flexbox with 'flexWrap: wrap'. Create a container with 'flexDirection: row'. Children should have percentage widths (e.g., '48%' for 2-col, '100%' for hero). Use 'gap' or margins for spacing."
+    },
+    "spacing": {
+      "container_padding": 20,
+      "element_gap": 16,
+      "section_gap": 32
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "Use 'expo-blur' (BlurView) with intensity 20-30 and tint 'dark' for overlays and floating headers.",
+    "gradients": "Use 'expo-linear-gradient' for button backgrounds or subtle glows behind hero images.",
+    "borders": "Use 1px borders with low opacity (10-20%) white to define edges in dark mode. Do not rely solely on shadows."
+  },
+  "image_urls": {
+    "hero_workout": "https://images.unsplash.com/photo-1760721897023-9ec0b318840e",
+    "tech_abstract": "https://images.unsplash.com/photo-1618902345120-77758161d808",
+    "sprinting_track": "https://images.unsplash.com/photo-1646917191161-9534b70741a8",
+    "logo_placeholder": "Use text 'NEXUS' in bold font if no logo image is available."
+  },
+  "instructions_to_main_agent": [
+    "CRITICAL: This is a React Native (Expo) project. DO NOT use HTML tags (div, span, h1). Use View, Text, TouchableOpacity, ScrollView.",
+    "CRITICAL: DO NOT use Tailwind CSS classes (e.g., className='p-4'). They will not work. Use the 'style' prop with StyleSheet objects.",
+    "Use 'SafeAreaView' from 'react-native-safe-area-context' for all screen containers.",
+    "Implement the 'Bento Grid' layout using Flexbox logic (flexDirection: row, flexWrap: wrap).",
+    "Use 'expo-linear-gradient' for the primary action buttons to give them a neon glow feel.",
+    "Ensure all text has sufficient contrast against the #0A0A0A background. Default text color should be #A1A1AA, headings #FFFFFF.",
+    "For the 'EntrenadorIA' (Chat), use a bubble design: User (Green bg, Black text), AI (Dark Grey bg, White text).",
+    "Add 'data-testid' props to all interactive elements for testing."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Avoid generic 'flat' designs. Use borders, subtle gradients, and blur to create depth.",
+    "Do not center everything. Use left alignment for text to improve readability.",
+    "Use 2-3x more spacing than typical. 'padding: 24' is better than 'padding: 10'.",
+    "Every interaction needs feedback. Use 'activeOpacity={0.7}' on TouchableOpacity.",
+    "Dark colors look good when used independently. Avoid muddy gradients."
+  ]
+}

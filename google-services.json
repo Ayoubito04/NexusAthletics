@@ -1,0 +1,29 @@
+{
+    "project_info": {
+        "project_number": "14219880842",
+        "project_id": "nexusathleticsia",
+        "storage_bucket": "nexusathleticsia.firebasestorage.app"
+    },
+    "client": [
+        {
+            "client_info": {
+                "mobilesdk_app_id": "1:14219880842:android:41e0fa56ef3397b83ec073",
+                "android_client_info": {
+                    "package_name": "com.anonymous.MiProyectoBasico"
+                }
+            },
+            "oauth_client": [],
+            "api_key": [
+                {
+                    "current_key": "AIzaSyAuyqkLw5jUZ8OOmKo6sKcisHrQa-poliQ"
+                }
+            ],
+            "services": {
+                "appinvite_service": {
+                    "other_platform_oauth_client": []
+                }
+            }
+        }
+    ],
+    "configuration_version": "1"
+}

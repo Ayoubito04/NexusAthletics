@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nexus Athletics - Home Premium</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #050505;
+            color: white;
+            min-height: 100vh;
+            max-width: 430px;
+            margin: 0 auto;
+            overflow-x: hidden;
+        }
+        .scroll-content { padding: 20px; padding-top: 50px; padding-bottom: 120px; }
+        
+        /* Animations */
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .animate-in { animation: fadeSlideUp 0.6s ease-out forwards; }
+        .delay-1 { animation-delay: 0.1s; opacity: 0; }
+        .delay-2 { animation-delay: 0.2s; opacity: 0; }
+        .delay-3 { animation-delay: 0.3s; opacity: 0; }
+        .delay-4 { animation-delay: 0.4s; opacity: 0; }
+
+        /* Header */
+        .header { margin-bottom: 20px; }
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .greeting { color: #52525B; font-size: 13px; font-weight: 600; }
+        .user-name { 
+            color: #fff; font-size: 26px; font-weight: 900; 
+            letter-spacing: -0.5px; margin-top: 2px; 
+        }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+        .notif-btn {
+            width: 44px; height: 44px; border-radius: 14px; background: #121212;
+            display: flex; justify-content: center; align-items: center;
+            border: 1px solid #1F1F1F; position: relative; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .notif-btn:hover { background: #1a1a1a; transform: scale(1.05); }
+        .notif-badge {
+            position: absolute; top: -4px; right: -4px; background: #FF3366;
+            width: 18px; height: 18px; border-radius: 9px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 10px; font-weight: 800;
+        }
+        .avatar-btn { cursor: pointer; }
+        .avatar-border {
+            padding: 2px; border-radius: 16px;
+            background: linear-gradient(135deg, #63ff15, #00D1FF);
+        }
+        .avatar-img { width: 44px; height: 44px; border-radius: 14px; object-fit: cover; }
+
+        /* Plan Card */
+        .plan-card {
+            display: flex; justify-content: space-between; align-items: center;
+            background: linear-gradient(135deg, rgba(99,255,21,0.1), transparent);
+            border-radius: 16px; padding: 16px;
+            border: 1px solid rgba(99,255,21,0.3);
+            cursor: pointer; transition: all 0.3s;
+        }
+        .plan-card:hover { transform: translateY(-2px); border-color: rgba(99,255,21,0.5); }
+        .plan-left { display: flex; align-items: center; gap: 12px; }
+        .plan-label { color: #52525B; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .plan-name { color: #63ff15; font-size: 16px; font-weight: 800; margin-top: 2px; }
+        .upgrade-btn {
+            display: flex; align-items: center; gap: 6px;
+            background: #63ff15; padding: 8px 14px; border-radius: 8px;
+            color: #000; font-size: 11px; font-weight: 800; letter-spacing: 0.5px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .upgrade-btn:hover { transform: scale(1.05); }
+
+        /* Stats Row */
+        .stats-row { display: flex; gap: 10px; margin-bottom: 24px; }
+        .stat-mini {
+            flex: 1; display: flex; flex-direction: column; align-items: center;
+            padding: 16px; border-radius: 16px;
+            background: linear-gradient(180deg, #121212, #0a0a0a);
+            border: 1px solid #1A1A1A;
+            transition: all 0.3s;
+        }
+        .stat-mini:hover { transform: translateY(-2px); border-color: #2a2a2a; }
+        .stat-mini-value { color: #fff; font-size: 20px; font-weight: 900; margin-top: 8px; }
+        .stat-mini-label { color: #52525B; font-size: 10px; font-weight: 600; margin-top: 4px; text-transform: uppercase; }
+
+        /* Section Title */
+        .section-title { color: #fff; font-size: 18px; font-weight: 800; margin-bottom: 16px; letter-spacing: -0.3px; }
+        .section-header { display: flex; align-items: center; gap: 10px; margin-top: 8px; margin-bottom: 16px; }
+        .section-icon { width: 32px; height: 32px; border-radius: 10px; display: flex; justify-content: center; align-items: center; }
+        .section-title-alt { color: #E4E4E7; font-size: 15px; font-weight: 700; }
+
+        /* Quick Actions */
+        .quick-actions { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 24px; }
+        .quick-action {
+            min-width: 80px; display: flex; flex-direction: column; align-items: center;
+            padding: 16px; border-radius: 16px; background: #0D0D0D;
+            border: 1px solid #1A1A1A; cursor: pointer; transition: all 0.3s;
+            position: relative; overflow: hidden;
+        }
+        .quick-action::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 60px;
+            background: linear-gradient(180deg, var(--accent-color, rgba(99,255,21,0.2)), transparent);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .quick-action:hover { transform: translateY(-4px); border-color: #2a2a2a; }
+        .quick-action:hover::before { opacity: 1; }
+        .quick-action-icon {
+            width: 44px; height: 44px; border-radius: 12px;
+            display: flex; justify-content: center; align-items: center; margin-bottom: 8px;
+        }
+        .quick-action-label { color: #A1A1AA; font-size: 11px; font-weight: 600; text-align: center; }
+
+        /* Daily Cards */
+        .daily-row { display: flex; gap: 12px; margin-bottom: 20px; }
+        .daily-card {
+            flex: 1; padding: 18px; border-radius: 20px;
+            border: 1px solid #1A1A1A; position: relative; overflow: hidden;
+            cursor: pointer; transition: all 0.3s;
+        }
+        .daily-card:hover { transform: translateY(-2px); border-color: #2a2a2a; }
+        .daily-card.water { background: linear-gradient(180deg, #0D1B2A, #0a0a0a); }
+        .daily-card.streak { background: linear-gradient(180deg, #1A0D0D, #0a0a0a); }
+        .daily-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .daily-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; justify-content: center; align-items: center; }
+        .daily-add {
+            width: 32px; height: 32px; border-radius: 10px; background: #00D1FF;
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .daily-add:hover { transform: scale(1.1); }
+        .daily-value { color: #fff; font-size: 28px; font-weight: 900; letter-spacing: -1px; }
+        .daily-unit { font-size: 14px; color: #52525B; font-weight: 600; }
+        .daily-label { color: #71717A; font-size: 12px; font-weight: 700; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .daily-subtext { color: #63ff15; font-size: 11px; font-weight: 700; margin-top: 6px; }
+        .daily-progress { height: 4px; background: #1A1A1A; border-radius: 2px; margin-top: 12px; overflow: hidden; }
+        .daily-progress-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease-out; }
+
+        /* Step Counter */
+        .step-counter {
+            background: linear-gradient(180deg, #0f0f0f, #050505);
+            border-radius: 24px; padding: 24px; margin-bottom: 24px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .step-header-left { display: flex; align-items: center; gap: 14px; }
+        .step-icon-box {
+            width: 48px; height: 48px; border-radius: 14px;
+            background: linear-gradient(135deg, #63ff15, #4dd10e);
+            display: flex; justify-content: center; align-items: center;
+        }
+        .step-title { font-size: 17px; font-weight: 800; }
+        .step-subtitle { color: #52525B; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+        .sync-badge {
+            background: rgba(99,255,21,0.1); padding: 12px; border-radius: 12px;
+            border: 1px solid rgba(99,255,21,0.2); cursor: pointer; transition: all 0.2s;
+        }
+        .sync-badge:hover { background: rgba(99,255,21,0.2); }
+        .circle-container { display: flex; justify-content: center; margin: 16px 0; }
+        .outer-circle {
+            width: 200px; height: 200px; border-radius: 100px;
+            border: 2px solid rgba(255,255,255,0.06);
+            display: flex; justify-content: center; align-items: center;
+            background: #0a0a0a; position: relative;
+            animation: pulse 3s ease-in-out infinite;
+        }
+        .inner-circle {
+            width: 160px; height: 160px; border-radius: 80px;
+            background: #050505; border: 1px solid rgba(255,255,255,0.06);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .steps-number { font-size: 36px; font-weight: 900; color: #63ff15; }
+        .steps-label { color: #71717A; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+        .goal-badge {
+            background: rgba(255,255,255,0.05); padding: 5px 10px; border-radius: 8px;
+            margin-top: 8px; display: flex; align-items: center; gap: 4px;
+        }
+        .goal-badge span { color: #71717A; font-size: 10px; font-weight: 700; }
+        .progress-section { margin-bottom: 24px; }
+        .progress-info { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .progress-label { color: #71717A; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .progress-percent { color: #63ff15; font-size: 15px; font-weight: 900; }
+        .progress-bar { height: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; overflow: hidden; }
+        .progress-fill {
+            height: 100%; border-radius: 8px;
+            background: linear-gradient(90deg, #63ff15, #00D1FF);
+            width: 72%; animation: fadeSlideUp 1s ease-out 0.5s forwards;
+        }
+        .stats-grid { display: flex; gap: 10px; }
+        .stat-card {
+            flex: 1; background: rgba(255,255,255,0.03); padding: 16px; border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.05); text-align: center;
+            transition: all 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-2px); background: rgba(255,255,255,0.05); }
+        .stat-icon-circle { width: 48px; height: 48px; border-radius: 14px; margin: 0 auto 10px; display: flex; justify-content: center; align-items: center; }
+        .stat-value { font-size: 20px; font-weight: 900; }
+        .stat-label { color: #52525B; font-size: 10px; text-transform: uppercase; margin-top: 4px; }
+
+        /* Feature Cards */
+        .features-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+        .feature-card {
+            display: flex; align-items: center; padding: 16px; border-radius: 16px;
+            background: linear-gradient(180deg, #141414, #0c0c0c);
+            border: 1px solid #1A1A1A; cursor: pointer; transition: all 0.3s;
+            position: relative;
+        }
+        .feature-card:hover { transform: translateX(4px); border-color: #2a2a2a; }
+        .feature-content { flex: 1; display: flex; align-items: center; gap: 14px; }
+        .feature-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; justify-content: center; align-items: center; }
+        .feature-title { color: #fff; font-size: 15px; font-weight: 700; }
+        .feature-desc { color: #52525B; font-size: 11px; font-weight: 500; margin-top: 2px; }
+        .feature-badge {
+            position: absolute; top: 10px; right: 36px;
+            padding: 3px 8px; border-radius: 6px;
+            font-size: 9px; font-weight: 900; color: #000; letter-spacing: 0.5px;
+        }
+        .feature-arrow { color: #3F3F46; margin-left: 8px; }
+
+        /* Motivation */
+        .motivation-card {
+            margin-top: 20px; padding: 24px; border-radius: 20px;
+            border: 1px solid rgba(99,255,21,0.15);
+            background: linear-gradient(135deg, rgba(99,255,21,0.08), rgba(0,209,255,0.05), transparent);
+            text-align: center;
+        }
+        .motivation-header { display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 12px; }
+        .motivation-label { color: #63ff15; font-size: 10px; font-weight: 800; letter-spacing: 2px; }
+        .motivation-text { color: #A1A1AA; font-size: 15px; font-style: italic; line-height: 24px; }
+
+        /* Tab Bar */
+        .tab-bar {
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 100%; max-width: 430px; background: rgba(10,10,10,0.95);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255,255,255,0.05);
+            display: flex; justify-content: space-around; padding: 12px 0 28px;
+        }
+        .tab-item {
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            color: #52525B; cursor: pointer; transition: all 0.2s;
+        }
+        .tab-item:hover { color: #A1A1AA; }
+        .tab-item.active { color: #63ff15; }
+        .tab-item span { font-size: 10px; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="scroll-content">
+        <!-- Header -->
+        <div class="header animate-in">
+            <div class="header-top">
+                <div>
+                    <div class="greeting">Buenas tardes</div>
+                    <div class="user-name">Juan García</div>
+                </div>
+                <div class="header-right">
+                    <div class="notif-btn">
+                        <i class="fas fa-bell" style="color: #A1A1AA;"></i>
+                        <div class="notif-badge">3</div>
+                    </div>
+                    <div class="avatar-btn">
+                        <div class="avatar-border">
+                            <img src="https://i.pravatar.cc/100?img=12" class="avatar-img" alt="Avatar">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="plan-card">
+                <div class="plan-left">
+                    <i class="fas fa-shield-alt" style="color: #63ff15; font-size: 20px;"></i>
+                    <div>
+                        <div class="plan-label">Tu Plan</div>
+                        <div class="plan-name">Pro</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="stats-row animate-in delay-1">
+            <div class="stat-mini">
+                <i class="fas fa-fire-alt" style="color: #FF6B35; font-size: 20px;"></i>
+                <div class="stat-mini-value">12,450</div>
+                <div class="stat-mini-label">kcal totales</div>
+            </div>
+            <div class="stat-mini">
+                <i class="fas fa-location-arrow" style="color: #00D1FF; font-size: 20px;"></i>
+                <div class="stat-mini-value">48.2</div>
+                <div class="stat-mini-label">km totales</div>
+            </div>
+            <div class="stat-mini">
+                <i class="fas fa-dumbbell" style="color: #A259FF; font-size: 20px;"></i>
+                <div class="stat-mini-value">23</div>
+                <div class="stat-mini-label">sesiones</div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="section-title animate-in delay-2">Acceso Rápido</div>
+        <div class="quick-actions animate-in delay-2">
+            <div class="quick-action" style="--accent-color: rgba(162,89,255,0.2);">
+                <div class="quick-action-icon" style="background: rgba(162,89,255,0.15);">
+                    <i class="fas fa-comments" style="color: #A259FF;"></i>
+                </div>
+                <div class="quick-action-label">Nexus AI</div>
+            </div>
+            <div class="quick-action" style="--accent-color: rgba(0,209,255,0.2);">
+                <div class="quick-action-icon" style="background: rgba(0,209,255,0.15);">
+                    <i class="fas fa-microphone" style="color: #00D1FF;"></i>
+                </div>
+                <div class="quick-action-label">Voz Coach</div>
+            </div>
+            <div class="quick-action" style="--accent-color: rgba(99,255,21,0.2);">
+                <div class="quick-action-icon" style="background: rgba(99,255,21,0.15);">
+                    <i class="fas fa-walking" style="color: #63ff15;"></i>
+                </div>
+                <div class="quick-action-label">Cardio</div>
+            </div>
+            <div class="quick-action" style="--accent-color: rgba(255,107,107,0.2);">
+                <div class="quick-action-icon" style="background: rgba(255,107,107,0.15);">
+                    <i class="fas fa-calendar-alt" style="color: #FF6B6B;"></i>
+                </div>
+                <div class="quick-action-label">Calendario</div>
+            </div>
+            <div class="quick-action" style="--accent-color: rgba(255,215,0,0.2);">
+                <div class="quick-action-icon" style="background: rgba(255,215,0,0.15);">
+                    <i class="fas fa-trophy" style="color: #FFD700;"></i>
+                </div>
+                <div class="quick-action-label">Ranking</div>
+            </div>
+        </div>
+
+        <!-- Daily Focus -->
+        <div class="section-title animate-in delay-3">Enfoque Diario</div>
+        <div class="daily-row animate-in delay-3">
+            <div class="daily-card water">
+                <div class="daily-top">
+                    <div class="daily-icon" style="background: rgba(0,209,255,0.15);">
+                        <i class="fas fa-tint" style="color: #00D1FF; font-size: 22px;"></i>
+                    </div>
+                    <div class="daily-add">
+                        <i class="fas fa-plus" style="color: #000;"></i>
+                    </div>
+                </div>
+                <div class="daily-value">2000<span class="daily-unit">ml</span></div>
+                <div class="daily-label">Hidratación</div>
+                <div class="daily-progress">
+                    <div class="daily-progress-fill" style="width: 80%; background: #00D1FF;"></div>
+                </div>
+            </div>
+            <div class="daily-card streak">
+                <div class="daily-top">
+                    <div class="daily-icon" style="background: rgba(255,107,0,0.15);">
+                        <i class="fas fa-fire" style="color: #FF6B00; font-size: 24px;"></i>
+                    </div>
+                </div>
+                <div class="daily-value">12<span class="daily-unit"> días</span></div>
+                <div class="daily-label">Racha Activa</div>
+                <div class="daily-subtext">¡Sigue así!</div>
+            </div>
+        </div>
+
+        <!-- Step Counter -->
+        <div class="step-counter animate-in delay-4">
+            <div class="step-header">
+                <div class="step-header-left">
+                    <div class="step-icon-box">
+                        <i class="fas fa-shoe-prints" style="color: #000; font-size: 20px;"></i>
+                    </div>
+                    <div>
+                        <div class="step-title">Contador de Pasos</div>
+                        <div class="step-subtitle">Seguimiento Automático</div>
+                    </div>
+                </div>
+                <div class="sync-badge">
+                    <i class="fas fa-cloud-upload-alt" style="color: #63ff15;"></i>
+                </div>
+            </div>
+            
+            <div class="circle-container">
+                <div class="outer-circle">
+                    <div class="inner-circle">
+                        <div class="steps-number">7,234</div>
+                        <div class="steps-label">pasos</div>
+                        <div class="goal-badge">
+                            <i class="fas fa-flag" style="color: #888; font-size: 10px;"></i>
+                            <span>10,000</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="progress-section">
+                <div class="progress-info">
+                    <div class="progress-label">Progreso Diario</div>
+                    <div class="progress-percent">72%</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon-circle" style="background: rgba(255,107,53,0.15);">
+                        <i class="fas fa-fire-alt" style="color: #ff6b35; font-size: 20px;"></i>
+                    </div>
+                    <div class="stat-value">289</div>
+                    <div class="stat-label">Calorías</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-circle" style="background: rgba(0,209,255,0.15);">
+                        <i class="fas fa-route" style="color: #00D1FF; font-size: 20px;"></i>
+                    </div>
+                    <div class="stat-value">5.79</div>
+                    <div class="stat-label">Kilómetros</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-circle" style="background: rgba(255,215,0,0.15);">
+                        <i class="fas fa-clock" style="color: #FFD700; font-size: 20px;"></i>
+                    </div>
+                    <div class="stat-value">72</div>
+                    <div class="stat-label">Minutos</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Section -->
+        <div class="section-header animate-in delay-4">
+            <div class="section-icon" style="background: rgba(162,89,255,0.15);">
+                <i class="fas fa-magic" style="color: #A259FF;"></i>
+            </div>
+            <div class="section-title-alt">Inteligencia Nexus</div>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-content">
+                    <div class="feature-icon" style="background: rgba(162,89,255,0.15);">
+                        <i class="fas fa-comments" style="color: #A259FF;"></i>
+                    </div>
+                    <div>
+                        <div class="feature-title">Nexus AI</div>
+                        <div class="feature-desc">Chat con IA</div>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right feature-arrow"></i>
+            </div>
+            <div class="feature-card">
+                <div class="feature-content">
+                    <div class="feature-icon" style="background: rgba(0,209,255,0.15);">
+                        <i class="fas fa-microphone" style="color: #00D1FF;"></i>
+                    </div>
+                    <div>
+                        <div class="feature-title">Voz Coach</div>
+                        <div class="feature-desc">Entrena por voz</div>
+                    </div>
+                </div>
+                <div class="feature-badge" style="background: #00D1FF;">NUEVO</div>
+                <i class="fas fa-chevron-right feature-arrow"></i>
+            </div>
+            <div class="feature-card">
+                <div class="feature-content">
+                    <div class="feature-icon" style="background: rgba(255,0,255,0.15);">
+                        <i class="fas fa-apple-alt" style="color: #FF00FF;"></i>
+                    </div>
+                    <div>
+                        <div class="feature-title">Bio-Scanner</div>
+                        <div class="feature-desc">Analiza comidas</div>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right feature-arrow"></i>
+            </div>
+        </div>
+
+        <!-- Training Section -->
+        <div class="section-header">
+            <div class="section-icon" style="background: rgba(99,255,21,0.15);">
+                <i class="fas fa-dumbbell" style="color: #63ff15;"></i>
+            </div>
+            <div class="section-title-alt">Zona de Entrenamiento</div>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-content">
+                    <div class="feature-icon" style="background: rgba(99,255,21,0.15);">
+                        <i class="fas fa-walking" style="color: #63ff15;"></i>
+                    </div>
+                    <div>
+                        <div class="feature-title">Cardio GPS</div>
+                        <div class="feature-desc">Tracking en vivo</div>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right feature-arrow"></i>
+            </div>
+            <div class="feature-card">
+                <div class="feature-content">
+                    <div class="feature-icon" style="background: rgba(0,122,255,0.15);">
+                        <i class="fas fa-calendar-alt" style="color: #007AFF;"></i>
+                    </div>
+                    <div>
+                        <div class="feature-title">Calendario</div>
+                        <div class="feature-desc">Planifica sesiones</div>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right feature-arrow"></i>
+            </div>
+        </div>
+
+        <!-- Motivation -->
+        <div class="motivation-card">
+            <div class="motivation-header">
+                <i class="fas fa-bolt" style="color: #63ff15;"></i>
+                <div class="motivation-label">NEXUS MOTIVATION</div>
+            </div>
+            <div class="motivation-text">"La disciplina es el puente entre tus metas y tus logros."</div>
+        </div>
+    </div>
+
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+        <div class="tab-item active">
+            <i class="fas fa-home"></i>
+            <span>Inicio</span>
+        </div>
+        <div class="tab-item">
+            <i class="fas fa-robot"></i>
+            <span>IA</span>
+        </div>
+        <div class="tab-item">
+            <i class="fas fa-users"></i>
+            <span>Social</span>
+        </div>
+        <div class="tab-item">
+            <i class="fas fa-user"></i>
+            <span>Perfil</span>
+        </div>
+    </div>
+</body>
+</html>
