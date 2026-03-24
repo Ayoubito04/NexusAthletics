@@ -13,8 +13,50 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-// Database
-connectDB();
+// Database + Auto-migrate nuevas tablas
+async function startServer() {
+    await connectDB();
+
+    // Crear tablas OAuthToken y AuthLog si no existen
+    try {
+        await prisma.$executeRawUnsafe(`
+            CREATE TABLE IF NOT EXISTS "OAuthToken" (
+                "id" SERIAL PRIMARY KEY,
+                "userId" INTEGER NOT NULL,
+                "provider" TEXT NOT NULL,
+                "accessToken" TEXT,
+                "refreshToken" TEXT,
+                "tokenType" TEXT,
+                "expiresAt" TIMESTAMP(3),
+                "scope" TEXT,
+                "providerId" TEXT,
+                "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT "OAuthToken_userId_provider_key" UNIQUE ("userId", "provider"),
+                CONSTRAINT "OAuthToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
+            );
+        `);
+        await prisma.$executeRawUnsafe(`
+            CREATE TABLE IF NOT EXISTS "AuthLog" (
+                "id" SERIAL PRIMARY KEY,
+                "userId" INTEGER,
+                "action" TEXT NOT NULL,
+                "provider" TEXT,
+                "ipAddress" TEXT,
+                "userAgent" TEXT,
+                "success" BOOLEAN NOT NULL DEFAULT TRUE,
+                "errorMessage" TEXT,
+                "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT "AuthLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL
+            );
+        `);
+        console.log('✅ Tablas OAuthToken y AuthLog verificadas');
+    } catch (e) {
+        console.error('⚠️ Auto-migrate warning:', e.message);
+    }
+}
+
+startServer();
 
 // Logging
 app.use((req, res, next) => {
