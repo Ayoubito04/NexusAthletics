@@ -94,7 +94,7 @@ app.use('/voice', voiceRoutes);
 // --- CUALQUIER OTRA RUTA QUE QUEDE EN INDEX.JS ---
 // (Aquí irán pagos, admin y PDF por ahora hasta que los movamos)
 
-app.get('/', (req, res) => res.json({ status: "Nexus AI Server running" }));
+app.get('/', (req, res) => res.json({ status: "Nexus AI Server running", version: "2.0-supabase-sync" }));
 
 app.listen(port, () => {
     console.log(`🚀 Servidor MODULAR corriendo en http://localhost:${port}`);
