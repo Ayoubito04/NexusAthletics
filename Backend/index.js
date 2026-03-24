@@ -69,27 +69,32 @@ app.use((req, res, next) => {
 });
 
 // --- ROUTES MODULARES ---
-const authRoutes = require('./src/routes/authRoutes');
-const userRoutes = require('./src/routes/userRoutes');
-const activityRoutes = require('./src/routes/activityRoutes');
-const chatRoutes = require('./src/routes/chatRoutes');
-const communityRoutes = require('./src/routes/communityRoutes');
-const paymentRoutes = require('./src/routes/paymentRoutes');
-const planRoutes = require('./src/routes/planRoutes');
-const adminRoutes = require('./src/routes/adminRoutes');
-const socialRoutes = require('./src/routes/socialRoutes');
-const voiceRoutes = require('./src/routes/voiceRoutes');
+let authRoutes, userRoutes, activityRoutes, chatRoutes, communityRoutes,
+    paymentRoutes, planRoutes, adminRoutes, socialRoutes, voiceRoutes;
 
-app.use('/auth', authRoutes);
-app.use('/user', userRoutes);
-app.use('/activities', activityRoutes);
-app.use('/chat', chatRoutes);
-app.use('/', communityRoutes);
-app.use('/payments', paymentRoutes);
-app.use('/', planRoutes);
-app.use('/admin', adminRoutes);
-app.use('/', socialRoutes);
-app.use('/voice', voiceRoutes);
+try { authRoutes = require('./src/routes/authRoutes'); console.log('✅ authRoutes cargado'); }
+catch (e) { console.error('❌ authRoutes FALLÓ:', e.message); }
+
+try { userRoutes = require('./src/routes/userRoutes'); } catch (e) { console.error('❌ userRoutes FALLÓ:', e.message); }
+try { activityRoutes = require('./src/routes/activityRoutes'); } catch (e) { console.error('❌ activityRoutes FALLÓ:', e.message); }
+try { chatRoutes = require('./src/routes/chatRoutes'); } catch (e) { console.error('❌ chatRoutes FALLÓ:', e.message); }
+try { communityRoutes = require('./src/routes/communityRoutes'); } catch (e) { console.error('❌ communityRoutes FALLÓ:', e.message); }
+try { paymentRoutes = require('./src/routes/paymentRoutes'); } catch (e) { console.error('❌ paymentRoutes FALLÓ:', e.message); }
+try { planRoutes = require('./src/routes/planRoutes'); } catch (e) { console.error('❌ planRoutes FALLÓ:', e.message); }
+try { adminRoutes = require('./src/routes/adminRoutes'); } catch (e) { console.error('❌ adminRoutes FALLÓ:', e.message); }
+try { socialRoutes = require('./src/routes/socialRoutes'); } catch (e) { console.error('❌ socialRoutes FALLÓ:', e.message); }
+try { voiceRoutes = require('./src/routes/voiceRoutes'); } catch (e) { console.error('❌ voiceRoutes FALLÓ:', e.message); }
+
+if (authRoutes) app.use('/auth', authRoutes);
+if (userRoutes) app.use('/user', userRoutes);
+if (activityRoutes) app.use('/activities', activityRoutes);
+if (chatRoutes) app.use('/chat', chatRoutes);
+if (communityRoutes) app.use('/', communityRoutes);
+if (paymentRoutes) app.use('/payments', paymentRoutes);
+if (planRoutes) app.use('/', planRoutes);
+if (adminRoutes) app.use('/admin', adminRoutes);
+if (socialRoutes) app.use('/', socialRoutes);
+if (voiceRoutes) app.use('/voice', voiceRoutes);
 
 // --- CUALQUIER OTRA RUTA QUE QUEDE EN INDEX.JS ---
 // (Aquí irán pagos, admin y PDF por ahora hasta que los movamos)
