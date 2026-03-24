@@ -11,6 +11,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import { NativeModules } from 'react-native';
 import { supabase } from '../lib/supabase';
+import { isValidEmail, isValidPassword, parseAuthError } from '../utils/authErrorHandler';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -56,14 +57,31 @@ export default function Register() {
     const handleRegister = async () => {
         if (!nombre || !apellido || !email || !contraseña || !confirmarContraseña) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            showAlert("Campo Requerido", "Por favor, completa todos los campos", "warning");
+            showAlert("Campos Requeridos", "Por favor, completa todos los campos", "warning");
             return;
         }
+
+        // Validar formato de email
+        if (!isValidEmail(email)) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            showAlert("Email Inválido", "Por favor, introduce un email válido (ej: usuario@ejemplo.com)", "warning");
+            return;
+        }
+
+        // Validar longitud de contraseña
+        if (!isValidPassword(contraseña)) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            showAlert("Contraseña Débil", "La contraseña debe tener al menos 6 caracteres", "warning");
+            return;
+        }
+
         if (contraseña !== confirmarContraseña) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            showAlert("Contraseña", "Las contraseñas no coinciden", "error");
+            showAlert("Contraseñas No Coinciden", "Las contraseñas ingresadas no coinciden", "error");
             return;
         }
+
+        setIsLoading(true);
 
         try {
             const response = await fetch(`${BACKEND_URL}/auth/register`, {
@@ -71,17 +89,48 @@ export default function Register() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ nombre, apellido, email, password: contraseña })
             });
-            const data = await response.json();
-            if (data.token) {
-                await AsyncStorage.setItem('user', JSON.stringify(data.user));
-                await AsyncStorage.setItem('token', data.token);
-                showAlert("Éxito", "✨ ¡Registro exitoso!", "success", () => navigation.navigate('WelcomePlans'));
-            } else {
-                showAlert("Error", data.error || "Error al registrar", "error");
+
+            console.log('📊 Register response status:', response.status);
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.error('❌ Respuesta no es JSON. Content-Type:', contentType);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                const errorInfo = parseAuthError(null, response, {});
+                showAlert(errorInfo.title, errorInfo.message, "error");
+                setIsLoading(false);
+                return;
             }
+
+            const data = await response.json();
+
+            if (!response.ok || !data.token) {
+                console.error('❌ Error HTTP:', response.status, data);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                const errorInfo = parseAuthError(null, response, data);
+                showAlert(errorInfo.title, errorInfo.message || data.error, "error");
+                setIsLoading(false);
+                return;
+            }
+
+            // Registro exitoso
+            await AsyncStorage.setItem('user', JSON.stringify(data.user));
+            await AsyncStorage.setItem('token', data.token);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            console.log('✅ Registro exitoso');
+            showAlert(
+                "Bienvenido",
+                "✨ Tu cuenta ha sido creada exitosamente. ¡Vamos a personalizarla!",
+                "success",
+                () => navigation.navigate('WelcomePlans')
+            );
+
         } catch (error) {
-            console.error(error);
-            showAlert("Error", "Error de conexión", "error");
+            console.error('❌ Error en handleRegister:', error.message);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            const errorInfo = parseAuthError(error);
+            showAlert(errorInfo.title, errorInfo.message, "error");
+            setIsLoading(false);
         }
     }
 
@@ -104,9 +153,37 @@ export default function Register() {
                 body: JSON.stringify(body)
             });
 
+            console.log(`📊 Social auth response status: ${response.status}`);
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.error('❌ Respuesta no es JSON. Content-Type:', contentType);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                showAlert(
+                    "Error de Servidor",
+                    "El servidor no respondió correctamente. Por favor, intenta de nuevo.",
+                    "error"
+                );
+                setIsLoading(false);
+                return;
+            }
+
             const data = await response.json();
 
+            if (!response.ok) {
+                console.error('❌ Error HTTP:', response.status, data);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                showAlert(
+                    "Error de Autenticación",
+                    data.error || "Error al registrarse con " + provider,
+                    "error"
+                );
+                setIsLoading(false);
+                return;
+            }
+
             if (data.requiresVerification) {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 setIsLoading(false);
                 navigation.navigate('Verification', { email: data.user.email });
                 return;
@@ -120,6 +197,7 @@ export default function Register() {
                 };
                 await AsyncStorage.setItem('user', JSON.stringify(userData));
                 await AsyncStorage.setItem('token', data.token);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
                 // Si es un usuario nuevo (o le faltan datos biométricos), mandarlo a WelcomePlans
                 if (data.isNewUser || !data.user.peso || !data.user.altura) {
@@ -128,12 +206,22 @@ export default function Register() {
                     navigation.navigate('Home');
                 }
             } else {
-                showAlert("Autenticación", data.error || "Error en autenticación social", "error");
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                showAlert(
+                    "Autenticación",
+                    data.error || "Error en autenticación social. Por favor, intenta de nuevo.",
+                    "error"
+                );
                 setIsLoading(false);
             }
         } catch (error) {
-            console.error(error);
-            showAlert("Error", "Error de conexión con el servidor", "error");
+            console.error('❌ Error en handleSocialAuth:', error.message);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            showAlert(
+                "Error de Conexión",
+                "No se pudo conectar con el servidor. Verifica tu conexión a internet.",
+                "error"
+            );
             setIsLoading(false);
         }
     };

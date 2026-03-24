@@ -5,8 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NexusAlert from '../components/NexusAlert';
+import * as Haptics from 'expo-haptics';
 
 import Config from '../constants/Config';
+import { parseAuthError } from '../utils/authErrorHandler';
 
 const BACKEND_URL = Config.BACKEND_URL;
 
@@ -65,7 +67,12 @@ export default function Verification() {
     const handleVerify = async () => {
         const fullCode = code.join('');
         if (fullCode.length < 6) {
-            showAlert("Error", "Por favor ingresa el código completo de 6 dígitos.", "warning");
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            showAlert(
+                "Código Incompleto",
+                "Por favor ingresa los 6 dígitos del código de verificación.",
+                "warning"
+            );
             return;
         }
 
@@ -77,17 +84,49 @@ export default function Verification() {
                 body: JSON.stringify({ email, code: fullCode })
             });
 
+            console.log('📊 Verify response status:', response.status);
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.error('❌ Respuesta no es JSON. Content-Type:', contentType);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                const errorInfo = parseAuthError(null, response, {});
+                showAlert(errorInfo.title, errorInfo.message, "error");
+                setIsLoading(false);
+                return;
+            }
+
             const data = await response.json();
 
-            if (response.ok) {
+            if (response.ok && data.token) {
                 await AsyncStorage.setItem('user', JSON.stringify(data.user));
                 await AsyncStorage.setItem('token', data.token);
-                showAlert("Éxito", "Cuenta verificada correctamente.", "success", () => navigation.navigate('Home'));
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                console.log('✅ Verificación exitosa');
+                showAlert(
+                    "Verificado",
+                    "Tu cuenta ha sido verificada correctamente. ¡Bienvenido!",
+                    "success",
+                    () => navigation.navigate('Home')
+                );
             } else {
-                showAlert("Error", data.error || "Código incorrecto", "error");
+                console.error('❌ Error en verificacion:', response.status, data);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                const errorInfo = parseAuthError(null, response, data);
+                showAlert(
+                    errorInfo.title,
+                    errorInfo.message || data.error || "El código no es válido o ha expirado.",
+                    "error"
+                );
+                // Limpiar los inputs
+                setCode(['', '', '', '', '', '']);
+                inputs.current[0]?.focus();
             }
         } catch (error) {
-            showAlert("Error", "No se pudo conectar con el servidor", "error");
+            console.error('❌ Error en handleVerify:', error.message);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            const errorInfo = parseAuthError(error);
+            showAlert(errorInfo.title, errorInfo.message, "error");
         } finally {
             setIsLoading(false);
         }
@@ -101,14 +140,40 @@ export default function Verification() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
             });
+
+            console.log('📊 Resend code response status:', response.status);
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.error('❌ Respuesta no es JSON. Content-Type:', contentType);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                const errorInfo = parseAuthError(null, response, {});
+                showAlert(errorInfo.title, errorInfo.message, "error");
+                setIsLoading(false);
+                return;
+            }
+
             const data = await response.json();
-            if (data.success) {
-                showAlert("Éxito", "Código reenviado correctamente.", "success");
+
+            if (response.ok && data.success) {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                console.log('✅ Código reenviado');
+                showAlert(
+                    "Código Reenviado",
+                    "Te hemos enviado un nuevo código de verificación a tu correo. Revisa tu bandeja de entrada.",
+                    "success"
+                );
             } else {
-                showAlert("Error", data.error || "No se pudo reenviar el código", "error");
+                console.error('❌ Error reenviando código:', response.status, data);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                const errorInfo = parseAuthError(null, response, data);
+                showAlert(errorInfo.title, errorInfo.message || data.error, "error");
             }
         } catch (error) {
-            showAlert("Error", "Error de conexión", "error");
+            console.error('❌ Error en handleResend:', error.message);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            const errorInfo = parseAuthError(error);
+            showAlert(errorInfo.title, errorInfo.message, "error");
         } finally {
             setIsLoading(false);
         }

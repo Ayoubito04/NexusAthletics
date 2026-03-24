@@ -16,6 +16,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 import Config from '../constants/Config';
 import { supabase } from '../lib/supabase';
+import { isValidEmail, parseAuthError } from '../utils/authErrorHandler';
 
 const BACKEND_URL = Config.BACKEND_URL;
 
@@ -62,19 +63,65 @@ export default function Login() {
     const syncWithBackend = async (supabaseAccessToken) => {
         try {
             console.log('🔄 Sincronizando sesión de Supabase con el backend de Nexus...');
+            console.log('🔗 URL completa:', `${BACKEND_URL}/auth/supabase-sync`);
+
             const response = await fetch(`${BACKEND_URL}/auth/supabase-sync`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ accessToken: supabaseAccessToken })
             });
 
+            console.log('📊 Response status:', response.status);
+            console.log('📊 Response headers:', {
+                contentType: response.headers.get('content-type'),
+                contentLength: response.headers.get('content-length')
+            });
+
             const text = await response.text();
+
+            // Validar que la respuesta sea JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.error('❌ Respuesta no es JSON. Content-Type:', contentType);
+                console.error('📄 Respuesta recibida:', text.substring(0, 1000));
+
+                if (response.status === 404) {
+                    showAlert(
+                        'Error de Configuración',
+                        'La ruta de sincronización no está disponible en el servidor. Por favor, verifica que el backend esté actualizado.',
+                        'error'
+                    );
+                } else {
+                    showAlert(
+                        'Error del Servidor',
+                        'El servidor no respondió correctamente. Por favor, intenta de nuevo.',
+                        'error'
+                    );
+                }
+                return;
+            }
+
             let data;
             try {
                 data = JSON.parse(text);
             } catch (e) {
                 console.error('❌ Error parseando JSON:', e);
-                console.error('📄 Respuesta del servidor (posible HTML):', text.substring(0, 500));
+                console.error('📄 Respuesta del servidor:', text.substring(0, 500));
+                showAlert(
+                    'Error de Respuesta',
+                    'El servidor devolvió datos inválidos. Por favor, intenta de nuevo.',
+                    'error'
+                );
+                return;
+            }
+
+            if (!response.ok) {
+                console.error('❌ Error HTTP:', response.status, data);
+                showAlert(
+                    'Error de Autenticación',
+                    data.error || 'Error al sincronizar la sesión. Por favor, intenta de nuevo.',
+                    'error'
+                );
                 return;
             }
 
@@ -94,9 +141,19 @@ export default function Login() {
                 }
             } else {
                 console.error('❌ Sincronización fallida (sin token):', data.error || 'Error desconocido');
+                showAlert(
+                    'Error de Sincronización',
+                    data.error || 'No se pudo completar la autenticación. Por favor, intenta de nuevo.',
+                    'error'
+                );
             }
         } catch (error) {
             console.error('❌ Error de red sincronizando con el backend:', error);
+            showAlert(
+                'Error de Conexión',
+                'No se pudo conectar con el servidor. Verifica tu conexión a internet.',
+                'error'
+            );
         }
     };
 
@@ -199,8 +256,38 @@ export default function Login() {
                 body: JSON.stringify(body)
             });
 
-            console.log('📡 Respuesta del backend recibida');
+            console.log(`📡 Respuesta del backend recibida (${response.status})`);
+
+            // Validar que la respuesta sea JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.error('❌ Respuesta no es JSON. Content-Type:', contentType);
+                const text = await response.text();
+                console.error('📄 Respuesta recibida:', text.substring(0, 500));
+
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                showAlert(
+                    'Error de Servidor',
+                    'El servidor no respondió correctamente. Por favor, intenta de nuevo.',
+                    'error'
+                );
+                setIsLoading(false);
+                return;
+            }
+
             const data = await response.json();
+
+            if (!response.ok) {
+                console.error('❌ Error HTTP:', response.status, data);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                showAlert(
+                    'Error de Autenticación',
+                    data.error || 'Error al iniciar sesión con ' + provider,
+                    'error'
+                );
+                setIsLoading(false);
+                return;
+            }
 
             if (data.requiresVerification) {
                 setIsLoading(false);
@@ -217,6 +304,8 @@ export default function Login() {
                 await AsyncStorage.setItem('user', JSON.stringify(userData));
                 await AsyncStorage.setItem('token', data.token);
 
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
                 // Si es un usuario nuevo (o le faltan datos biométricos), mandarlo a WelcomePlans
                 if (data.isNewUser || !data.user.peso || !data.user.altura) {
                     navigation.navigate('WelcomePlans');
@@ -224,11 +313,22 @@ export default function Login() {
                     navigation.navigate('Home');
                 }
             } else {
-                showAlert("Error", data.error || "Error en autenticación", "error");
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                showAlert(
+                    'Error',
+                    data.error || 'Error en autenticación. Por favor, intenta de nuevo.',
+                    'error'
+                );
                 setIsLoading(false);
             }
         } catch (error) {
-            showAlert("Error de Red", "No se pudo conectar al servidor", "error");
+            console.error('❌ Error en handleSocialAuth:', error.message);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            showAlert(
+                'Error de Conexión',
+                'No se pudo conectar con el servidor. Verifica tu conexión a internet.',
+                'error'
+            );
             setIsLoading(false);
         }
     };
@@ -236,7 +336,14 @@ export default function Login() {
     const handleLogin = async () => {
         if (!usuario || !contraseña) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            showAlert("Atención", "Por favor, introduce tus credenciales", "warning");
+            showAlert("Campos Requeridos", "Por favor, introduce tu email y contraseña", "warning");
+            return;
+        }
+
+        // Validar formato de email
+        if (!isValidEmail(usuario)) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            showAlert("Email Inválido", "Por favor, introduce un email válido (ej: usuario@ejemplo.com)", "warning");
             return;
         }
 
@@ -249,30 +356,49 @@ export default function Login() {
                 body: JSON.stringify({ email: usuario, password: contraseña })
             });
 
+            console.log('📊 Login response status:', response.status);
+
             const contentType = response.headers.get("content-type");
-            if (contentType && contentType.indexOf("application/json") !== -1) {
-                const data = await response.json();
-
-                if (data.requires2FA) {
-                    setIsLoading(false);
-                    navigation.navigate('Verification', { email: data.email });
-                    return;
-                }
-
-                if (data.token) {
-                    await AsyncStorage.setItem('user', JSON.stringify(data.user));
-                    await AsyncStorage.setItem('token', data.token);
-                    navigation.navigate('Home');
-                } else {
-                    showAlert("Error", data.error || "Credenciales incorrectas", "error");
-                    setIsLoading(false);
-                }
-            } else {
-                showAlert("Error", "Error en el servidor", "error");
+            if (!contentType || !contentType.includes("application/json")) {
+                console.error('❌ Respuesta no es JSON. Content-Type:', contentType);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                const errorInfo = parseAuthError(null, response, {});
+                showAlert(errorInfo.title, errorInfo.message, "error");
                 setIsLoading(false);
+                return;
             }
+
+            const data = await response.json();
+
+            if (data.requires2FA) {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                setIsLoading(false);
+                console.log('✅ 2FA requerido');
+                navigation.navigate('Verification', { email: data.email });
+                return;
+            }
+
+            if (!response.ok || !data.token) {
+                console.error('❌ Error HTTP:', response.status, data);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                const errorInfo = parseAuthError(null, response, data);
+                showAlert(errorInfo.title, errorInfo.message || data.error, "error");
+                setIsLoading(false);
+                return;
+            }
+
+            // Login exitoso
+            await AsyncStorage.setItem('user', JSON.stringify(data.user));
+            await AsyncStorage.setItem('token', data.token);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            console.log('✅ Login exitoso');
+            navigation.navigate('Home');
+
         } catch (error) {
-            showAlert("Error de Conexión", "Revisa que el backend esté corriendo.", "error");
+            console.error('❌ Error en handleLogin:', error.message);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            const errorInfo = parseAuthError(error);
+            showAlert(errorInfo.title, errorInfo.message, "error");
             setIsLoading(false);
         }
     };
