@@ -278,8 +278,14 @@ const createSession = async (req, res) => {
 const deleteSession = async (req, res) => {
     const { sessionId } = req.params;
     try {
-        await prisma.chatSession.delete({
+        // Verificar que la sesión pertenece al usuario antes de borrar
+        const session = await prisma.chatSession.findFirst({
             where: { id: parseInt(sessionId), userId: req.user.id }
+        });
+        if (!session) return res.status(404).json({ error: "Sesión no encontrada" });
+
+        await prisma.chatSession.delete({
+            where: { id: parseInt(sessionId) }
         });
         res.json({ success: true });
     } catch (error) {

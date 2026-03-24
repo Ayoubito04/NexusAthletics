@@ -9,8 +9,7 @@ const BACKEND_URL = Config.BACKEND_URL;
 // Detección ultra-robusta de Expo Go para silenciar errores de SDK 53+
 const isExpoGo =
     Constants.executionEnvironment === 'storeClient' ||
-    Constants.appOwnership === 'expo' ||
-    (Platform.OS === 'android' && !Constants.expoConfig?.android?.package);
+    Constants.appOwnership === 'expo';
 
 export async function registerForPushNotificationsAsync() {
     try {

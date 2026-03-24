@@ -19,6 +19,12 @@ class GoogleFitService {
         if (Platform.OS !== 'android') return { success: false, message: 'Google Fit solo disponible en Android' };
 
         try {
+            await GoogleFit.checkIsAuthorized();
+            if (GoogleFit.isAuthorized) {
+                this.isAuthorized = true;
+                return { success: true };
+            }
+
             const auth = await GoogleFit.authorize(options);
             if (auth.success) {
                 this.isAuthorized = true;
@@ -39,7 +45,10 @@ class GoogleFitService {
         const end = new Date();
 
         try {
-            const res = await GoogleFit.getDailySteps(start.toISOString(), end.toISOString());
+            const res = await GoogleFit.getDailyStepCountSamples({
+                startDate: start.toISOString(),
+                endDate: end.toISOString()
+            });
             if (res.length > 0) {
                 // Buscamos el origen de datos adecuado (com.google.step_count.delta)
                 const stepData = res.find(r => r.source === 'com.google.android.gms:estimated_steps');

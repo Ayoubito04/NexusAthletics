@@ -162,8 +162,8 @@ export default function ActividadGuardada() {
         });
     };
 
-    const verCalorias = (calorias) => {
-        navigation.navigate("CalcularCalorias", { actividad: calorias });
+    const verCalorias = (item) => {
+        navigation.navigate("CalcularCalorias", { actividad: item });
     }
 
     const handleShare = async () => {
@@ -271,7 +271,7 @@ export default function ActividadGuardada() {
                         <ActivityItem
                             item={item}
                             onShare={openShareModal}
-                            onAnalyze={verCalorias}
+                            onAnalyze={() => verCalorias(item)}
                         />
                     )}
                     keyExtractor={(item, index) => index.toString()}
@@ -291,7 +291,7 @@ export default function ActividadGuardada() {
                     <Text style={styles.emptySub}>Supera tus límites hoy. Tus entrenamientos aparecerán aquí una vez que los completes.</Text>
                     <TouchableOpacity
                         style={styles.startBtn}
-                        onPress={() => navigation.navigate("ActivityMap")}
+                        onPress={() => navigation.navigate("HealthSync")}
                         activeOpacity={0.8}
                     >
                         <LinearGradient

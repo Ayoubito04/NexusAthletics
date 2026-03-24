@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Config from '../constants/Config';
+import NexusChart from '../components/NexusChart';
 const BACKEND_URL = Config.BACKEND_URL;
 
 export default function Analytics() {
@@ -170,17 +171,8 @@ export default function Analytics() {
                     </View>
                 )}
 
-                <View style={styles.chartPlaceholder}>
-                    <Text style={styles.chartTitle}>Evolución Semanal</Text>
-                    <View style={styles.barContainer}>
-                        {[40, 70, 45, 90, 65, 30, 85].map((h, i) => (
-                            <View key={i} style={styles.barWrapper}>
-                                <View style={[styles.bar, { height: h, backgroundColor: i === 3 ? '#63ff15' : '#222' }]} />
-                                <Text style={styles.barDay}>{['L', 'M', 'X', 'J', 'V', 'S', 'D'][i]}</Text>
-                            </View>
-                        ))}
-                    </View>
-                </View>
+                {/* Gráfico de Evolución Semanal */}
+                <NexusChart data={stats.weeklyProgress} />
 
                 <TouchableOpacity
                     style={styles.aiAnalysisBtn}

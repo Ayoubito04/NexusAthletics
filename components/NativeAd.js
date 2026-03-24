@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function NativeAd({ type = 'fitness' }) {
     const ads = {
@@ -35,7 +35,7 @@ export default function NativeAd({ type = 'fitness' }) {
 
                 <View style={styles.content}>
                     <View style={[styles.iconBox, { backgroundColor: ad.color + '20' }]}>
-                        <Ionicons name={ad.icon} size={24} color={ad.color} />
+                        <MaterialCommunityIcons name={ad.icon} size={24} color={ad.color} />
                     </View>
                     <View style={styles.textWrap}>
                         <Text style={styles.title}>{ad.title}</Text>

@@ -1,5 +1,14 @@
 import { registerRootComponent } from 'expo';
 
+// CAPTURADOR DE ERRORES CRÍTICOS
+try {
+    console.log('🚀 PROYECTO INICIANDO...');
+} catch (e) {
+    console.error('🔥 ERROR DE CARGA INICIAL:', e);
+}
+
+// Cargar rastreador de ubicación en segundo plano
+import './services/LocationTracker';
 import App from './App';
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);

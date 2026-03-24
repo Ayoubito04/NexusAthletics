@@ -418,6 +418,11 @@ export default function EntrenadorIA() {
                     text: errorMsg,
                     sender: 'ia'
                 }]);
+            } else if (response.status === 401 || response.status === 403) {
+                showAlert("Sesión Expirada", "Tu sesión ha expirado o es inválida. Por favor inicia sesión nuevamente.", "warning", () => {
+                    AsyncStorage.multiRemove(['token', 'user']);
+                    navigation.replace('Login');
+                });
             } else if (data.error) {
                 setMensajes(prev => [...prev, { text: "⚠️ " + data.error, sender: 'ia' }]);
             } else if (data.text) {
@@ -491,7 +496,7 @@ export default function EntrenadorIA() {
                         <Text style={styles.headerTitle}>Nexus AI <Text style={styles.titleHighlight}>Elite</Text></Text>
                         <View style={styles.statusRow}>
                             <View style={styles.dot} />
-                            <Text style={styles.statusText}>{user ? `Plan ${user.plan}` : 'Alto Rendimiento'}</Text>
+                            <Text style={styles.statusText}>{user ? `Plan ${user.plan || 'Gratis'}` : 'Alto Rendimiento'}</Text>
                         </View>
                     </View>
                     <View style={styles.headerActions}>

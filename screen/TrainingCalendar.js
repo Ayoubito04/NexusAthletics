@@ -5,11 +5,28 @@ import WorkoutTimer from '../components/WorkoutTimer';
 import WorkoutReview from '../components/WorkoutReview';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
+const QUICK_EXERCISES = [
+    { name: 'Sentadillas', muscle: 'Piernas', reps: 12, sets: 3, weight: 0 },
+    { name: 'Press Banca', muscle: 'Pecho', reps: 10, sets: 4, weight: 0 },
+    { name: 'Peso Muerto', muscle: 'Espalda', reps: 8, sets: 3, weight: 0 },
+    { name: 'Press Militar', muscle: 'Hombros', reps: 10, sets: 3, weight: 0 },
+    { name: 'Dominadas', muscle: 'Espalda', reps: 10, sets: 3, weight: 0 },
+    { name: 'Zancadas', muscle: 'Piernas', reps: 12, sets: 3, weight: 0 },
+    { name: 'Plancha', muscle: 'Core', reps: 60, sets: 3, weight: 0 },
+    { name: 'Bíceps Curls', muscle: 'Brazos', reps: 12, sets: 3, weight: 0 },
+];
+
+/**
+ * TrainingCalendar Component
+ * Enhanced UI with Elite Cyberpunk aesthetics and improved accessibility.
+ */
 export default function TrainingCalendar({ navigation }) {
     const [viewMode, setViewMode] = useState('month');
     const [completedDays, setCompletedDays] = useState([]);
@@ -31,6 +48,9 @@ export default function TrainingCalendar({ navigation }) {
     // Review states
     const [reviewVisible, setReviewVisible] = useState(false);
     const [sessionDataForReview, setSessionDataForReview] = useState(null);
+
+    // Copy/Paste State
+    const [copiedRoutine, setCopiedRoutine] = useState(null);
 
     // NexusAlert State
     const [alert, setAlert] = useState({ visible: false, title: '', message: '', type: 'info', onConfirm: null, onCancel: null, confirmText: 'ACEPTAR' });
@@ -75,6 +95,7 @@ export default function TrainingCalendar({ navigation }) {
     };
 
     const assignRoutine = async () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         const newRoutines = { ...assignedRoutines };
         newRoutines[selectedDateKey] = {
             title: customTitle || 'Sesión Manual',
@@ -86,7 +107,28 @@ export default function TrainingCalendar({ navigation }) {
         resetModal();
     };
 
+    const copyRoutine = (key) => {
+        const routine = assignedRoutines[key];
+        if (routine) {
+            setCopiedRoutine(JSON.parse(JSON.stringify(routine)));
+            Haptics.selectionAsync();
+            showAlert("Copiado", "Rutina copiada. Ahora selecciona un día vacío para pegarla.", "info");
+        }
+    };
+
+    const pasteRoutine = async (key) => {
+        if (!copiedRoutine) return;
+        
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        const newRoutines = { ...assignedRoutines };
+        newRoutines[key] = { ...copiedRoutine };
+        setAssignedRoutines(newRoutines);
+        await AsyncStorage.setItem('assigned_routines', JSON.stringify(newRoutines));
+        showAlert("Pegado", "Rutina aplicada correctamente.", "info");
+    };
+
     const removeRoutine = async (key) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         showAlert(
             "Deshacer Rutina",
             "¿Quieres borrar esta rutina del calendario? Esto también quitará cualquier plan de la IA en este día.",
@@ -144,7 +186,6 @@ export default function TrainingCalendar({ navigation }) {
         setModalVisible(true);
     };
 
-    // Abrir WorkoutTimer para un día con rutina
     const startWorkout = (key) => {
         const routine = assignedRoutines[key];
         if (!routine) {
@@ -152,7 +193,6 @@ export default function TrainingCalendar({ navigation }) {
             return;
         }
 
-        // Convertir la rutina en ejercicios para el timer
         const exercises = routine.exercises && routine.exercises.length > 0
             ? routine.exercises
             : [
@@ -171,7 +211,6 @@ export default function TrainingCalendar({ navigation }) {
         setSessionDataForReview(stats);
         setReviewVisible(true);
 
-        // Marcar el día como completado (esto se puede hacer antes o después de la review)
         const todayKey = new Date().toISOString().split('T')[0];
         await toggleDayCompletion(todayKey);
     };
@@ -200,12 +239,20 @@ export default function TrainingCalendar({ navigation }) {
             const routine = assignedRoutines[key];
             const isToday = key === new Date().toISOString().split('T')[0];
 
+            let accessibilityLabel = `${i} de ${currentDate.toLocaleString('es-ES', { month: 'long' })}`;
+            if (isToday) accessibilityLabel += ", hoy";
+            if (routine) accessibilityLabel += `, rutina: ${routine.title}`;
+            if (isCompleted) accessibilityLabel += ", completado";
+
             days.push(
                 <TouchableOpacity
                     key={i}
                     style={[styles.dayCell, isCompleted && styles.completedDay, isToday && styles.todayDay]}
                     onPress={() => openDayPicker(key)}
                     onLongPress={() => removeRoutine(key)}
+                    accessibilityLabel={accessibilityLabel}
+                    accessibilityRole="button"
+                    activeOpacity={0.7}
                 >
                     <Text style={[styles.dayText, isCompleted && styles.completedDayText, isToday && { color: '#63ff15' }]}>{i}</Text>
                     {routine && (
@@ -220,7 +267,7 @@ export default function TrainingCalendar({ navigation }) {
         return (
             <View style={styles.calendarGrid}>
                 <View style={styles.weekRow}>{headers}</View>
-                <View style={styles.daysGrid}>{days}</View>
+                <View style={[styles.daysGrid, { opacity: 1 }]}>{days}</View>
             </View>
         );
     };
@@ -243,33 +290,75 @@ export default function TrainingCalendar({ navigation }) {
 
                     return (
                         <View key={i} style={[styles.weekRowItem, isToday && styles.todayRow, routine?.isElite && styles.eliteRow]}>
-                            <TouchableOpacity style={styles.weekDateBox} onPress={() => openDayPicker(key)}>
+                            <TouchableOpacity 
+                                style={styles.weekDateBox} 
+                                onPress={() => openDayPicker(key)}
+                                accessibilityLabel={`Día ${d.getDate()}, ${d.toLocaleString('es-ES', { weekday: 'long' })}`}
+                                accessibilityRole="button"
+                            >
                                 <Text style={styles.weekDayName}>{d.toLocaleString('es-ES', { weekday: 'short' }).toUpperCase()}</Text>
                                 <Text style={styles.weekDayNum}>{d.getDate()}</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.weekInfo} onPress={() => openDayPicker(key)}>
+                            <TouchableOpacity 
+                                style={styles.weekInfo} 
+                                onPress={() => openDayPicker(key)}
+                                accessibilityLabel={routine ? `Rutina: ${routine.title}` : "Sin rutina, pulse para asignar"}
+                                accessibilityRole="button"
+                            >
                                 {routine ? (
                                     <>
                                         <Text style={styles.weekRoutineName}>{routine.title}</Text>
-                                        <Text style={styles.weekSubText}>{routine.isElite ? 'PLAN IA (Propagado)' : 'MANUAL'}</Text>
+                                        <Text style={styles.weekSubText}>{routine.isElite ? 'PLAN IA (PRÓXIMA GENERACIÓN)' : 'MANUAL'}</Text>
                                     </>
                                 ) : (
                                     <Text style={styles.noRoutineText}>Toque para asignar manual</Text>
                                 )}
                             </TouchableOpacity>
                             <View style={styles.weekActions}>
-                                {routine && (
+                                {routine ? (
                                     <>
-                                        <TouchableOpacity onPress={() => startWorkout(key)} style={styles.playBtn}>
-                                            <Ionicons name="play-circle" size={28} color="#63ff15" />
+                                        <TouchableOpacity 
+                                            onPress={() => copyRoutine(key)}
+                                            accessibilityLabel="Copiar rutina"
+                                            accessibilityRole="button"
+                                        >
+                                            <Ionicons name="copy-outline" size={22} color="#00F0FF" />
                                         </TouchableOpacity>
-                                        <TouchableOpacity onPress={() => removeRoutine(key)}>
-                                            <Ionicons name="trash-outline" size={20} color="#ff4d4d" />
+                                        <TouchableOpacity 
+                                            onPress={() => startWorkout(key)} 
+                                            style={styles.playBtn}
+                                            accessibilityLabel="Iniciar entrenamiento"
+                                            accessibilityRole="button"
+                                        >
+                                            <Ionicons name="play-circle" size={32} color="#63ff15" />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity 
+                                            onPress={() => removeRoutine(key)}
+                                            accessibilityLabel="Eliminar rutina"
+                                            accessibilityRole="button"
+                                        >
+                                            <Ionicons name="trash-outline" size={22} color="#ff4d4d" />
                                         </TouchableOpacity>
                                     </>
+                                ) : (
+                                    copiedRoutine && (
+                                        <TouchableOpacity 
+                                            onPress={() => pasteRoutine(key)}
+                                            accessibilityLabel="Pegar rutina"
+                                            accessibilityRole="button"
+                                            style={styles.pasteBtn}
+                                        >
+                                            <Ionicons name="clipboard-outline" size={28} color="#63ff15" />
+                                        </TouchableOpacity>
+                                    )
                                 )}
-                                <TouchableOpacity onPress={() => toggleDayCompletion(key)}>
-                                    <Ionicons name={isCompleted ? "checkmark-circle" : "ellipse-outline"} size={28} color={isCompleted ? "#63ff15" : "#333"} />
+                                <TouchableOpacity 
+                                    onPress={() => toggleDayCompletion(key)}
+                                    accessibilityLabel={isCompleted ? "Marcar como no completado" : "Marcar como completado"}
+                                    accessibilityRole="checkbox"
+                                    accessibilityState={{ checked: isCompleted }}
+                                >
+                                    <Ionicons name={isCompleted ? "checkmark-circle" : "ellipse-outline"} size={32} color={isCompleted ? "#63ff15" : "#333"} />
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -281,73 +370,244 @@ export default function TrainingCalendar({ navigation }) {
 
     return (
         <SafeAreaView style={styles.container}>
-            <LinearGradient colors={['#050505', '#000']} style={StyleSheet.absoluteFill} />
-
+            <LinearGradient 
+                colors={['#0A0A0A', '#121212', '#0A0A0A']} 
+                style={StyleSheet.absoluteFill} 
+                start={{ x: 0, y: 0 }} 
+                end={{ x: 1, y: 1 }}
+            />
+            
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}><Ionicons name="chevron-back" size={28} color="white" /></TouchableOpacity>
-                <View style={styles.modeToggle}>
-                    <TouchableOpacity style={[styles.mBtn, viewMode === 'month' && styles.mBtnActive]} onPress={() => setViewMode('month')}>
-                        <Text style={[styles.mText, viewMode === 'month' && styles.mTextActive]}>Mes</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.mBtn, viewMode === 'week' && styles.mBtnActive]} onPress={() => setViewMode('week')}>
-                        <Text style={[styles.mText, viewMode === 'week' && styles.mTextActive]}>Semana</Text>
-                    </TouchableOpacity>
-                </View>
+                <TouchableOpacity 
+                    onPress={() => navigation.goBack()}
+                    accessibilityLabel="Atrás"
+                    accessibilityRole="button"
+                >
+                    <Ionicons name="chevron-back" size={28} color="white" />
+                </TouchableOpacity>
+                <BlurView intensity={30} tint="dark" style={styles.headerGlass}>
+                    <View style={styles.modeToggle}>
+                        <TouchableOpacity 
+                            style={[styles.mBtn, viewMode === 'month' && styles.mBtnActive]} 
+                            onPress={() => setViewMode('month')}
+                            accessibilityLabel="Vista mensual"
+                            accessibilityRole="button"
+                        >
+                            <Text style={[styles.mText, viewMode === 'month' && styles.mTextActive]}>Mes</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={[styles.mBtn, viewMode === 'week' && styles.mBtnActive]} 
+                            onPress={() => setViewMode('week')}
+                            accessibilityLabel="Vista semanal"
+                            accessibilityRole="button"
+                        >
+                            <Text style={[styles.mText, viewMode === 'week' && styles.mTextActive]}>Semana</Text>
+                        </TouchableOpacity>
+                    </View>
+                </BlurView>
                 <View style={{ width: 28 }} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={styles.monthNav}>
-                    <TouchableOpacity onPress={() => {
-                        const d = new Date(currentDate);
-                        viewMode === 'month' ? d.setMonth(d.getMonth() - 1) : d.setDate(d.getDate() - 7);
-                        setCurrentDate(d);
-                    }}><Ionicons name="chevron-back" size={24} color="#63ff15" /></TouchableOpacity>
+                    <TouchableOpacity 
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            const d = new Date(currentDate);
+                            viewMode === 'month' ? d.setMonth(d.getMonth() - 1) : d.setDate(d.getDate() - 7);
+                            setCurrentDate(d);
+                        }}
+                        accessibilityLabel="Anterior"
+                        accessibilityRole="button"
+                    >
+                        <Ionicons name="chevron-back" size={24} color="#63ff15" />
+                    </TouchableOpacity>
                     <Text style={styles.navTitle}>
                         {viewMode === 'month'
                             ? currentDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' }).toUpperCase()
                             : 'CONTROL SEMANAL'
                         }
                     </Text>
-                    <TouchableOpacity onPress={() => {
-                        const d = new Date(currentDate);
-                        viewMode === 'month' ? d.setMonth(d.getMonth() + 1) : d.setDate(d.getDate() + 7);
-                        setCurrentDate(d);
-                    }}><Ionicons name="chevron-forward" size={24} color="#63ff15" /></TouchableOpacity>
+                    <TouchableOpacity 
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            const d = new Date(currentDate);
+                            viewMode === 'month' ? d.setMonth(d.getMonth() + 1) : d.setDate(d.getDate() + 7);
+                            setCurrentDate(d);
+                        }}
+                        accessibilityLabel="Siguiente"
+                        accessibilityRole="button"
+                    >
+                        <Ionicons name="chevron-forward" size={24} color="#63ff15" />
+                    </TouchableOpacity>
                 </View>
 
                 {viewMode === 'month' ? renderMonthView() : renderWeekView()}
 
-                <View style={styles.guideCard}>
-                    <Text style={styles.guideT}>Gestión Nexus:</Text>
-                    <Text style={styles.guideS}>• Pulsa una fecha para crear/editar manual.{"\n"}• Mantén pulsado (o papelera) para deshacer rutina.{"\n"}• Sincroniza planes Élite para propagar semanas enteras.</Text>
-                </View>
+                <BlurView intensity={20} tint="dark" style={styles.guideCardBlur}>
+                    <View style={styles.guideCard}>
+                        <Text style={styles.guideT}>GESTOR NEXUS ELITE</Text>
+                        <Text style={styles.guideS}>
+                            • <Text style={{ color: '#63ff15' }}>Pulsa</Text> una fecha para crear/editar sesión.{"\n"}
+                            • <Text style={{ color: '#ff4d4d' }}>Manten pulsado</Text> para eliminar rutina.{"\n"}
+                            • <Text style={{ color: '#00F0FF' }}>Planes Élite</Text> sincronizan semanas completas.
+                        </Text>
+                    </View>
+                </BlurView>
             </ScrollView>
 
             <Modal visible={modalVisible} transparent animationType="slide">
                 <View style={styles.modalOverlay}>
+                    <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFill} />
                     <View style={styles.modalContent}>
+                        <View style={styles.modalBar} />
                         <View style={styles.modalHead}>
                             <Text style={styles.modalTitle}>Editor de Sesión</Text>
-                            <TouchableOpacity onPress={resetModal}><Ionicons name="close-circle" size={30} color="#444" /></TouchableOpacity>
+                            <TouchableOpacity onPress={resetModal} accessibilityLabel="Cerrar" accessibilityRole="button">
+                                <Ionicons name="close-circle" size={32} color="#333" />
+                            </TouchableOpacity>
                         </View>
-                        <Text style={styles.label}>TÍTULO MANUAL</Text>
-                        <TextInput style={styles.input} placeholder="Ej: FullBody Casa" placeholderTextColor="#444" value={customTitle} onChangeText={setCustomTitle} />
+                        
+                        <Text style={styles.label}>TÍTULO DE LA SESIÓN</Text>
+                        <TextInput 
+                            style={styles.input} 
+                            placeholder="Ej: Powerlifting Day" 
+                            placeholderTextColor="#52525B" 
+                            value={customTitle} 
+                            onChangeText={setCustomTitle} 
+                        />
 
-                        <TouchableOpacity style={styles.saveMain} onPress={assignRoutine}>
-                            <Text style={styles.saveText}>FIJAR RUTINA MANUAL</Text>
+                        <View style={styles.quickLibSection}>
+                            <Text style={styles.label}>BIBLIOTECA RÁPIDA</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickLib}>
+                                {QUICK_EXERCISES.map((ex, idx) => (
+                                    <TouchableOpacity 
+                                        key={idx} 
+                                        style={styles.quickChip}
+                                        onPress={() => {
+                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                            setSelectedExercises([...selectedExercises, { ...ex }]);
+                                        }}
+                                    >
+                                        <Text style={styles.quickChipText}>{ex.name}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </View>
+
+                        <View style={styles.exerciseSection}>
+                            <View style={styles.exerciseHeader}>
+                                <Text style={styles.label}>EJERCICIOS ({selectedExercises.length})</Text>
+                                <TouchableOpacity 
+                                    style={styles.addExerciseBtn} 
+                                    onPress={() => {
+                                        setSelectedExercises([...selectedExercises, { 
+                                            name: '', 
+                                            sets: 3, 
+                                            reps: 12, 
+                                            weight: 0, 
+                                            muscle: 'General' 
+                                        }]);
+                                    }}
+                                >
+                                    <Ionicons name="add-circle" size={24} color="#63ff15" />
+                                    <Text style={styles.addExerciseText}>AÑADIR</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <ScrollView style={styles.exerciseList} nestedScrollEnabled={true}>
+                                {selectedExercises.map((ex, idx) => (
+                                    <View key={idx} style={styles.exerciseItem}>
+                                        <View style={styles.exRow}>
+                                            <TextInput
+                                                style={[styles.exInput, { flex: 2 }]}
+                                                placeholder="Ejercicio"
+                                                placeholderTextColor="#444"
+                                                value={ex.name}
+                                                onChangeText={(val) => {
+                                                    const updated = [...selectedExercises];
+                                                    updated[idx].name = val;
+                                                    setSelectedExercises(updated);
+                                                }}
+                                            />
+                                            <TouchableOpacity 
+                                                onPress={() => {
+                                                    const updated = selectedExercises.filter((_, i) => i !== idx);
+                                                    setSelectedExercises(updated);
+                                                }}
+                                            >
+                                                <Ionicons name="trash-outline" size={20} color="#ff4d4d" />
+                                            </TouchableOpacity>
+                                        </View>
+                                        
+                                        <View style={styles.exDetailsRow}>
+                                            <View style={styles.exDetailGroup}>
+                                                <Text style={styles.exDetailLabel}>SETS</Text>
+                                                <TextInput
+                                                    style={styles.exDetailInput}
+                                                    keyboardType="numeric"
+                                                    value={ex.sets ? ex.sets.toString() : '0'}
+                                                    onChangeText={(val) => {
+                                                        const updated = [...selectedExercises];
+                                                        updated[idx].sets = parseInt(val) || 0;
+                                                        setSelectedExercises(updated);
+                                                    }}
+                                                />
+                                            </View>
+                                            <View style={styles.exDetailGroup}>
+                                                <Text style={styles.exDetailLabel}>REPS</Text>
+                                                <TextInput
+                                                    style={styles.exDetailInput}
+                                                    keyboardType="numeric"
+                                                    value={ex.reps ? ex.reps.toString() : '0'}
+                                                    onChangeText={(val) => {
+                                                        const updated = [...selectedExercises];
+                                                        updated[idx].reps = parseInt(val) || 0;
+                                                        setSelectedExercises(updated);
+                                                    }}
+                                                />
+                                            </View>
+                                            <View style={styles.exDetailGroup}>
+                                                <Text style={styles.exDetailLabel}>KG</Text>
+                                                <TextInput
+                                                    style={styles.exDetailInput}
+                                                    keyboardType="numeric"
+                                                    value={ex.weight ? ex.weight.toString() : '0'}
+                                                    onChangeText={(val) => {
+                                                        const updated = [...selectedExercises];
+                                                        updated[idx].weight = parseFloat(val) || 0;
+                                                        setSelectedExercises(updated);
+                                                    }}
+                                                />
+                                            </View>
+                                        </View>
+                                    </View>
+                                ))}
+                            </ScrollView>
+                        </View>
+
+                        <TouchableOpacity style={styles.saveMain} onPress={assignRoutine} activeOpacity={0.8}>
+                            <LinearGradient 
+                                colors={['#63ff15', '#4cc910']} 
+                                style={styles.saveGradient}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                            >
+                                <Text style={styles.saveText}>ASIGNAR RUTINA</Text>
+                            </LinearGradient>
                         </TouchableOpacity>
-                        <Text style={styles.hintText}>*Asignar una rutina manual sobrescribe el plan de la IA para este día específico.</Text>
+                        <Text style={styles.hintText}>* Las rutinas manuales tienen prioridad sobre los planes generados por IA.</Text>
                     </View>
                 </View>
             </Modal>
 
             {showAnimation && (
                 <View style={styles.animOverlay}>
-                    <LinearGradient colors={['rgba(99,255,21,0.2)', 'transparent']} style={StyleSheet.absoluteFill} />
+                    <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
                     <Animated.View style={{ transform: [{ scale: pulseAnim }], alignItems: 'center' }}>
-                        <Text style={styles.animT}>¡PROGRESS SAVED!</Text>
-                        <MaterialCommunityIcons name="flash-circle" size={100} color="#63ff15" />
+                        <Text style={styles.animT}>STATUS: SYNCED</Text>
+                        <MaterialCommunityIcons name="shield-check-outline" size={120} color="#63ff15" />
+                        <Text style={styles.animSub}>OBJETIVO LOGRADO</Text>
                     </Animated.View>
                 </View>
             )}
@@ -379,51 +639,248 @@ export default function TrainingCalendar({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#000' },
-    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, height: 60 },
-    modeToggle: { flexDirection: 'row', backgroundColor: '#111', borderRadius: 12, padding: 3, width: 140 },
-    mBtn: { flex: 1, paddingVertical: 5, alignItems: 'center', borderRadius: 10 },
-    mBtnActive: { backgroundColor: '#63ff15' },
-    mText: { color: '#444', fontSize: 11, fontWeight: '800' },
-    mTextActive: { color: 'black' },
-    scrollContent: { padding: 20 },
-    monthNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-    navTitle: { color: 'white', fontSize: 13, fontWeight: '900', letterSpacing: 1 },
-    calendarGrid: { backgroundColor: '#111', borderRadius: 25, padding: 15, borderWidth: 1, borderColor: '#222' },
-    weekRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
-    dayHeader: { color: '#333', fontWeight: 'bold', width: (width - 110) / 7, textAlign: 'center', fontSize: 11 },
+    container: { flex: 1, backgroundColor: '#0A0A0A' },
+    header: { 
+        flexDirection: 'row', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        paddingHorizontal: 20, 
+        height: 70,
+        zIndex: 10
+    },
+    headerGlass: {
+        borderRadius: 16,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)'
+    },
+    modeToggle: { 
+        flexDirection: 'row', 
+        backgroundColor: 'rgba(20,20,20,0.4)', 
+        padding: 4, 
+        width: 150 
+    },
+    mBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 12 },
+    mBtnActive: { backgroundColor: '#63ff15', elevation: 10, shadowColor: '#63ff15', shadowOpacity: 0.4, shadowRadius: 10 },
+    mText: { color: '#A1A1AA', fontSize: 12, fontWeight: '800', textTransform: 'uppercase' },
+    mTextActive: { color: '#000' },
+    scrollContent: { padding: 24, paddingBottom: 100 },
+    monthNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+    navTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '900', letterSpacing: 2 },
+    calendarGrid: { 
+        backgroundColor: 'rgba(18,18,18,0.8)', 
+        borderRadius: 30, 
+        padding: 20, 
+        borderWidth: 1, 
+        borderColor: 'rgba(255,255,255,0.1)',
+        shadowColor: '#000',
+        shadowOpacity: 0.5,
+        shadowRadius: 20
+    },
+    weekRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+    dayHeader: { color: '#52525B', fontWeight: '900', width: (width - 110) / 7, textAlign: 'center', fontSize: 12 },
     daysGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-    dayCell: { width: (width - 110) / 7, height: 50, justifyContent: 'center', alignItems: 'center', marginBottom: 8, borderRadius: 12, backgroundColor: '#0a0a0a', margin: 2 },
-    dayText: { color: 'white', fontWeight: '800', fontSize: 14 },
-    completedDay: { backgroundColor: '#63ff15' },
-    completedDayText: { color: 'black' },
-    todayDay: { borderWidth: 1, borderColor: '#63ff1540' },
-    routineIndicator: { position: 'absolute', bottom: 4 },
-    weekContainer: { gap: 10 },
-    weekRowItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', padding: 15, borderRadius: 25, borderWidth: 1, borderColor: '#1a1a1a' },
-    eliteRow: { borderLeftWidth: 4, borderLeftColor: '#63ff15' },
-    todayRow: { borderColor: '#63ff1540' },
-    weekDateBox: { width: 45, height: 45, backgroundColor: '#000', borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-    weekDayName: { color: '#444', fontSize: 9, fontWeight: '900' },
-    weekDayNum: { color: 'white', fontSize: 18, fontWeight: '900' },
+    dayCell: { 
+        width: (width - 130) / 7, 
+        height: 55, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        marginBottom: 8, 
+        borderRadius: 16, 
+        backgroundColor: '#111', 
+        margin: 3,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.03)'
+    },
+    dayText: { color: '#FFFFFF', fontWeight: '800', fontSize: 16 },
+    completedDay: { backgroundColor: '#63ff15', borderColor: '#63ff15' },
+    completedDayText: { color: '#000' },
+    todayDay: { 
+        borderWidth: 1.5, 
+        borderColor: '#63ff15', 
+        backgroundColor: 'rgba(99,255,21,0.1)',
+        shadowColor: '#63ff15',
+        shadowOpacity: 0.5,
+        shadowRadius: 10,
+        elevation: 5
+    },
+    routineIndicator: { position: 'absolute', bottom: 6 },
+    weekContainer: { gap: 16 },
+    weekRowItem: { 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        backgroundColor: 'rgba(18,18,18,0.8)', 
+        padding: 18, 
+        borderRadius: 25, 
+        borderWidth: 1, 
+        borderColor: 'rgba(255,255,255,0.05)' 
+    },
+    eliteRow: { borderLeftWidth: 5, borderLeftColor: '#63ff15', shadowColor: '#63ff15', shadowOpacity: 0.1, shadowRadius: 10 },
+    todayRow: { borderColor: 'rgba(99,255,21,0.3)', backgroundColor: 'rgba(99,255,21,0.03)' },
+    weekDateBox: { 
+        width: 55, 
+        height: 55, 
+        backgroundColor: '#000', 
+        borderRadius: 15, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        marginRight: 18,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)'
+    },
+    weekDayName: { color: '#A1A1AA', fontSize: 10, fontWeight: '900' },
+    weekDayNum: { color: '#FFFFFF', fontSize: 22, fontWeight: '900' },
     weekInfo: { flex: 1 },
-    weekRoutineName: { color: 'white', fontSize: 15, fontWeight: '900' },
-    weekSubText: { color: '#63ff15', fontSize: 9, fontWeight: 'bold', marginTop: 2, letterSpacing: 0.5 },
-    noRoutineText: { color: '#333', fontSize: 12, fontStyle: 'italic' },
+    weekRoutineName: { color: '#FFFFFF', fontSize: 18, fontWeight: '900' },
+    weekSubText: { color: '#63ff15', fontSize: 10, fontWeight: '900', marginTop: 4, letterSpacing: 1 },
+    noRoutineText: { color: '#52525B', fontSize: 13, fontStyle: 'italic' },
     weekActions: { flexDirection: 'row', alignItems: 'center', gap: 15 },
     playBtn: { marginRight: 5 },
-    guideCard: { marginTop: 30, backgroundColor: '#080808', padding: 20, borderRadius: 20, borderStyle: 'dotted', borderWidth: 1, borderColor: '#222' },
-    guideT: { color: '#63ff15', fontSize: 10, fontWeight: '900', marginBottom: 8 },
-    guideS: { color: '#444', fontSize: 11, lineHeight: 18 },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'flex-end' },
-    modalContent: { backgroundColor: '#111', borderTopLeftRadius: 40, borderTopRightRadius: 40, padding: 30, height: height * 0.5 },
-    modalHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
-    modalTitle: { color: 'white', fontSize: 22, fontWeight: '900' },
-    label: { color: '#444', fontSize: 10, fontWeight: '900', marginBottom: 10 },
-    input: { backgroundColor: '#0a0a0a', padding: 18, borderRadius: 15, color: 'white', marginBottom: 20, borderWidth: 1, borderColor: '#222' },
-    saveMain: { backgroundColor: '#63ff15', padding: 20, borderRadius: 18, alignItems: 'center' },
-    saveText: { color: 'black', fontWeight: '900', fontSize: 16 },
-    hintText: { color: '#333', fontSize: 10, marginTop: 15, textAlign: 'center' },
-    animOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center', zIndex: 100 },
-    animT: { color: '#63ff15', fontSize: 24, fontWeight: '900' }
+    guideCardBlur: { marginTop: 40, borderRadius: 25, overflow: 'hidden' },
+    guideCard: { 
+        backgroundColor: 'rgba(10,10,10,0.6)', 
+        padding: 24, 
+        borderWidth: 1, 
+        borderColor: 'rgba(255,255,255,0.05)',
+        borderStyle: 'dashed'
+    },
+    guideT: { color: '#63ff15', fontSize: 12, fontWeight: '900', marginBottom: 12, letterSpacing: 2 },
+    guideS: { color: '#A1A1AA', fontSize: 12, lineHeight: 22, fontWeight: '500' },
+    modalOverlay: { flex: 1, justifyContent: 'flex-end' },
+    modalContent: { 
+        backgroundColor: '#0A0A0A', 
+        borderTopLeftRadius: 40, 
+        borderTopRightRadius: 40, 
+        padding: 30, 
+        paddingTop: 15,
+        height: height * 0.8,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)'
+    },
+    modalBar: { width: 40, height: 5, backgroundColor: '#333', borderRadius: 10, alignSelf: 'center', marginBottom: 20 },
+    modalHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    modalTitle: { color: '#FFFFFF', fontSize: 26, fontWeight: '900' },
+    label: { color: '#63ff15', fontSize: 11, fontWeight: '900', marginBottom: 12, letterSpacing: 1.5 },
+    input: { 
+        backgroundColor: '#121212', 
+        padding: 15, 
+        borderRadius: 15, 
+        color: '#FFFFFF', 
+        marginBottom: 20, 
+        borderWidth: 1, 
+        borderColor: 'rgba(255,255,255,0.1)',
+        fontSize: 16
+    },
+    quickLibSection: {
+        marginBottom: 20,
+    },
+    quickLib: {
+        flexDirection: 'row',
+        marginTop: 5,
+    },
+    quickChip: {
+        backgroundColor: '#1a1a1a',
+        paddingHorizontal: 15,
+        paddingVertical: 8,
+        borderRadius: 20,
+        marginRight: 10,
+        borderWidth: 1,
+        borderColor: '#333',
+    },
+    quickChipText: {
+        color: '#63ff15',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    exerciseSection: {
+        flex: 1,
+        marginBottom: 20,
+    },
+    exerciseHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    addExerciseBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        backgroundColor: 'rgba(99,255,21,0.1)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 12,
+    },
+    addExerciseText: {
+        color: '#63ff15',
+        fontSize: 10,
+        fontWeight: '900',
+    },
+    exerciseList: {
+        backgroundColor: '#0f0f0f',
+        borderRadius: 20,
+        padding: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+    },
+    exerciseItem: {
+        backgroundColor: '#161616',
+        borderRadius: 15,
+        padding: 12,
+        marginBottom: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+    },
+    exRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10,
+        gap: 10,
+    },
+    exInput: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '700',
+        paddingVertical: 5,
+    },
+    exDetailsRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: 10,
+    },
+    exDetailGroup: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    exDetailLabel: {
+        color: '#444',
+        fontSize: 9,
+        fontWeight: '900',
+        marginBottom: 4,
+    },
+    exDetailInput: {
+        backgroundColor: '#0a0a0a',
+        width: '100%',
+        paddingVertical: 6,
+        borderRadius: 10,
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '900',
+        textAlign: 'center',
+        borderWidth: 1,
+        borderColor: '#222',
+    },
+    pasteBtn: {
+        marginRight: 10,
+        opacity: 0.9,
+    },
+    saveMain: { borderRadius: 20, overflow: 'hidden', elevation: 15, shadowColor: '#63ff15', shadowOpacity: 0.3, shadowRadius: 15 },
+    saveGradient: { padding: 18, alignItems: 'center' },
+    saveText: { color: '#000', fontWeight: '900', fontSize: 18, letterSpacing: 1 },
+    hintText: { color: '#52525B', fontSize: 11, marginTop: 15, textAlign: 'center', lineHeight: 18 },
+    animOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', zIndex: 100 },
+    animT: { color: '#63ff15', fontSize: 28, fontWeight: '900', letterSpacing: 4, marginBottom: 20 },
+    animSub: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', letterSpacing: 2, marginTop: 15 },
 });
+

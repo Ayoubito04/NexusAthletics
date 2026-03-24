@@ -5,18 +5,21 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { useNavigation } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 
 import Config from '../constants/Config';
 
 const BACKEND_URL = Config.BACKEND_URL;
 
 export default function StepCounter() {
+    const navigation = useNavigation();
     const [currentSteps, setCurrentSteps] = useState(0);
     const [isPedometerAvailable, setIsPedometerAvailable] = useState('checking');
     const [dailyGoal] = useState(10000);
     const [subscription, setSubscription] = useState(null);
 
-    // Animaciones mejoradas
+    // Animaciones
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const pulseAnim = useRef(new Animated.Value(1)).current;
     const rotateAnim = useRef(new Animated.Value(0)).current;
@@ -26,10 +29,21 @@ export default function StepCounter() {
         initPedometer();
         loadTodaySteps();
 
+        // Loop de pulso
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulseAnim, { toValue: 1.03, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                Animated.timing(pulseAnim, { toValue: 1, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
+            ])
+        ).start();
+
+        // Rotación sutil
+        Animated.loop(
+            Animated.timing(rotateAnim, { toValue: 1, duration: 20000, easing: Easing.linear, useNativeDriver: true })
+        ).start();
+
         return () => {
-            if (subscription) {
-                subscription.remove();
-            }
+            if (subscription) subscription.remove();
         };
     }, []);
 
@@ -44,98 +58,77 @@ export default function StepCounter() {
         }).start();
     }, [currentSteps]);
 
-    // Guardar pasos cada minuto
+    // Polling de pasos (para capturar lo que el servicio de fondo guarda)
     useEffect(() => {
         const interval = setInterval(() => {
-            saveTodaySteps();
+            loadTodaySteps();
             syncWithBackend();
-        }, 60000);
+        }, 10000); // 10 segundos
 
         return () => clearInterval(interval);
-    }, [currentSteps]);
-
-    // Animación de pulso continuo mejorada
-    useEffect(() => {
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(pulseAnim, {
-                    toValue: 1.03,
-                    duration: 2000,
-                    easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: true,
-                }),
-                Animated.timing(pulseAnim, {
-                    toValue: 1,
-                    duration: 2000,
-                    easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: true,
-                })
-            ])
-        ).start();
-
-        // Rotación sutil
-        Animated.loop(
-            Animated.timing(rotateAnim, {
-                toValue: 1,
-                duration: 20000,
-                easing: Easing.linear,
-                useNativeDriver: true,
-            })
-        ).start();
     }, []);
+    const lastResultSteps = useRef(0);
 
     const loadTodaySteps = async () => {
         try {
             const today = new Date().toDateString();
-            const stored = await AsyncStorage.getItem('steps_data');
+            
+            // Obtener el ID del usuario actual
+            const userJson = await AsyncStorage.getItem('user');
+            const userDataParsed = userJson ? JSON.parse(userJson) : null;
+            const userId = userDataParsed?._id || userDataParsed?.id || 'default';
+            const STEPS_KEY = `steps_data_${userId}`;
+
+            const stored = await AsyncStorage.getItem(STEPS_KEY);
             if (stored) {
                 const data = JSON.parse(stored);
                 if (data.date === today) {
-                    setCurrentSteps(data.steps);
+                    // Solo actualizar si el valor en storage es mayor al actual (evita saltos hacia atrás)
+                    if (data.steps > currentSteps) {
+                        setCurrentSteps(data.steps);
+                    }
                 } else {
-                    await AsyncStorage.setItem('steps_data', JSON.stringify({
-                        date: today,
-                        steps: 0
-                    }));
+                    await AsyncStorage.setItem(STEPS_KEY, JSON.stringify({ date: today, steps: 0 }));
                     setCurrentSteps(0);
+                    lastResultSteps.current = 0;
                 }
             }
-        } catch (error) {
-            // Silent error handling
-        }
+        } catch (error) { }
     };
 
     const saveTodaySteps = async () => {
         try {
             const today = new Date().toDateString();
-            await AsyncStorage.setItem('steps_data', JSON.stringify({
-                date: today,
-                steps: currentSteps
-            }));
-        } catch (error) {
-            // Silent error handling
-        }
+            const userJson = await AsyncStorage.getItem('user');
+            const userDataParsed = userJson ? JSON.parse(userJson) : null;
+            const userId = userDataParsed?._id || userDataParsed?.id || 'default';
+            const STEPS_KEY = `steps_data_${userId}`;
+
+            await AsyncStorage.setItem(STEPS_KEY, JSON.stringify({ date: today, steps: currentSteps }));
+        } catch (error) { }
     };
 
     const syncWithBackend = async () => {
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) return;
-
             await fetch(`${BACKEND_URL}/user/sync-steps`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    steps: currentSteps,
-                    date: new Date().toISOString()
-                })
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ steps: currentSteps, date: new Date().toISOString() })
             });
-        } catch (error) {
-            // Silent error handling
-        }
+        } catch (error) { }
+    };
+
+    const handleManualRefresh = async () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await loadTodaySteps();
+        await syncWithBackend();
+        
+        Animated.sequence([
+            Animated.timing(scaleAnim, { toValue: 0.95, duration: 100, useNativeDriver: true }),
+            Animated.spring(scaleAnim, { toValue: 1, friction: 3, useNativeDriver: true })
+        ]).start();
     };
 
     const initPedometer = async () => {
@@ -143,43 +136,50 @@ export default function StepCounter() {
         setIsPedometerAvailable(String(isAvailable));
 
         if (isAvailable) {
+            lastResultSteps.current = 0; // Reset inicial
             const sub = Pedometer.watchStepCount(result => {
-                setCurrentSteps(prev => {
-                    const newTotal = prev + result.steps;
-                    
-                    // Animación al detectar pasos
+                const delta = result.steps - lastResultSteps.current;
+                lastResultSteps.current = result.steps;
+
+                if (delta > 0) {
+                    setCurrentSteps(prev => {
+                        const newTotal = prev + delta;
+                        saveImmediate(newTotal);
+                        return newTotal;
+                    });
+
                     Animated.sequence([
                         Animated.timing(scaleAnim, { toValue: 1.15, duration: 100, useNativeDriver: true }),
                         Animated.spring(scaleAnim, { toValue: 1, friction: 3, useNativeDriver: true })
                     ]).start();
-
-                    return newTotal;
-                });
+                }
             });
-
             setSubscription(sub);
         }
     };
 
+    const saveImmediate = async (steps) => {
+        const today = new Date().toDateString();
+        const userJson = await AsyncStorage.getItem('user');
+        const userDataParsed = userJson ? JSON.parse(userJson) : null;
+        const userId = userDataParsed?._id || userDataParsed?.id || 'default';
+        const STEPS_KEY = `steps_data_${userId}`;
+
+        await AsyncStorage.setItem(STEPS_KEY, JSON.stringify({ date: today, steps }));
+    };
+
     const progress = (currentSteps / dailyGoal) * 100;
     const progressClamped = Math.min(progress, 100);
-
     const calories = Math.round(currentSteps * 0.04);
-    const distance = (currentSteps * 0.0008).toFixed(2);
+    const distanceVal = (currentSteps * 0.0008).toFixed(2);
     const minutes = Math.round(currentSteps * 0.01);
 
-    const spin = rotateAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0deg', '360deg']
-    });
+    const spin = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
 
     if (isPedometerAvailable === 'false') {
         return (
             <View style={styles.errorContainer}>
-                <LinearGradient
-                    colors={['#1a0505', '#0a0a0a']}
-                    style={StyleSheet.absoluteFill}
-                />
+                <LinearGradient colors={['#1a0505', '#0a0a0a']} style={StyleSheet.absoluteFill} />
                 <Ionicons name="alert-circle" size={50} color="#ff4d4d" />
                 <Text style={styles.errorTitle}>Pedómetro No Disponible</Text>
                 <Text style={styles.errorText}>Este dispositivo no soporta el contador de pasos</Text>
@@ -190,32 +190,20 @@ export default function StepCounter() {
     if (isPedometerAvailable === 'checking') {
         return (
             <View style={styles.loadingContainer}>
-                <LinearGradient
-                    colors={['#1a1a1a', '#0d0d0d']}
-                    style={StyleSheet.absoluteFill}
-                />
                 <Animated.View style={{ transform: [{ rotate: spin }] }}>
                     <MaterialCommunityIcons name="loading" size={40} color="#63ff15" />
                 </Animated.View>
-                <Text style={styles.loadingText}>Iniciando Pedómetro...</Text>
             </View>
         );
     }
 
     return (
         <View style={styles.container}>
-            <LinearGradient
-                colors={['#0f0f0f', '#050505']}
-                style={StyleSheet.absoluteFill}
-            />
-            
-            {/* Header con efecto glass */}
+            <LinearGradient colors={['#0f0f0f', '#050505']} style={StyleSheet.absoluteFill} />
+
             <View style={styles.header}>
                 <View style={styles.headerLeft}>
-                    <LinearGradient
-                        colors={['#63ff15', '#4dd10e']}
-                        style={styles.iconGradient}
-                    >
+                    <LinearGradient colors={['#63ff15', '#4dd10e']} style={styles.iconGradient}>
                         <Ionicons name="footsteps" size={22} color="black" />
                     </LinearGradient>
                     <View>
@@ -223,28 +211,19 @@ export default function StepCounter() {
                         <Text style={styles.subtitle}>Seguimiento Automático</Text>
                     </View>
                 </View>
-                <TouchableOpacity 
-                    style={styles.syncBadge} 
-                    onPress={() => { syncWithBackend(); saveTodaySteps(); }}
-                    activeOpacity={0.7}
-                    data-testid="sync-steps-btn"
-                >
-                    <Ionicons name="cloud-done" size={16} color="#63ff15" />
+                <TouchableOpacity style={styles.syncBadge} onPress={handleManualRefresh}>
+                    <Ionicons name="sync" size={18} color="#63ff15" />
                 </TouchableOpacity>
             </View>
 
-            {/* Círculo de progreso premium */}
             <View style={styles.circleContainer}>
                 <Animated.View style={[styles.outerCircle, { transform: [{ scale: pulseAnim }] }]}>
-                    {/* Glow effect */}
                     <LinearGradient
                         colors={progressClamped >= 100 ? ['rgba(255,215,0,0.15)', 'transparent'] : ['rgba(99,255,21,0.1)', 'transparent']}
                         style={styles.glowEffect}
                     />
-                    
-                    {/* Anillo de progreso animado */}
                     <View style={styles.progressRing}>
-                        <Animated.View 
+                        <Animated.View
                             style={[
                                 styles.progressFill,
                                 {
@@ -258,8 +237,6 @@ export default function StepCounter() {
                             ]}
                         />
                     </View>
-
-                    {/* Contenido central */}
                     <Animated.View style={[styles.innerCircle, { transform: [{ scale: scaleAnim }] }]}>
                         <Text style={styles.stepsNumber}>{currentSteps.toLocaleString()}</Text>
                         <Text style={styles.stepsLabel}>pasos</Text>
@@ -271,7 +248,6 @@ export default function StepCounter() {
                 </Animated.View>
             </View>
 
-            {/* Barra de progreso premium */}
             <View style={styles.progressSection}>
                 <View style={styles.progressInfo}>
                     <Text style={styles.progressLabel}>Progreso Diario</Text>
@@ -280,10 +256,10 @@ export default function StepCounter() {
                     </Text>
                 </View>
                 <View style={styles.progressBarContainer}>
-                    <Animated.View 
+                    <Animated.View
                         style={[
-                            styles.progressBarFill, 
-                            { 
+                            styles.progressBarFill,
+                            {
                                 width: progressAnim.interpolate({
                                     inputRange: [0, 100],
                                     outputRange: ['0%', '100%']
@@ -293,21 +269,13 @@ export default function StepCounter() {
                     >
                         <LinearGradient
                             colors={progressClamped >= 100 ? ['#FFD700', '#FFA500'] : ['#63ff15', '#00D1FF']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
+                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                             style={StyleSheet.absoluteFill}
                         />
                     </Animated.View>
                 </View>
-                {progressClamped >= 100 && (
-                    <View style={styles.completeBadge}>
-                        <Ionicons name="trophy" size={16} color="#FFD700" />
-                        <Text style={styles.completeText}>¡Meta Alcanzada!</Text>
-                    </View>
-                )}
             </View>
 
-            {/* Stats Grid mejorado */}
             <View style={styles.statsGrid}>
                 <View style={styles.statCard}>
                     <View style={[styles.statIconCircle, { backgroundColor: 'rgba(255,107,53,0.15)' }]}>
@@ -316,15 +284,13 @@ export default function StepCounter() {
                     <Text style={styles.statValue}>{calories}</Text>
                     <Text style={styles.statLabel}>Calorías</Text>
                 </View>
-
                 <View style={styles.statCard}>
                     <View style={[styles.statIconCircle, { backgroundColor: 'rgba(0,209,255,0.15)' }]}>
                         <Ionicons name="navigate" size={24} color="#00D1FF" />
                     </View>
-                    <Text style={styles.statValue}>{distance}</Text>
+                    <Text style={styles.statValue}>{distanceVal}</Text>
                     <Text style={styles.statLabel}>Kilómetros</Text>
                 </View>
-
                 <View style={styles.statCard}>
                     <View style={[styles.statIconCircle, { backgroundColor: 'rgba(255,215,0,0.15)' }]}>
                         <Ionicons name="time" size={24} color="#FFD700" />
@@ -334,293 +300,62 @@ export default function StepCounter() {
                 </View>
             </View>
 
-            {/* Botón de sincronización premium */}
-            <TouchableOpacity
-                style={styles.syncButton}
-                onPress={() => {
-                    syncWithBackend();
-                    saveTodaySteps();
-                    Animated.sequence([
-                        Animated.timing(scaleAnim, { toValue: 0.95, duration: 100, useNativeDriver: true }),
-                        Animated.spring(scaleAnim, { toValue: 1, friction: 3, useNativeDriver: true })
-                    ]).start();
-                }}
-                activeOpacity={0.8}
-                data-testid="sync-now-btn"
-            >
-                <LinearGradient
-                    colors={['#63ff15', '#4dd10e']}
-                    style={styles.syncButtonGradient}
+            <View style={styles.actionButtons}>
+                <TouchableOpacity
+                    style={styles.historyButton}
+                    onPress={() => navigation.navigate('StepsHistory')}
                 >
-                    <Ionicons name="cloud-upload" size={20} color="black" />
-                    <Text style={styles.syncButtonText}>SINCRONIZAR AHORA</Text>
-                </LinearGradient>
-            </TouchableOpacity>
+                    <LinearGradient colors={['#007AFF', '#00D1FF']} style={styles.historyButtonGradient}>
+                        <Ionicons name="stats-chart" size={20} color="white" />
+                        <Text style={styles.historyButtonText}>VER HISTORIAL</Text>
+                    </LinearGradient>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.syncButtonSmall} onPress={handleManualRefresh}>
+                    <Ionicons name="refresh" size={24} color="#63ff15" />
+                </TouchableOpacity>
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        borderRadius: 24,
-        padding: 24,
-        marginVertical: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
-        overflow: 'hidden',
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 24,
-    },
-    headerLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 14,
-    },
-    iconGradient: {
-        width: 48,
-        height: 48,
-        borderRadius: 14,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    title: {
-        color: 'white',
-        fontSize: 17,
-        fontWeight: '800',
-        letterSpacing: -0.3,
-    },
-    subtitle: {
-        color: '#52525B',
-        fontSize: 11,
-        fontWeight: '600',
-        marginTop: 2,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    syncBadge: {
-        backgroundColor: 'rgba(99,255,21,0.1)',
-        padding: 12,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.2)',
-    },
-    circleContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginVertical: 16,
-    },
-    outerCircle: {
-        width: 200,
-        height: 200,
-        borderRadius: 100,
-        borderWidth: 2,
-        borderColor: 'rgba(255,255,255,0.06)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        position: 'relative',
-        overflow: 'hidden',
-        backgroundColor: '#0a0a0a',
-    },
-    glowEffect: {
-        position: 'absolute',
-        width: '150%',
-        height: '150%',
-        borderRadius: 200,
-    },
-    progressRing: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: '100%',
-        overflow: 'hidden',
-    },
-    progressFill: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-    },
-    innerCircle: {
-        width: 160,
-        height: 160,
-        borderRadius: 80,
-        backgroundColor: '#050505',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.06)',
-    },
-    stepsNumber: {
-        fontSize: 36,
-        fontWeight: '900',
-        color: '#63ff15',
-        letterSpacing: -1,
-    },
-    stepsLabel: {
-        fontSize: 13,
-        color: '#71717A',
-        fontWeight: '600',
-        marginTop: 2,
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-    },
-    goalBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        marginTop: 8,
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 8,
-    },
-    goalText: {
-        fontSize: 10,
-        color: '#71717A',
-        fontWeight: '700',
-    },
-    progressSection: {
-        marginBottom: 24,
-    },
-    progressInfo: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 10,
-    },
-    progressLabel: {
-        color: '#71717A',
-        fontSize: 11,
-        fontWeight: '700',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    progressPercent: {
-        color: '#63ff15',
-        fontSize: 15,
-        fontWeight: '900',
-    },
-    progressBarContainer: {
-        height: 12,
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        borderRadius: 8,
-        overflow: 'hidden',
-    },
-    progressBarFill: {
-        height: '100%',
-        borderRadius: 8,
-        overflow: 'hidden',
-    },
-    completeBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        marginTop: 12,
-        backgroundColor: 'rgba(255,215,0,0.1)',
-        padding: 10,
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: 'rgba(255,215,0,0.2)',
-    },
-    completeText: {
-        color: '#FFD700',
-        fontSize: 12,
-        fontWeight: '800',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    statsGrid: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 20,
-        gap: 10,
-    },
-    statCard: {
-        flex: 1,
-        backgroundColor: 'rgba(255,255,255,0.03)',
-        padding: 16,
-        borderRadius: 16,
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
-    },
-    statIconCircle: {
-        width: 48,
-        height: 48,
-        borderRadius: 14,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 10,
-    },
-    statValue: {
-        fontSize: 20,
-        fontWeight: '900',
-        color: 'white',
-        letterSpacing: -0.5,
-    },
-    statLabel: {
-        fontSize: 10,
-        color: '#52525B',
-        marginTop: 4,
-        fontWeight: '600',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    syncButton: {
-        borderRadius: 12,
-        overflow: 'hidden',
-    },
-    syncButtonGradient: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 16,
-        gap: 10,
-    },
-    syncButtonText: {
-        color: 'black',
-        fontWeight: '800',
-        fontSize: 13,
-        letterSpacing: 0.5,
-    },
-    errorContainer: {
-        borderRadius: 20,
-        padding: 30,
-        alignItems: 'center',
-        gap: 15,
-        borderWidth: 1,
-        borderColor: 'rgba(255,77,77,0.2)',
-        overflow: 'hidden',
-    },
-    errorTitle: {
-        color: '#ff4d4d',
-        fontSize: 17,
-        fontWeight: '800',
-    },
-    errorText: {
-        color: '#ff4d4d',
-        fontSize: 13,
-        textAlign: 'center',
-        opacity: 0.7,
-    },
-    loadingContainer: {
-        borderRadius: 20,
-        padding: 30,
-        alignItems: 'center',
-        gap: 15,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
-        overflow: 'hidden',
-    },
-    loadingText: {
-        color: '#71717A',
-        fontSize: 13,
-        fontWeight: '600',
-    },
+    container: { borderRadius: 24, padding: 24, marginVertical: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', overflow: 'hidden' },
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+    headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+    iconGradient: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+    title: { color: 'white', fontSize: 17, fontWeight: '800' },
+    subtitle: { color: '#52525B', fontSize: 11, fontWeight: '600', textTransform: 'uppercase' },
+    syncBadge: { backgroundColor: 'rgba(99,255,21,0.1)', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(99,255,21,0.2)' },
+    circleContainer: { alignItems: 'center', justifyContent: 'center', marginVertical: 16 },
+    outerCircle: { width: 200, height: 200, borderRadius: 100, borderWidth: 2, borderColor: 'rgba(255,255,255,0.06)', justifyContent: 'center', alignItems: 'center', position: 'relative', overflow: 'hidden', backgroundColor: '#0a0a0a' },
+    glowEffect: { position: 'absolute', width: '150%', height: '150%', borderRadius: 200 },
+    progressRing: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '100%', overflow: 'hidden' },
+    progressFill: { position: 'absolute', bottom: 0, left: 0, right: 0 },
+    innerCircle: { width: 160, height: 160, borderRadius: 80, backgroundColor: '#050505', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+    stepsNumber: { fontSize: 36, fontWeight: '900', color: '#63ff15' },
+    stepsLabel: { fontSize: 13, color: '#71717A', fontWeight: '600', textTransform: 'uppercase' },
+    goalBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8, backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+    goalText: { fontSize: 10, color: '#71717A', fontWeight: '700' },
+    progressSection: { marginBottom: 24 },
+    progressInfo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+    progressLabel: { color: '#71717A', fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
+    progressPercent: { color: '#63ff15', fontSize: 15, fontWeight: '900' },
+    progressBarContainer: { height: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8, overflow: 'hidden' },
+    progressBarFill: { height: '100%', borderRadius: 8, overflow: 'hidden' },
+    statsGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, gap: 10 },
+    statCard: { flex: 1, backgroundColor: 'rgba(255,255,255,0.03)', padding: 16, borderRadius: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+    statIconCircle: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
+    statValue: { fontSize: 20, fontWeight: '900', color: 'white' },
+    statLabel: { fontSize: 10, color: '#52525B', marginTop: 4, fontWeight: '600', textTransform: 'uppercase' },
+    actionButtons: { flexDirection: 'row', gap: 10 },
+    historyButton: { flex: 1, borderRadius: 12, overflow: 'hidden' },
+    historyButtonGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, gap: 10 },
+    historyButtonText: { color: 'white', fontWeight: '800', fontSize: 13 },
+    syncButtonSmall: { width: 56, height: 56, borderRadius: 12, backgroundColor: 'rgba(99,255,21,0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(99,255,21,0.2)' },
+    errorContainer: { borderRadius: 20, padding: 30, alignItems: 'center', gap: 15, borderWidth: 1, borderColor: 'rgba(255,77,77,0.2)', overflow: 'hidden' },
+    errorTitle: { color: '#ff4d4d', fontSize: 17, fontWeight: '800' },
+    errorText: { color: '#ff4d4d', fontSize: 13, textAlign: 'center', opacity: 0.7 },
+    loadingContainer: { borderRadius: 20, padding: 30, alignItems: 'center', gap: 15, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', overflow: 'hidden' },
+    loadingText: { color: '#71717A', fontSize: 13, fontWeight: '600' },
 });

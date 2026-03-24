@@ -18,7 +18,6 @@ import Home from './screen/Home';
 import Details from './screen/Details';
 import Login from './screen/Login';
 import Register from './screen/register';
-import ActivityMap from './screen/ActivityMap';
 import ActividadGuardada from './screen/ActividadGuardada';
 import CalcularCalorias from './screen/CalcularCalorias';
 import PlanesPago from './screen/PlanesPago';
@@ -48,10 +47,140 @@ import VoiceCoach from './screen/VoiceCoach';
 import MuscleRankings from './screen/MuscleRankings';
 import WelcomePlans from './screen/WelcomePlans';
 import Notifications from './screen/Notifications';
+import StepsHistory from './screen/StepsHistory';
+
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
+
+import { BlurView } from 'expo-blur';
+
+import * as Haptics from 'expo-haptics';
 
 const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
+
+function TabNavigator() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarShowLabel: true,
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '800',
+          marginBottom: 8,
+          textTransform: 'uppercase',
+          letterSpacing: 0.5,
+        },
+        tabBarStyle: {
+          backgroundColor: 'transparent',
+          position: 'absolute',
+          bottom: 20,
+          left: 15,
+          right: 15,
+          height: 75,
+          borderRadius: 30,
+          borderTopWidth: 0,
+          elevation: 10,
+          shadowColor: '#63ff15',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.1,
+          shadowRadius: 10,
+          overflow: 'hidden',
+          borderWidth: 1.5,
+          borderColor: 'rgba(255, 255, 255, 0.12)',
+        },
+        tabBarBackground: () => (
+          <BlurView intensity={45} tint="dark" style={StyleSheet.absoluteFill}>
+            <LinearGradient
+              colors={['rgba(255,255,255,0.05)', 'transparent']}
+              style={StyleSheet.absoluteFill}
+            />
+          </BlurView>
+        ),
+        tabBarActiveTintColor: '#63ff15',
+        tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.3)',
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+          if (route.name === 'Dashboard') {
+            iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'Nexus IA') {
+            iconName = focused ? 'sparkles' : 'sparkles-outline';
+          } else if (route.name === 'Estadísticas') {
+            iconName = focused ? 'analytics' : 'analytics-outline';
+          } else if (route.name === 'Comunidad') {
+            iconName = focused ? 'people' : 'people-outline';
+          } else if (route.name === 'Perfil') {
+            iconName = focused ? 'person' : 'person-outline';
+          }
+          return (
+            <View style={{ alignItems: 'center', justifyContent: 'center', marginTop: 5 }}>
+              <Ionicons name={iconName} size={focused ? 24 : 22} color={color} />
+              {focused && (
+                <View style={{
+                  position: 'absolute',
+                  top: -10,
+                  width: 30,
+                  height: 2,
+                  backgroundColor: '#63ff15',
+                  borderRadius: 1,
+                  shadowColor: '#63ff15',
+                  shadowOpacity: 0.8,
+                  shadowRadius: 6,
+                  elevation: 5
+                }} />
+              )}
+            </View>
+          );
+        },
+      })}
+    >
+      <Tab.Screen 
+        name="Dashboard" 
+        component={Home}
+        options={{ tabBarLabel: 'Home' }}
+        listeners={{
+          tabPress: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
+        }}
+      />
+      <Tab.Screen 
+        name="Nexus IA" 
+        component={EntrenadorIA}
+        options={{ tabBarLabel: 'Nexus' }}
+        listeners={{
+          tabPress: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium),
+        }}
+      />
+      <Tab.Screen 
+        name="Estadísticas" 
+        component={Analytics}
+        options={{ tabBarLabel: 'Stats' }}
+        listeners={{
+          tabPress: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
+        }}
+      />
+      <Tab.Screen 
+        name="Comunidad" 
+        component={Community}
+        options={{ tabBarLabel: 'Social' }}
+        listeners={{
+          tabPress: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
+        }}
+      />
+      <Tab.Screen 
+        name="Perfil" 
+        component={Profile}
+        options={{ tabBarLabel: 'Yo' }}
+        listeners={{
+          tabPress: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
+        }}
+      />
+    </Tab.Navigator>
+  );
+}
 
 const forFade = ({ current, next }) => {
+// ... (mantenemos el resto igual)
   const opacity = Animated.add(
     current.progress,
     next ? next.progress : 0
@@ -144,11 +273,11 @@ export default function App() {
             },
           }}
         >
+          <Stack.Screen name="MainTabs" component={TabNavigator} />
           <Stack.Screen name="Home" component={Home} />
           <Stack.Screen name="Details" component={Details} />
           <Stack.Screen name="Login" component={Login} />
           <Stack.Screen name="Register" component={Register} />
-          <Stack.Screen name="ActivityMap" component={ActivityMap} />
           <Stack.Screen name="ActividadGuardada" component={ActividadGuardada} />
           <Stack.Screen name="CalcularCalorias" component={CalcularCalorias} />
           <Stack.Screen name="PlanesPago" component={PlanesPago} />
@@ -177,6 +306,7 @@ export default function App() {
           <Stack.Screen name="MuscleRankings" component={MuscleRankings} />
           <Stack.Screen name="WelcomePlans" component={WelcomePlans} />
           <Stack.Screen name="Notifications" component={Notifications} />
+          <Stack.Screen name="StepsHistory" component={StepsHistory} />
         </Stack.Navigator>
       </NavigationContainer>
     </StripeProvider>

@@ -40,6 +40,8 @@ yarn-error.*
 /ios
 /android
 .env
+# Backend (Moved to independent repo)
+Backend/
 Backend/node_modules/
 Backend/.env
 -e 

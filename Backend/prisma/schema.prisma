@@ -71,6 +71,12 @@ model User {
   // Mensajes Directos
   sentMessages              DirectMessage[] @relation("SentDMs")
   receivedMessages          DirectMessage[] @relation("ReceivedDMs")
+
+  // Tokens OAuth
+  oauthTokens               OAuthToken[]
+
+  // Logs de autenticacion
+  authLogs                  AuthLog[]
 }
 
 model Friendship {
@@ -183,4 +189,35 @@ model SavedPlan {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   planData  Json
   createdAt DateTime @default(now())
+}
+
+// Tokens OAuth para refresh y revocacion
+model OAuthToken {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider      String   // 'google', 'facebook', 'instagram', 'twitter'
+  accessToken   String?  // Token de acceso (puede expirar)
+  refreshToken  String?  // Token de refresco
+  tokenType     String?  // 'bearer', etc.
+  expiresAt     DateTime? // Fecha de expiracion
+  scope         String?  // Permisos otorgados
+  providerId    String?  // ID del usuario en el proveedor
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, provider]) // Un token por usuario/proveedor
+}
+
+// Logs de autenticacion para auditoria
+model AuthLog {
+  id          Int      @id @default(autoincrement())
+  userId      Int?
+  action      String   // 'login', 'logout', 'register', 'oauth_login', 'token_refresh', 'account_link'
+  provider    String?  // 'email', 'google', 'facebook', 'instagram', 'twitter'
+  ipAddress   String?
+  userAgent   String?
+  success     Boolean  @default(true)
+  errorMessage String?
+  createdAt   DateTime @default(now())
 }

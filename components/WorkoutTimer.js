@@ -31,8 +31,12 @@ export default function WorkoutTimer({ visible, exercises = [], onClose, onCompl
     // Inicializar inputs cuando cambia el ejercicio
     useEffect(() => {
         if (currentExercise) {
-            setCurrentReps(currentExercise.reps?.toString().split('-')[0] || '12');
-            setCurrentWeight('');
+            // Usar reps planificadas si existen (pueden venir como número o string rango)
+            const targetReps = currentExercise.reps?.toString().split('-')[0] || '12';
+            setCurrentReps(targetReps);
+            
+            // Usar peso planificado si existe
+            setCurrentWeight(currentExercise.weight ? currentExercise.weight.toString() : '');
         }
     }, [currentExerciseIndex]);
 

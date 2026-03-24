@@ -3,8 +3,11 @@ const jwt = require('jsonwebtoken');
 const { prisma } = require('../config/prisma');
 const axios = require('axios');
 const { Resend } = require('resend');
+const oauthService = require('../services/oauthService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto_por_defecto';
+const JWT_EXPIRES_IN = '30d';
+const JWT_REFRESH_EXPIRES_IN = '7d';
 
 // Inicialización segura de Resend
 const resendApiKey = process.env.RESEND_API_KEY;
@@ -13,6 +16,7 @@ const resend = (resendApiKey && resendApiKey !== 're_tu_api_key') ? new Resend(r
 function generateVCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
+
 
 function generateReferralCode(nombre) {
     const prefix = nombre ? nombre.slice(0, 3).toUpperCase() : 'NEX';
@@ -281,8 +285,10 @@ const socialLogin = async (req, res) => {
 
         console.log("✅ Datos de usuario extraídos:", userData);
 
+        // Buscar el usuario existente en la BD por email
         let user = await prisma.user.findUnique({ where: { email: userData.email } });
 
+        let isNewUser = false;
         if (!user) {
             console.log("📝 Creando nuevo usuario...");
             user = await prisma.user.create({
@@ -300,6 +306,7 @@ const socialLogin = async (req, res) => {
                     referralCode: generateReferralCode(userData.nombre)
                 }
             });
+            isNewUser = true;
             console.log("✅ Usuario creado:", user.id);
         } else {
             console.log("✅ Usuario existente encontrado:", user.id);
@@ -339,7 +346,7 @@ const socialLogin = async (req, res) => {
         const { password: _, ...userWithoutPassword } = user;
 
         console.log("✅ Login social exitoso, devolviendo token");
-        res.json({ user: userWithoutPassword, token });
+        res.json({ user: userWithoutPassword, token, isNewUser });
 
     } catch (error) {
         console.error("❌ Error en login social:", error.response?.data || error.message);
@@ -359,4 +366,360 @@ const getMe = async (req, res) => {
     }
 };
 
-module.exports = { register, login, getMe, verify2FA, resend2FACode, socialLogin };
+const supabaseSync = async (req, res) => {
+    try {
+        const { accessToken } = req.body;
+
+        if (!accessToken) {
+            return res.status(400).json({ error: "Access token is required" });
+        }
+
+        // Validamos el token con Supabase directamente
+        const supabaseUrl = process.env.SUPABASE_URL || 'https://gbtxcjprfqmghdhqvyfb.supabase.co';
+        const response = await axios.get(`${supabaseUrl}/auth/v1/user`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'apikey': process.env.SUPABASE_ANON_KEY || ''
+            }
+        });
+
+        const supabaseUser = response.data;
+        if (!supabaseUser || !supabaseUser.email) {
+            return res.status(401).json({ error: "Token de Supabase inválido" });
+        }
+
+        // Buscamos o creamos el usuario en nuestra DB
+        let user = await prisma.user.findUnique({
+            where: { email: supabaseUser.email }
+        });
+
+        let isNewUser = false;
+
+        if (!user) {
+            user = await prisma.user.create({
+                data: {
+                    email: supabaseUser.email,
+                    nombre: supabaseUser.user_metadata?.full_name || supabaseUser.email,
+                    plan: 'Gratis',
+                    role: 'USER',
+                    referralCode: generateReferralCode(supabaseUser.user_metadata?.full_name),
+                }
+            });
+            isNewUser = true;
+        }
+
+        // Generamos nuestro propio JWT
+        const token = jwt.sign(
+            { id: user.id, email: user.email, role: user.role },
+            JWT_SECRET,
+            { expiresIn: '30d' }
+        );
+
+        const { password: _, ...userWithoutPassword } = user;
+        res.json({ user: userWithoutPassword, token, isNewUser });
+
+    } catch (error) {
+        console.error("❌ Error en supabaseSync:", error.response?.data || error.message);
+        res.status(error.response?.status || 500).json({
+            error: "Error sincronizando sesión con Supabase",
+            details: error.response?.data || error.message
+        });
+    }
+};
+
+
+
+
+
+/**
+ * Refresca el token JWT
+ * Permite mantener la sesion activa sin necesidad de re-login
+ */
+const refreshToken = async (req, res) => {
+    try {
+        const { refreshToken: oldRefreshToken } = req.body;
+
+        if (!oldRefreshToken) {
+            return res.status(400).json({
+                error: 'Refresh token requerido',
+                code: 'MISSING_REFRESH_TOKEN'
+            });
+        }
+
+        // Verificar el refresh token
+        let decoded;
+        try {
+            decoded = jwt.verify(oldRefreshToken, JWT_SECRET);
+        } catch (err) {
+            return res.status(401).json({
+                error: 'Refresh token invalido o expirado',
+                code: 'INVALID_REFRESH_TOKEN'
+            });
+        }
+
+        // Verificar que el usuario existe
+        const user = await prisma.user.findUnique({
+            where: { id: decoded.id }
+        });
+
+        if (!user) {
+            return res.status(404).json({
+                error: 'Usuario no encontrado',
+                code: 'USER_NOT_FOUND'
+            });
+        }
+
+        // Generar nuevos tokens
+        const newToken = jwt.sign(
+            { id: user.id, email: user.email, role: user.role },
+            JWT_SECRET,
+            { expiresIn: JWT_EXPIRES_IN }
+        );
+
+        const newRefreshToken = jwt.sign(
+            { id: user.id, email: user.email, role: user.role },
+            JWT_SECRET,
+            { expiresIn: JWT_REFRESH_EXPIRES_IN }
+        );
+
+        // Registrar el refresh
+        await oauthService.logAuthAction(user.id, 'token_refresh', 'jwt', true, null, req);
+
+        res.json({
+            token: newToken,
+            refreshToken: newRefreshToken,
+            expiresIn: 30 * 24 * 60 * 60 * 1000 // 30 dias en ms
+        });
+
+    } catch (error) {
+        console.error('Error en refreshToken:', error);
+        res.status(500).json({
+            error: 'Error al refrescar el token',
+            code: 'REFRESH_ERROR'
+        });
+    }
+};
+
+/**
+ * Logout con revocacion de tokens OAuth
+ */
+const logout = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        const { provider, oauthToken } = req.body;
+
+        // Revocar token OAuth con el proveedor si se proporciona
+        if (oauthToken && provider) {
+            await oauthService.revokeOAuthToken(provider, oauthToken);
+        }
+
+        // Registrar logout
+        if (userId) {
+            await oauthService.logAuthAction(userId, 'logout', provider || 'jwt', true, null, req);
+        }
+
+        res.json({
+            success: true,
+            message: 'Sesion cerrada correctamente'
+        });
+
+    } catch (error) {
+        console.error('Error en logout:', error);
+        res.status(500).json({
+            error: 'Error al cerrar sesion',
+            code: 'LOGOUT_ERROR'
+        });
+    }
+};
+
+/**
+ * Vincula una cuenta OAuth a un usuario existente
+ */
+const linkAccount = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { provider, accessToken, idToken } = req.body;
+
+        if (!provider) {
+            return res.status(400).json({
+                error: 'Proveedor requerido',
+                code: 'MISSING_PROVIDER'
+            });
+        }
+
+        if (!['google', 'facebook', 'instagram', 'twitter'].includes(provider)) {
+            return res.status(400).json({
+                error: 'Proveedor no soportado',
+                code: 'UNSUPPORTED_PROVIDER'
+            });
+        }
+
+        // Validar token con el proveedor
+        const tokenType = idToken ? 'idToken' : 'accessToken';
+        const token = idToken || accessToken;
+
+        const validation = await oauthService.validateToken(provider, token, tokenType);
+
+        if (!validation.valid) {
+            return res.status(401).json({
+                error: oauthService.getErrorMessage(validation.error),
+                code: validation.error
+            });
+        }
+
+        // Vincular cuenta
+        const result = await oauthService.linkAccount(
+            userId,
+            provider,
+            validation.userData.id,
+            accessToken,
+            null
+        );
+
+        if (!result.success) {
+            return res.status(400).json({
+                error: result.message || 'Error al vincular cuenta',
+                code: result.error
+            });
+        }
+
+        res.json({
+            success: true,
+            message: `Cuenta de ${provider} vinculada correctamente`,
+            provider,
+            providerUserId: validation.userData.id
+        });
+
+    } catch (error) {
+        console.error('Error en linkAccount:', error);
+        res.status(500).json({
+            error: 'Error al vincular la cuenta',
+            code: 'LINK_ERROR'
+        });
+    }
+};
+
+/**
+ * Desvincula una cuenta OAuth del usuario
+ */
+const unlinkAccount = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { provider } = req.body;
+
+        if (!provider) {
+            return res.status(400).json({
+                error: 'Proveedor requerido',
+                code: 'MISSING_PROVIDER'
+            });
+        }
+
+        // Obtener token OAuth para revocarlo
+        const oauthToken = await oauthService.getValidOAuthToken(userId, provider);
+
+        // Revocar con el proveedor
+        if (oauthToken?.accessToken) {
+            await oauthService.revokeOAuthToken(provider, oauthToken.accessToken);
+        }
+
+        // Desvincular cuenta
+        const result = await oauthService.unlinkAccount(userId, provider);
+
+        if (!result.success) {
+            return res.status(400).json({
+                error: result.message || 'Error al desvincular cuenta',
+                code: result.error
+            });
+        }
+
+        res.json({
+            success: true,
+            message: `Cuenta de ${provider} desvinculada correctamente`
+        });
+
+    } catch (error) {
+        console.error('Error en unlinkAccount:', error);
+        res.status(500).json({
+            error: 'Error al desvincular la cuenta',
+            code: 'UNLINK_ERROR'
+        });
+    }
+};
+
+/**
+ * Obtiene las cuentas OAuth vinculadas del usuario
+ */
+const getLinkedAccounts = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                googleId: true,
+                facebookId: true,
+                instagramId: true,
+                twitterId: true,
+                email: true,
+                password: true,
+            }
+        });
+
+        const linkedAccounts = [];
+
+        if (user.googleId) {
+            linkedAccounts.push({
+                provider: 'google',
+                linked: true,
+                linkedAt: new Date() // TODO: Guardar fecha de vinculacion
+            });
+        }
+        if (user.facebookId) {
+            linkedAccounts.push({
+                provider: 'facebook',
+                linked: true,
+            });
+        }
+        if (user.instagramId) {
+            linkedAccounts.push({
+                provider: 'instagram',
+                linked: true,
+            });
+        }
+        if (user.twitterId) {
+            linkedAccounts.push({
+                provider: 'twitter',
+                linked: true,
+            });
+        }
+
+        res.json({
+            accounts: linkedAccounts,
+            hasPassword: !!user.password,
+            email: user.email
+        });
+
+    } catch (error) {
+        console.error('Error en getLinkedAccounts:', error);
+        res.status(500).json({
+            error: 'Error al obtener cuentas vinculadas',
+            code: 'GET_ACCOUNTS_ERROR'
+        });
+    }
+};
+
+module.exports = {
+    register,
+    login,
+    getMe,
+    verify2FA,
+    resend2FACode,
+    socialLogin,
+    supabaseSync,
+    // Nuevos endpoints
+    refreshToken,
+    logout,
+    linkAccount,
+    unlinkAccount,
+    getLinkedAccounts,
+};

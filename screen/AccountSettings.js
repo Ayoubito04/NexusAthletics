@@ -179,8 +179,20 @@ export default function AccountSettings() {
             "Esta acción es irreversible y perderás todos tus datos, rutinas y logros. ¿Estás seguro?",
             "error",
             async () => {
-                await AsyncStorage.clear();
-                navigation.navigate('Register');
+                try {
+                    const token = await AsyncStorage.getItem('token');
+                    if (token) {
+                        await fetch(`${BACKEND_URL}/user/account`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                    }
+                } catch (e) {
+                    console.warn('Error al eliminar cuenta en el servidor:', e);
+                } finally {
+                    await AsyncStorage.clear();
+                    navigation.navigate('Register');
+                }
             },
             () => { },
             "ELIMINAR TODO"
@@ -315,45 +327,47 @@ export default function AccountSettings() {
                             </TouchableOpacity>
                         </View>
 
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Contraseña Actual</Text>
-                            <TextInput
-                                style={styles.input}
-                                secureTextEntry
-                                value={passwords.current}
-                                onChangeText={(val) => setPasswords({ ...passwords, current: val })}
-                                placeholder="******"
-                                placeholderTextColor="#444"
-                            />
-                        </View>
+                        <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Contraseña Actual</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    secureTextEntry
+                                    value={passwords.current}
+                                    onChangeText={(val) => setPasswords({ ...passwords, current: val })}
+                                    placeholder="******"
+                                    placeholderTextColor="#444"
+                                />
+                            </View>
 
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Nueva Contraseña</Text>
-                            <TextInput
-                                style={styles.input}
-                                secureTextEntry
-                                value={passwords.next}
-                                onChangeText={(val) => setPasswords({ ...passwords, next: val })}
-                                placeholder="Min. 6 caracteres"
-                                placeholderTextColor="#444"
-                            />
-                        </View>
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Nueva Contraseña</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    secureTextEntry
+                                    value={passwords.next}
+                                    onChangeText={(val) => setPasswords({ ...passwords, next: val })}
+                                    placeholder="Min. 6 caracteres"
+                                    placeholderTextColor="#444"
+                                />
+                            </View>
 
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Confirmar Nueva Contraseña</Text>
-                            <TextInput
-                                style={styles.input}
-                                secureTextEntry
-                                value={passwords.confirm}
-                                onChangeText={(val) => setPasswords({ ...passwords, confirm: val })}
-                                placeholder="******"
-                                placeholderTextColor="#444"
-                            />
-                        </View>
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Confirmar Nueva Contraseña</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    secureTextEntry
+                                    value={passwords.confirm}
+                                    onChangeText={(val) => setPasswords({ ...passwords, confirm: val })}
+                                    placeholder="******"
+                                    placeholderTextColor="#444"
+                                />
+                            </View>
 
-                        <TouchableOpacity style={styles.saveBtn} onPress={handleChangePassword} disabled={loading}>
-                            {loading ? <ActivityIndicator color="black" /> : <Text style={styles.saveBtnText}>Sincronizar nueva contraseña</Text>}
-                        </TouchableOpacity>
+                            <TouchableOpacity style={styles.saveBtn} onPress={handleChangePassword} disabled={loading}>
+                                {loading ? <ActivityIndicator color="black" /> : <Text style={styles.saveBtnText}>Sincronizar nueva contraseña</Text>}
+                            </TouchableOpacity>
+                        </ScrollView>
                     </View>
                 </View>
             )}

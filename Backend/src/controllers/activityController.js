@@ -139,6 +139,41 @@ const getStats = async (req, res) => {
             where: { userId }
         });
 
+        // Calcular datos semanales (últimos 7 días)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
+
+        const weeklyActivities = await prisma.activity.findMany({
+            where: {
+                userId,
+                fecha: { gte: sevenDaysAgo }
+            },
+            orderBy: { fecha: 'asc' }
+        });
+
+        // Crear buckets para cada uno de los últimos 7 días
+        const dailyStats = Array.from({ length: 7 }).map((_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - (6 - i));
+            d.setHours(0, 0, 0, 0);
+            return {
+                date: d.toISOString().split('T')[0],
+                calories: 0,
+                distance: 0,
+                dayName: ['D', 'L', 'M', 'X', 'J', 'V', 'S'][d.getDay()]
+            };
+        });
+
+        weeklyActivities.forEach(act => {
+            const actDate = new Date(act.fecha).toISOString().split('T')[0];
+            const bucket = dailyStats.find(b => b.date === actDate);
+            if (bucket) {
+                bucket.calories += (act.calorias || 0);
+                bucket.distance += (act.distancia || 0);
+            }
+        });
+
         const stats = activities.reduce((acc, curr) => {
             acc.totalKm += (curr.distancia / 1000);
             acc.totalKcal += (curr.calorias || 0);
@@ -152,11 +187,13 @@ const getStats = async (req, res) => {
             healthSynced: user.healthSynced,
             healthService: user.healthService,
             healthCalories: user.healthCalories || 0,
-            healthSteps: user.healthSteps || 0
+            healthSteps: user.healthSteps || 0,
+            weeklyProgress: dailyStats // Añadimos el progreso semanal aquí
         });
 
         res.json(stats);
     } catch (error) {
+        console.error("Error en getStats:", error);
         res.status(500).json({ error: "Error al obtener estadísticas" });
     }
 };

@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import NexusAlert from '../components/NexusAlert';
 import Config from '../constants/Config';
+import AchievementsShowcase from '../components/AchievementsShowcase';
 
 const BACKEND_URL = Config.BACKEND_URL;
 
@@ -114,14 +115,19 @@ export default function Profile() {
 
                 <View style={styles.statsRow}>
                     <View style={styles.statBox}>
+                        <LinearGradient colors={['#1a1a1a', '#0a0a0a']} style={StyleSheet.absoluteFill} borderRadius={20} />
                         <Text style={styles.statVal}>{user.mensajesHoy || 0}</Text>
                         <Text style={styles.statLab}>Consultas IA</Text>
                     </View>
                     <View style={styles.statBox}>
-                        <Text style={styles.statVal}>85%</Text>
-                        <Text style={styles.statLab}>Meta Semanal</Text>
+                        <LinearGradient colors={['#1a1a1a', '#0a0a0a']} style={StyleSheet.absoluteFill} borderRadius={20} />
+                        <Text style={styles.statVal}>{user.healthSteps || 0}</Text>
+                        <Text style={styles.statLab}>Pasos Hoy</Text>
                     </View>
                 </View>
+
+                {/* Vitrina de Trofeos */}
+                <AchievementsShowcase user={user} />
 
                 <View style={styles.menuSection}>
                     <Text style={styles.sectionTitle}>Mi Cuerpo (IA Optimization)</Text>

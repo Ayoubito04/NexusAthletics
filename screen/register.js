@@ -1,15 +1,29 @@
 import React, { useState } from 'react';
 import { View, Text, KeyboardAvoidingView, ScrollView, TextInput, TouchableOpacity, StyleSheet, Platform, ActivityIndicator } from 'react-native';
-import { FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Config from '../constants/Config';
 import NexusAlert from '../components/NexusAlert';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
 
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
+import { NativeModules } from 'react-native';
+import { supabase } from '../lib/supabase';
 
 WebBrowser.maybeCompleteAuthSession();
+
+// Carga segura de GoogleSignin
+let GoogleSignin = null;
+try {
+    if (NativeModules.RNGoogleSignin) {
+        const GoogleModule = require('@react-native-google-signin/google-signin');
+        GoogleSignin = GoogleModule.GoogleSignin;
+    }
+} catch (e) {
+    console.log('Error al cargar módulo nativo de Google en Register:', e);
+}
 
 const BACKEND_URL = Config.BACKEND_URL;
 
@@ -41,10 +55,12 @@ export default function Register() {
 
     const handleRegister = async () => {
         if (!nombre || !apellido || !email || !contraseña || !confirmarContraseña) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             showAlert("Campo Requerido", "Por favor, completa todos los campos", "warning");
             return;
         }
         if (contraseña !== confirmarContraseña) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             showAlert("Contraseña", "Las contraseñas no coinciden", "error");
             return;
         }
@@ -97,9 +113,20 @@ export default function Register() {
             }
 
             if (data.token) {
-                await AsyncStorage.setItem('user', JSON.stringify(data.user));
+                // Aseguramos que el usuario tenga un plan por defecto en el almacenamiento local
+                const userData = {
+                    ...data.user,
+                    plan: data.user.plan || "Gratis"
+                };
+                await AsyncStorage.setItem('user', JSON.stringify(userData));
                 await AsyncStorage.setItem('token', data.token);
-                navigation.navigate('WelcomePlans');
+
+                // Si es un usuario nuevo (o le faltan datos biométricos), mandarlo a WelcomePlans
+                if (data.isNewUser || !data.user.peso || !data.user.altura) {
+                    navigation.navigate('WelcomePlans');
+                } else {
+                    navigation.navigate('Home');
+                }
             } else {
                 showAlert("Autenticación", data.error || "Error en autenticación social", "error");
                 setIsLoading(false);
@@ -111,138 +138,67 @@ export default function Register() {
         }
     };
 
-    const handleSocialRegister = async (platform) => {
-        console.log("=== REGISTER SOCIAL AUTH DEBUG ===");
-        console.log("Platform solicitada:", platform);
-        console.log("Android Client ID:", process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID);
-        console.log("iOS Client ID:", process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID);
-        console.log("Web Client ID:", process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
-        console.log("Platform OS:", Platform.OS);
-        console.log("==================================");
-
-        if (platform === 'Google') {
-            try {
-                setIsLoading(true);
-
-                // URL HTTPS del proxy de Expo (obligatorio para Google OAuth)
-                const redirectUri = "https://auth.expo.io/@ayoubito04/nexus-fitness";
-
-                console.log("=== GOOGLE REGISTER ===");
-                console.log("Redirect URI:", redirectUri);
-                console.log("Client ID:", process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
-                console.log("=======================");
-
-                const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-                    `client_id=${process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID}` +
-                    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-                    `&response_type=id_token` +
-                    `&scope=${encodeURIComponent('openid email profile')}` +
-                    `&nonce=${Math.random().toString(36)}`;
-
-                const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
-
-                console.log("=== RESPONSE ===");
-                console.log("Type:", result.type);
-
-                if (result.type === 'success' && result.url) {
-                    console.log("✅ SUCCESS - URL:", result.url);
-
-                    const hashParams = new URLSearchParams(result.url.split('#')[1] || '');
-                    const idToken = hashParams.get('id_token');
-
-                    if (idToken) {
-                        console.log("Token obtenido:", idToken.substring(0, 20) + "...");
-                        handleSocialAuth('google', idToken, 'idToken');
-                    } else {
-                        console.error("❌ No se encontró id_token");
-                        setIsLoading(false);
-                    }
-                } else {
-                    console.log("❌ Register cancelado o falló");
-                    setIsLoading(false);
-                }
-
-            } catch (error) {
-                console.error("❌ Error Google Registration:", error);
-                showAlert("Error", "No se pudo registrar con Google", "error");
-                setIsLoading(false);
-            }
-        } else if (platform === 'Facebook') {
-            try {
-                setIsLoading(true);
-                const redirectUri = "https://auth.expo.io/@ayoubito04/nexus-fitness";
-                const fbAppId = process.env.EXPO_PUBLIC_FACEBOOK_APP_ID || '';
-
-                if (!fbAppId || fbAppId === 'tu_facebook_app_id') {
-                    showAlert("Configuración", "El Facebook App ID no está configurado en el archivo .env", "warning");
-                    setIsLoading(false);
+    const handleSocialRegister = async (provider) => {
+        try {
+            if (provider === 'Google') {
+                try {
+                    if (!GoogleSignin) throw new Error('Native module missing');
+                    await GoogleSignin.hasPlayServices();
+                    const userInfo = await GoogleSignin.signIn();
+                    const idToken = userInfo.data?.idToken || userInfo.idToken;
+                    if (idToken) handleSocialAuth('google', idToken, 'idToken');
                     return;
+                } catch (e) {
+                    console.log('Utilizando fallback web para Google Register...');
                 }
+            }
 
-                const authUrl = `https://www.facebook.com/v11.0/dialog/oauth?` +
-                    `client_id=${fbAppId}` +
-                    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-                    `&response_type=token` +
-                    `&scope=${encodeURIComponent('email,public_profile')}`;
+            // Flujo común via Supabase OAuth para Web Fallback, Facebook e Instagram
+            setIsLoading(true);
+            const redirectUri = AuthSession.makeRedirectUri({
+                scheme: 'nexus-fitness',
+            });
 
-                const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: provider.toLowerCase(),
+                options: {
+                    redirectTo: redirectUri,
+                    skipBrowserRedirect: true,
+                }
+            });
+
+            if (error) throw error;
+
+            if (data?.url) {
+                const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
 
                 if (result.type === 'success' && result.url) {
-                    const urlParts = result.url.split('#');
-                    if (urlParts.length > 1) {
-                        const params = new URLSearchParams(urlParts[1]);
-                        const accessToken = params.get('access_token');
-                        if (accessToken) {
-                            handleSocialAuth('facebook', accessToken);
-                        } else {
-                            setIsLoading(false);
+                    const urlObj = new URL(result.url.replace('#', '?'));
+                    const access_token = urlObj.searchParams.get('access_token');
+                    const refresh_token = urlObj.searchParams.get('refresh_token');
+
+                    if (access_token) {
+                        try {
+                            await supabase.auth.setSession({
+                                access_token,
+                                refresh_token: refresh_token || '',
+                            });
+                        } catch (sessionError) {
+                            if (!sessionError.message?.includes('setAuth')) {
+                                throw sessionError;
+                            }
                         }
-                    } else {
-                        setIsLoading(false);
+                        // El navigation se manejará en un useEffect o tras el setSession
+                        // Para registro, forzamos la sincronización
+                        handleSocialAuth(provider.toLowerCase(), access_token);
                     }
-                } else {
-                    setIsLoading(false);
                 }
-            } catch (error) {
-                console.error("❌ Error Facebook Registration:", error);
-                showAlert("Error", "No se pudo registrar con Facebook", "error");
                 setIsLoading(false);
             }
-        } else if (platform === 'Instagram') {
-            try {
-                setIsLoading(true);
-                const redirectUri = "https://auth.expo.io/@ayoubito04/nexus-fitness";
-                // Usamos el CLIENT_ID de Instagram o el de Facebook si están vinculados
-                const instagramClientId = process.env.EXPO_PUBLIC_INSTAGRAM_CLIENT_ID || process.env.EXPO_PUBLIC_FACEBOOK_APP_ID;
-
-                if (!instagramClientId || instagramClientId === 'tu_instagram_client_id') {
-                    showAlert("Configuración", "Instagram no está configurado. Se intentará usar Facebook.", "info");
-                    handleSocialRegister('Facebook');
-                    return;
-                }
-
-                const authUrl = `https://api.instagram.com/oauth/authorize?` +
-                    `client_id=${instagramClientId}` +
-                    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-                    `&scope=user_profile,user_media` +
-                    `&response_type=code`;
-
-                const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
-
-                if (result.type === 'success' && result.url) {
-                    const code = new URLSearchParams(result.url.split('?')[1]).get('code');
-                    if (code) {
-                        handleSocialAuth('instagram', code);
-                    }
-                } else {
-                    setIsLoading(false);
-                }
-            } catch (error) {
-                setIsLoading(false);
-                showAlert("Error", "No se pudo registrar con Instagram", "error");
-            }
-        } else {
-            showAlert(platform, `Registro con ${platform} próximamente.`, "info");
+        } catch (error) {
+            console.error(`❌ Error en Register ${provider}:`, error);
+            showAlert("Error", `No se pudo conectar con ${provider}`, "error");
+            setIsLoading(false);
         }
     };
 
@@ -252,7 +208,7 @@ export default function Register() {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.mainContainer}
             >
-                <ScrollView contentContainerStyle={styles.scrollWrapper}>
+        <ScrollView contentContainerStyle={styles.scrollWrapper} keyboardShouldPersistTaps="handled">
                     <View style={styles.headerSection}>
                         <Text style={styles.registerTitle}>Únete a la <Text style={styles.neonText}>Élite</Text></Text>
                         <Text style={styles.registerSubtitle}>Empieza tu transformación hoy mismo</Text>
@@ -286,6 +242,7 @@ export default function Register() {
                             value={email}
                             onChangeText={setEmail}
                             keyboardType="email-address"
+                            autoCapitalize="none"
                             onFocus={() => setHoveredInput('email')}
                             onBlur={() => setHoveredInput(null)}
                         />
@@ -314,7 +271,10 @@ export default function Register() {
 
                         <TouchableOpacity
                             style={[styles.mainBtn, hoveredInput === 'btnRegister' && styles.btnActive]}
-                            onPress={handleRegister}
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                handleRegister();
+                            }}
                             onPressIn={() => setHoveredInput('btnRegister')}
                             onPressOut={() => setHoveredInput(null)}
                         >
@@ -328,14 +288,37 @@ export default function Register() {
                         </View>
 
                         <View style={styles.socialGrid}>
-                            <TouchableOpacity style={[styles.socialBtn, { borderColor: '#EA4335' }]} onPress={() => handleSocialRegister('Google')}>
-                                <FontAwesome5 name="google" size={18} color="#EA4335" />
+                            <TouchableOpacity
+                                style={styles.socialBtn}
+                                onPress={() => handleSocialRegister('Google')}
+                                disabled={isLoading}
+                                activeOpacity={0.7}
+                                accessibilityLabel="Registrarse con Google"
+                                accessibilityRole="button"
+                            >
+                                <Ionicons name="logo-google" size={20} color="#EA4335" />
                             </TouchableOpacity>
-                            <TouchableOpacity style={[styles.socialBtn, { borderColor: '#1877f2' }]} onPress={() => handleSocialRegister('Facebook')}>
-                                <FontAwesome5 name="facebook-f" size={18} color="#1877f2" />
+
+                            <TouchableOpacity
+                                style={styles.socialBtn}
+                                onPress={() => handleSocialRegister('Facebook')}
+                                disabled={isLoading}
+                                activeOpacity={0.7}
+                                accessibilityLabel="Registrarse con Facebook"
+                                accessibilityRole="button"
+                            >
+                                <Ionicons name="logo-facebook" size={20} color="#1877F2" />
                             </TouchableOpacity>
-                            <TouchableOpacity style={[styles.socialBtn, { borderColor: '#e4405f' }]} onPress={() => handleSocialRegister('Instagram')}>
-                                <FontAwesome5 name="instagram" size={18} color="#e4405f" />
+
+                            <TouchableOpacity
+                                style={styles.socialBtn}
+                                onPress={() => handleSocialRegister('Instagram')}
+                                disabled={isLoading}
+                                activeOpacity={0.7}
+                                accessibilityLabel="Registrarse con Instagram"
+                                accessibilityRole="button"
+                            >
+                                <Ionicons name="logo-instagram" size={20} color="#E4405F" />
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -457,14 +440,19 @@ const styles = StyleSheet.create({
     socialGrid: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        gap: 12,
     },
     socialBtn: {
-        width: '22%',
-        height: 45,
-        borderWidth: 1.5,
+        flex: 1,
+        height: 50,
+        backgroundColor: '#000',
         borderRadius: 12,
-        justifyContent: 'center',
+        flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        borderWidth: 1,
+        borderColor: '#222',
     },
     footerLink: {
         marginTop: 30,

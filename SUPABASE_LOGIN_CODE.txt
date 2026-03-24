@@ -1,0 +1,55 @@
+// Agregar este código después de checkAutoLogin() y antes de handleSocialAuth
+
+const handleGoogleLogin = async () => {
+    try {
+        setIsLoading(true);
+        
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: 'nexus-fitness://',
+            }
+        });
+
+        if (error) {
+            showAlert("Error", error.message, "error");
+            setIsLoading(false);
+            return;
+        }
+
+        // Supabase maneja automáticamente la sesión
+        // Cuando termine el OAuth, se llamará al listener de auth state
+        
+    } catch (error) {
+        showAlert("Error", "No se pudo iniciar sesión con Google", "error");
+        setIsLoading(false);
+    }
+};
+
+// Agregar este useEffect para escuchar cambios de autenticación
+useEffect(() => {
+    // Listener para cambios de sesión
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log('Auth event:', event);
+        
+        if (event === 'SIGNED_IN' && session) {
+            // Usuario autenticado exitosamente
+            const user = session.user;
+            
+            // Guardar en AsyncStorage para compatibilidad con tu backend
+            await AsyncStorage.setItem('user', JSON.stringify({
+                id: user.id,
+                email: user.email,
+                nombre: user.user_metadata.full_name || user.email,
+            }));
+            await AsyncStorage.setItem('token', session.access_token);
+            
+            // Navegar a Home
+            navigation.replace('Home');
+        }
+    });
+
+    return () => {
+        authListener?.subscription.unsubscribe();
+    };
+}, []);

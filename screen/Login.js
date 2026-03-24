@@ -5,15 +5,32 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
+import { NativeModules } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import NexusAlert from '../components/NexusAlert';
+import * as Haptics from 'expo-haptics';
 
 WebBrowser.maybeCompleteAuthSession();
 
 import Config from '../constants/Config';
+import { supabase } from '../lib/supabase';
 
 const BACKEND_URL = Config.BACKEND_URL;
+
+// Carga segura de GoogleSignin para evitar crash en Expo Go
+let GoogleSignin = null;
+let statusCodes = {};
+try {
+    if (NativeModules.RNGoogleSignin) {
+        const GoogleModule = require('@react-native-google-signin/google-signin');
+        GoogleSignin = GoogleModule.GoogleSignin;
+        statusCodes = GoogleModule.statusCodes;
+    }
+} catch (e) {
+    console.log('Error al cargar módulo nativo de Google:', e);
+}
 
 export default function Login() {
     const navigation = useNavigation();
@@ -42,8 +59,88 @@ export default function Login() {
     const slideAnim = useRef(new Animated.Value(40)).current;
     const logoScale = useRef(new Animated.Value(0.8)).current;
 
+    const syncWithBackend = async (supabaseAccessToken) => {
+        try {
+            console.log('🔄 Sincronizando sesión de Supabase con el backend de Nexus...');
+            const response = await fetch(`${BACKEND_URL}/auth/supabase-sync`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accessToken: supabaseAccessToken })
+            });
+
+            const text = await response.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                console.error('❌ Error parseando JSON:', e);
+                console.error('📄 Respuesta del servidor (posible HTML):', text.substring(0, 500));
+                return;
+            }
+
+            if (data.token) {
+                console.log('✅ Sincronización exitosa, token de Nexus actualizado');
+                const userData = {
+                    ...data.user,
+                    plan: data.user.plan || "Gratis"
+                };
+                await AsyncStorage.setItem('user', JSON.stringify(userData));
+                await AsyncStorage.setItem('token', data.token);
+
+                if (data.isNewUser || !data.user.peso || !data.user.altura) {
+                    navigation.navigate('WelcomePlans');
+                } else {
+                    navigation.replace('Home');
+                }
+            } else {
+                console.error('❌ Sincronización fallida (sin token):', data.error || 'Error desconocido');
+            }
+        } catch (error) {
+            console.error('❌ Error de red sincronizando con el backend:', error);
+        }
+    };
+
     useEffect(() => {
         checkAutoLogin();
+
+        // Configuración de Google Sign-In (Protegido para Expo Go)
+        try {
+            if (GoogleSignin && typeof GoogleSignin.configure === 'function') {
+                GoogleSignin.configure({
+                    webClientId: Config.GOOGLE_WEB_CLIENT_ID,
+                    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+                    offlineAccess: true,
+                });
+            } else {
+                console.warn('GoogleSignin no está disponible en este entorno');
+            }
+        } catch (e) {
+            console.error('Error al configurar Google Sign-In:', e);
+        }
+
+        // Listener para cambios de sesión de Supabase
+        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log('📡 Auth event:', event, !!session ? 'con sesión' : 'sin sesión');
+
+            if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+                const provider = session.user?.app_metadata?.provider || 'google';
+                const providerToken = session.provider_token;
+                const providerIdToken = session.provider_id_token;
+
+                if (providerIdToken || providerToken) {
+                    console.log(`🔄 Sincronizando con el backend (${provider}) usando token del proveedor...`);
+                    handleSocialAuth(
+                        provider,
+                        providerIdToken || providerToken,
+                        providerIdToken ? 'idToken' : 'accessToken'
+                    );
+                } else {
+                    // Si no hay token del proveedor (ej. INITIAL_SESSION con sesión persistida)
+                    // Usamos el accessToken de Supabase para sincronizar con el backend
+                    syncWithBackend(session.access_token);
+                }
+            }
+        });
 
         Animated.parallel([
             Animated.timing(fadeAnim, {
@@ -64,6 +161,12 @@ export default function Login() {
                 useNativeDriver: true,
             }),
         ]).start();
+
+        return () => {
+            if (authListener && authListener.subscription) {
+                authListener.subscription.unsubscribe();
+            }
+        };
     }, []);
 
     const checkAutoLogin = async () => {
@@ -89,12 +192,14 @@ export default function Login() {
                 body.accessToken = token;
             }
 
+            console.log(`📡 Enviando token de ${provider} al backend...`);
             const response = await fetch(`${BACKEND_URL}/auth/social`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
             });
 
+            console.log('📡 Respuesta del backend recibida');
             const data = await response.json();
 
             if (data.requiresVerification) {
@@ -104,9 +209,20 @@ export default function Login() {
             }
 
             if (data.token) {
-                await AsyncStorage.setItem('user', JSON.stringify(data.user));
+                // Aseguramos que el usuario tenga un plan por defecto en el almacenamiento local
+                const userData = {
+                    ...data.user,
+                    plan: data.user.plan || "Gratis"
+                };
+                await AsyncStorage.setItem('user', JSON.stringify(userData));
                 await AsyncStorage.setItem('token', data.token);
-                navigation.navigate('Home');
+
+                // Si es un usuario nuevo (o le faltan datos biométricos), mandarlo a WelcomePlans
+                if (data.isNewUser || !data.user.peso || !data.user.altura) {
+                    navigation.navigate('WelcomePlans');
+                } else {
+                    navigation.navigate('Home');
+                }
             } else {
                 showAlert("Error", data.error || "Error en autenticación", "error");
                 setIsLoading(false);
@@ -119,6 +235,7 @@ export default function Login() {
 
     const handleLogin = async () => {
         if (!usuario || !contraseña) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             showAlert("Atención", "Por favor, introduce tus credenciales", "warning");
             return;
         }
@@ -164,79 +281,169 @@ export default function Login() {
         if (platform === 'Google') {
             try {
                 setIsLoading(true);
-                const redirectUri = "https://auth.expo.io/@ayoubito04/nexus-fitness";
 
-                const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-                    `client_id=${Config.GOOGLE_WEB_CLIENT_ID}` +
-                    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-                    `&response_type=id_token` +
-                    `&scope=${encodeURIComponent('openid email profile')}` +
-                    `&nonce=${Math.random().toString(36)}`;
+                // Evitar crash en Expo Go (donde el módulo nativo no existe)
+                try {
+                    if (!GoogleSignin) throw new Error('Native module missing');
+                    await GoogleSignin.hasPlayServices();
+                } catch (e) {
+                    console.log('Utilizando fallback web para Google Auth...');
 
-                const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+                    const redirectUri = AuthSession.makeRedirectUri({
+                        useProxy: true,
+                        projectNameForProxy: '@ayoubito04/nexus-fitness',
+                    });
+                    console.log('🔗 Redirect URI generada:', redirectUri);
 
-                if (result.type === 'success' && result.url) {
-                    const hashParams = new URLSearchParams(result.url.split('#')[1] || '');
-                    const idToken = hashParams.get('id_token');
+                    const { data, error } = await supabase.auth.signInWithOAuth({
+                        provider: 'google',
+                        options: {
+                            redirectTo: redirectUri,
+                            skipBrowserRedirect: true,
+                        }
+                    });
 
-                    if (idToken) {
-                        handleSocialAuth('google', idToken, 'idToken');
-                    } else {
-                        setIsLoading(false);
+                    if (error) {
+                        console.error('❌ Error en signInWithOAuth:', error);
+                        throw error;
                     }
-                } else {
-                    setIsLoading(false);
+
+                    if (data?.url) {
+                        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
+
+                        if (result.type === 'success' && result.url) {
+                            // Extraer tokens del hash de la URL (#access_token=...)
+                            const urlObj = new URL(result.url.replace('#', '?'));
+                            const access_token = urlObj.searchParams.get('access_token');
+                            const refresh_token = urlObj.searchParams.get('refresh_token');
+
+                            if (access_token) {
+                                console.log('✅ Token obtenido, registrando sesión...');
+                                try {
+                                    await supabase.auth.setSession({
+                                        access_token,
+                                        refresh_token: refresh_token || '',
+                                    });
+                                } catch (sessionError) {
+                                    // Ignorar error de realtime.setAuth que es un bug interno de Supabase
+                                    if (!sessionError.message?.includes('setAuth')) {
+                                        throw sessionError;
+                                    }
+                                }
+                            } else {
+                                // No se obtuvo token del callback, desbloquear UI
+                                setIsLoading(false);
+                            }
+                        } else {
+                            setIsLoading(false);
+                        }
+                    }
+                    return;
                 }
+
+                // Iniciar sesión nativa
+                const userInfo = await GoogleSignin.signIn();
+
+                // Extraer el idToken
+                const idToken = userInfo.data?.idToken || userInfo.idToken;
+
+                if (!idToken) {
+                    throw new Error('No se pudo obtener el ID Token de Google');
+                }
+
+                // Autenticar con Supabase usando el idToken
+                try {
+                    const { error: authError } = await supabase.auth.signInWithIdToken({
+                        provider: 'google',
+                        token: idToken,
+                    });
+
+                    if (authError) throw authError;
+                } catch (internalError) {
+                    // Ignorar error de realtime.setAuth que es un bug interno de Supabase
+                    if (!internalError.message?.includes('setAuth')) {
+                        throw internalError;
+                    }
+                }
+
             } catch (error) {
-                showAlert("Error", "No se pudo iniciar sesión con Google", "error");
+                console.error('Google Sign-In Error:', error);
+                if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+                    // El usuario canceló
+                } else if (error.code === statusCodes.IN_PROGRESS) {
+                    // Ya hay un proceso en curso
+                } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+                    showAlert("Servicios", "Google Play Services no está disponible", "error");
+                } else {
+                    showAlert("Error", "No se pudo iniciar sesión con Google nativo. Verifica tu configuración.", "error");
+                }
                 setIsLoading(false);
             }
         } else if (platform === 'Facebook') {
             try {
                 setIsLoading(true);
-                const redirectUri = "https://auth.expo.io/@ayoubito04/nexus-fitness";
-                const fbAppId = Config.FACEBOOK_APP_ID;
 
-                if (!fbAppId || fbAppId === 'tu_facebook_app_id') {
-                    showAlert("Configuración", "El Facebook App ID no está configurado en el archivo constants/Config.js", "warning");
-                    setIsLoading(false);
-                    return;
-                }
+                // IMPORTANTE: Para Facebook en Expo Go, el redirectUri debe ser estable
+                const redirectUri = AuthSession.makeRedirectUri({
+                    useProxy: true,
+                    projectNameForProxy: '@ayoubito04/nexus-fitness'
+                });
 
-                const authUrl = `https://www.facebook.com/v11.0/dialog/oauth?` +
-                    `client_id=${fbAppId}` +
-                    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-                    `&response_type=token` +
-                    `&scope=${encodeURIComponent('email,public_profile')}`;
+                console.log('🔗 Facebook Redirect URI:', redirectUri);
 
-                const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
-
-                if (result.type === 'success' && result.url) {
-                    const urlParts = result.url.split('#');
-                    if (urlParts.length > 1) {
-                        const params = new URLSearchParams(urlParts[1]);
-                        const accessToken = params.get('access_token');
-                        if (accessToken) {
-                            handleSocialAuth('facebook', accessToken);
-                        }
+                const { data, error } = await supabase.auth.signInWithOAuth({
+                    provider: 'facebook',
+                    options: {
+                        redirectTo: redirectUri,
+                        skipBrowserRedirect: true,
                     }
-                } else {
-                    setIsLoading(false);
+                });
+
+                if (error) throw error;
+
+                if (data?.url) {
+                    console.log('🌐 Abriendo navegador para Facebook...');
+                    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
+
+                    if (result.type === 'success' && result.url) {
+                        console.log('✅ Retorno exitoso de Facebook');
+                        // Extraer tokens del hash de la URL (#access_token=...)
+                        const urlObj = new URL(result.url.replace('#', '?'));
+                        const access_token = urlObj.searchParams.get('access_token');
+                        const refresh_token = urlObj.searchParams.get('refresh_token');
+
+                        if (access_token) {
+                            console.log('💎 Token de Facebook obtenido, registrando sesión...');
+                            await supabase.auth.setSession({
+                                access_token,
+                                refresh_token: refresh_token || '',
+                            });
+                            // El listener onAuthStateChange se encargará de la redirección a Home
+                        }
+                    } else {
+                        console.log('⚠️ Login de Facebook cancelado o fallido:', result.type);
+                        setIsLoading(false);
+                    }
                 }
             } catch (error) {
+                console.error('Facebook Sign-In Error:', error);
+                showAlert("Error", "No se pudo iniciar sesión con Facebook", "error");
                 setIsLoading(false);
             }
         } else if (platform === 'Instagram') {
             try {
                 setIsLoading(true);
-                const redirectUri = "https://auth.expo.io/@ayoubito04/nexus-fitness";
-                // Usamos el CLIENT_ID de Instagram o el de Facebook si están vinculados
+
+                const redirectUri = AuthSession.makeRedirectUri({
+                    scheme: 'nexus-fitness',
+                });
+
+                // Usamos el CLIENT_ID de Instagram (o fallback al de Facebook si aplica)
                 const instagramClientId = Config.INSTAGRAM_CLIENT_ID || Config.FACEBOOK_APP_ID;
 
                 if (!instagramClientId || instagramClientId === 'tu_instagram_client_id') {
-                    showAlert("Configuración", "Instagram no está configurado. Se intentará usar Facebook.", "info");
-                    // Fallback a Facebook si no hay ID de Instagram específico
-                    handleSocialLogin('Facebook');
+                    showAlert("Configuración", "Instagram no está configurado. Se requiere un Client ID válido.", "info");
+                    setIsLoading(false);
                     return;
                 }
 
@@ -251,12 +458,14 @@ export default function Login() {
                 if (result.type === 'success' && result.url) {
                     const code = new URLSearchParams(result.url.split('?')[1]).get('code');
                     if (code) {
+                        // Sincronizamos con el backend tradicional (Instagram no tiene proveedor Supabase directo aún)
                         handleSocialAuth('instagram', code);
                     }
                 } else {
                     setIsLoading(false);
                 }
             } catch (error) {
+                console.error('Instagram Sign-In Error:', error);
                 setIsLoading(false);
                 showAlert("Error", "No se pudo iniciar sesión con Instagram", "error");
             }
@@ -335,7 +544,10 @@ export default function Login() {
 
                         <TouchableOpacity
                             style={styles.mainBtn}
-                            onPress={handleLogin}
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                handleLogin();
+                            }}
                             disabled={isLoading}
                             activeOpacity={0.8}
                             data-testid="login-btn"
@@ -364,6 +576,8 @@ export default function Login() {
                                 onPress={() => handleSocialLogin('Google')}
                                 disabled={isLoading}
                                 activeOpacity={0.7}
+                                accessibilityLabel="Iniciar sesión con Google"
+                                accessibilityRole="button"
                             >
                                 <Ionicons name="logo-google" size={20} color="#EA4335" />
                             </TouchableOpacity>
@@ -373,6 +587,8 @@ export default function Login() {
                                 onPress={() => handleSocialLogin('Facebook')}
                                 disabled={isLoading}
                                 activeOpacity={0.7}
+                                accessibilityLabel="Iniciar sesión con Facebook"
+                                accessibilityRole="button"
                             >
                                 <Ionicons name="logo-facebook" size={20} color="#1877F2" />
                             </TouchableOpacity>
@@ -382,6 +598,8 @@ export default function Login() {
                                 onPress={() => handleSocialLogin('Instagram')}
                                 disabled={isLoading}
                                 activeOpacity={0.7}
+                                accessibilityLabel="Iniciar sesión con Instagram"
+                                accessibilityRole="button"
                             >
                                 <Ionicons name="logo-instagram" size={20} color="#E4405F" />
                             </TouchableOpacity>
