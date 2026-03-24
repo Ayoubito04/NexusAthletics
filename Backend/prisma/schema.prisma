@@ -213,6 +213,7 @@ model OAuthToken {
 model AuthLog {
   id          Int      @id @default(autoincrement())
   userId      Int?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   action      String   // 'login', 'logout', 'register', 'oauth_login', 'token_refresh', 'account_link'
   provider    String?  // 'email', 'google', 'facebook', 'instagram', 'twitter'
   ipAddress   String?
