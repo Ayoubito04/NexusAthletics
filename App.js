@@ -12,14 +12,11 @@ WebBrowser.maybeCompleteAuthSession();
 
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Animated, Easing } from 'react-native';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import Home from './screen/Home';
-import Details from './screen/Details';
 import Login from './screen/Login';
 import Register from './screen/register';
-import ActividadGuardada from './screen/ActividadGuardada';
-import CalcularCalorias from './screen/CalcularCalorias';
 import PlanesPago from './screen/PlanesPago';
 import EntrenadorIA from './screen/EntrenadorIA';
 import Profile from './screen/Profile';
@@ -40,7 +37,6 @@ import ElitePlanScreen from './screen/ElitePlanScreen';
 import SavedElitePlans from './screen/SavedElitePlans';
 import FoodScanner from './screen/FoodScanner';
 import TrainingCalendar from './screen/TrainingCalendar';
-import HealthSync from './screen/HealthSync';
 import FAQ from './screen/FAQ';
 import Ranking from './screen/Ranking';
 import VoiceCoach from './screen/VoiceCoach';
@@ -53,6 +49,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import * as Haptics from 'expo-haptics';
 
@@ -67,39 +64,31 @@ function TabNavigator() {
         tabBarShowLabel: true,
         tabBarLabelStyle: {
           fontSize: 10,
-          fontWeight: '800',
-          marginBottom: 8,
-          textTransform: 'uppercase',
-          letterSpacing: 0.5,
+          fontWeight: '600',
+          marginBottom: 4,
+          letterSpacing: 0.3,
         },
         tabBarStyle: {
-          backgroundColor: 'transparent',
+          backgroundColor: '#111111',
           position: 'absolute',
-          bottom: 20,
-          left: 15,
-          right: 15,
-          height: 75,
-          borderRadius: 30,
+          bottom: 16,
+          left: 16,
+          right: 16,
+          height: 64,
+          borderRadius: 20,
           borderTopWidth: 0,
-          elevation: 10,
-          shadowColor: '#63ff15',
+          borderWidth: 1,
+          borderColor: 'rgba(99,255,21,0.2)',
+          elevation: 20,
+          shadowColor: '#000',
           shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.1,
-          shadowRadius: 10,
+          shadowOpacity: 0.4,
+          shadowRadius: 12,
           overflow: 'hidden',
-          borderWidth: 1.5,
-          borderColor: 'rgba(255, 255, 255, 0.12)',
         },
-        tabBarBackground: () => (
-          <BlurView intensity={45} tint="dark" style={StyleSheet.absoluteFill}>
-            <LinearGradient
-              colors={['rgba(255,255,255,0.05)', 'transparent']}
-              style={StyleSheet.absoluteFill}
-            />
-          </BlurView>
-        ),
+        tabBarBackground: () => null,
         tabBarActiveTintColor: '#63ff15',
-        tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.3)',
+        tabBarInactiveTintColor: '#555',
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
           if (route.name === 'Dashboard') {
@@ -114,20 +103,15 @@ function TabNavigator() {
             iconName = focused ? 'person' : 'person-outline';
           }
           return (
-            <View style={{ alignItems: 'center', justifyContent: 'center', marginTop: 5 }}>
-              <Ionicons name={iconName} size={focused ? 24 : 22} color={color} />
+            <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 6 }}>
+              <Ionicons name={iconName} size={23} color={color} />
               {focused && (
                 <View style={{
-                  position: 'absolute',
-                  top: -10,
-                  width: 30,
-                  height: 2,
+                  width: 4,
+                  height: 4,
+                  borderRadius: 2,
                   backgroundColor: '#63ff15',
-                  borderRadius: 1,
-                  shadowColor: '#63ff15',
-                  shadowOpacity: 0.8,
-                  shadowRadius: 6,
-                  elevation: 5
+                  marginTop: 4,
                 }} />
               )}
             </View>
@@ -275,11 +259,8 @@ export default function App() {
         >
           <Stack.Screen name="MainTabs" component={TabNavigator} />
           <Stack.Screen name="Home" component={Home} />
-          <Stack.Screen name="Details" component={Details} />
           <Stack.Screen name="Login" component={Login} />
           <Stack.Screen name="Register" component={Register} />
-          <Stack.Screen name="ActividadGuardada" component={ActividadGuardada} />
-          <Stack.Screen name="CalcularCalorias" component={CalcularCalorias} />
           <Stack.Screen name="PlanesPago" component={PlanesPago} />
           <Stack.Screen name="EntrenadorIA" component={EntrenadorIA} />
           <Stack.Screen name="Profile" component={Profile} />
@@ -299,7 +280,6 @@ export default function App() {
           <Stack.Screen name="SavedElitePlans" component={SavedElitePlans} />
           <Stack.Screen name="FoodScanner" component={FoodScanner} />
           <Stack.Screen name="TrainingCalendar" component={TrainingCalendar} />
-          <Stack.Screen name="HealthSync" component={HealthSync} />
           <Stack.Screen name="FAQ" component={FAQ} />
           <Stack.Screen name="Ranking" component={Ranking} />
           <Stack.Screen name="VoiceCoach" component={VoiceCoach} />

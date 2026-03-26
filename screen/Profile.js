@@ -169,11 +169,6 @@ export default function Profile() {
 
                 <View style={styles.menuSection}>
                     <Text style={styles.sectionTitle}>Configuración</Text>
-                    <TouchableOpacity style={styles.menuItem}>
-                        <Ionicons name="notifications-outline" size={22} color="#aaa" />
-                        <Text style={styles.menuText}>Notificaciones</Text>
-                        <Ionicons name="chevron-forward" size={20} color="#444" />
-                    </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.menuItem}
                         onPress={() => navigation.navigate('AccountSettings')}

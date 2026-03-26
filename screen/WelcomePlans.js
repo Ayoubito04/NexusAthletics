@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Dimensions, ActivityIndicator } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
+import Config from '../constants/Config';
 
 const { width } = Dimensions.get('window');
 
@@ -13,6 +15,9 @@ export default function WelcomePlans() {
     const [user, setUser] = useState(null);
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(50)).current;
+
+    const [locationStep, setLocationStep] = useState(true); // true = mostrar pantalla de ubicación
+    const [locationLoading, setLocationLoading] = useState(false);
 
     useEffect(() => {
         loadUser();
@@ -27,13 +32,88 @@ export default function WelcomePlans() {
         if (userData) setUser(JSON.parse(userData));
     };
 
+    const handleGrantLocation = async () => {
+        setLocationLoading(true);
+        try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status === 'granted') {
+                const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+                const geo = await Location.reverseGeocodeAsync(loc.coords);
+                const city = geo[0]?.city || geo[0]?.subregion || geo[0]?.region || '';
+                const token = await AsyncStorage.getItem('token');
+                if (token) {
+                    fetch(`${Config.BACKEND_URL}/user/update-profile`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ ciudad: city }),
+                    }).catch(() => {});
+                }
+                await AsyncStorage.setItem('userCity', city);
+            }
+        } catch (e) {}
+        setLocationLoading(false);
+        setLocationStep(false);
+    };
+
+    const handleSkipLocation = () => setLocationStep(false);
+
     const handleContinueFree = () => {
-        navigation.navigate('Home');
+        navigation.replace('MainTabs');
     };
 
     const handleSelectPremium = () => {
         navigation.navigate('PlanesPago');
     };
+
+    // Pantalla de solicitud de ubicación (solo para nuevos usuarios)
+    if (locationStep) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <LinearGradient colors={['#0a0a0a', '#111', '#0a0a0a']} style={styles.gradient}>
+                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 30 }}>
+                        <View style={{
+                            width: 90, height: 90, borderRadius: 45,
+                            backgroundColor: '#141414',
+                            borderWidth: 1.5, borderColor: 'rgba(99,255,21,0.3)',
+                            justifyContent: 'center', alignItems: 'center',
+                            marginBottom: 32,
+                        }}>
+                            <Ionicons name="location-outline" size={42} color="#63ff15" />
+                        </View>
+                        <Text style={{ color: '#fff', fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 12 }}>
+                            ¿Dónde entrenas?
+                        </Text>
+                        <Text style={{ color: '#888', fontSize: 14, textAlign: 'center', lineHeight: 22, marginBottom: 40 }}>
+                            Tu ubicación nos ayuda a mostrarte gyms, eventos y retos cerca de ti. No la compartimos con nadie.
+                        </Text>
+                        <TouchableOpacity
+                            style={{
+                                width: '100%', height: 56, borderRadius: 12,
+                                backgroundColor: '#63ff15',
+                                justifyContent: 'center', alignItems: 'center',
+                                marginBottom: 14,
+                                flexDirection: 'row', gap: 10,
+                            }}
+                            onPress={handleGrantLocation}
+                            disabled={locationLoading}
+                            activeOpacity={0.85}
+                        >
+                            {locationLoading
+                                ? <ActivityIndicator color="#000" />
+                                : <>
+                                    <Ionicons name="location" size={20} color="#000" />
+                                    <Text style={{ color: '#000', fontWeight: '800', fontSize: 15 }}>Permitir ubicación</Text>
+                                </>
+                            }
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={handleSkipLocation} activeOpacity={0.7} style={{ padding: 12 }}>
+                            <Text style={{ color: '#555', fontSize: 13, fontWeight: '600' }}>Omitir por ahora</Text>
+                        </TouchableOpacity>
+                    </View>
+                </LinearGradient>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container}>

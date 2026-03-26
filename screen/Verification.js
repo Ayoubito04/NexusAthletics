@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Animated, Platform, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Animated, Platform, ActivityIndicator, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NexusAlert from '../components/NexusAlert';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import Config from '../constants/Config';
 import { parseAuthError } from '../utils/authErrorHandler';
@@ -19,9 +20,10 @@ export default function Verification() {
 
     const [code, setCode] = useState(['', '', '', '', '', '']);
     const [isLoading, setIsLoading] = useState(false);
+    const [timeLeft, setTimeLeft] = useState(30);
+    const [canResend, setCanResend] = useState(false);
     const inputs = useRef([]);
 
-    // NexusAlert State
     const [alert, setAlert] = useState({ visible: false, title: '', message: '', type: 'info', onConfirm: null });
 
     const showAlert = (title, message, type = 'info', onConfirm = null) => {
@@ -38,29 +40,75 @@ export default function Verification() {
     };
 
     const fadeAnim = useRef(new Animated.Value(0)).current;
+    const scaleAnims = useRef([...Array(6)].map(() => new Animated.Value(1))).current;
 
     useEffect(() => {
         Animated.timing(fadeAnim, {
             toValue: 1,
-            duration: 1000,
+            duration: 800,
             useNativeDriver: true,
+            easing: Easing.out(Easing.ease),
         }).start();
+
+        inputs.current[0]?.focus();
     }, []);
 
+    // Countdown timer para reenvío
+    useEffect(() => {
+        let timer;
+        if (timeLeft > 0 && !canResend) {
+            timer = setTimeout(() => {
+                setTimeLeft(timeLeft - 1);
+            }, 1000);
+        } else if (timeLeft === 0) {
+            setCanResend(true);
+        }
+        return () => clearTimeout(timer);
+    }, [timeLeft, canResend]);
+
     const handleChange = (text, index) => {
+        if (!/^[0-9]*$/.test(text)) return;
+
         const newCode = [...code];
         newCode[index] = text;
         setCode(newCode);
 
-        // Mover al siguiente input si hay texto
+        // Animar el dígito ingresado
+        if (text) {
+            Animated.sequence([
+                Animated.timing(scaleAnims[index], {
+                    toValue: 1.15,
+                    duration: 150,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(scaleAnims[index], {
+                    toValue: 1,
+                    duration: 150,
+                    useNativeDriver: true,
+                }),
+            ]).start();
+        }
+
+        // Auto-focus al siguiente input
         if (text && index < 5) {
             inputs.current[index + 1].focus();
         }
     };
 
     const handleKeyPress = (e, index) => {
-        if (e.nativeEvent.key === 'Backspace' && !code[index] && index > 0) {
-            inputs.current[index - 1].focus();
+        if (e.nativeEvent.key === 'Backspace') {
+            if (!code[index] && index > 0) {
+                // Si está vacío, ir al anterior
+                const newCode = [...code];
+                newCode[index - 1] = '';
+                setCode(newCode);
+                inputs.current[index - 1].focus();
+            } else if (code[index]) {
+                // Si tiene contenido, solo limpiar
+                const newCode = [...code];
+                newCode[index] = '';
+                setCode(newCode);
+            }
         }
     };
 
@@ -107,7 +155,7 @@ export default function Verification() {
                     "Verificado",
                     "Tu cuenta ha sido verificada correctamente. ¡Bienvenido!",
                     "success",
-                    () => navigation.navigate('Home')
+                    () => navigation.replace('MainTabs')
                 );
             } else {
                 console.error('❌ Error en verificacion:', response.status, data);
@@ -118,7 +166,6 @@ export default function Verification() {
                     errorInfo.message || data.error || "El código no es válido o ha expirado.",
                     "error"
                 );
-                // Limpiar los inputs
                 setCode(['', '', '', '', '', '']);
                 inputs.current[0]?.focus();
             }
@@ -133,6 +180,8 @@ export default function Verification() {
     };
 
     const handleResend = async () => {
+        if (!canResend) return;
+
         setIsLoading(true);
         try {
             const response = await fetch(`${BACKEND_URL}/auth/resend-code`, {
@@ -158,6 +207,8 @@ export default function Verification() {
             if (response.ok && data.success) {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 console.log('✅ Código reenviado');
+                setTimeLeft(30);
+                setCanResend(false);
                 showAlert(
                     "Código Reenviado",
                     "Te hemos enviado un nuevo código de verificación a tu correo. Revisa tu bandeja de entrada.",
@@ -182,57 +233,85 @@ export default function Verification() {
     return (
         <SafeAreaView style={styles.container}>
             <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={28} color="white" />
-                </TouchableOpacity>
 
-                <View style={styles.header}>
+                {/* Header */}
+                <Animated.View style={styles.header}>
                     <View style={styles.iconCircle}>
-                        <Ionicons name="shield-checkmark" size={40} color="#0ce810" />
+                        <Ionicons name="shield-checkmark-outline" size={36} color="#63ff15" />
                     </View>
-                    <Text style={styles.title}>Verificación</Text>
+                    <Text style={styles.title}>VERIFICACIÓN</Text>
                     <Text style={styles.subtitle}>
-                        Hemos enviado un código de 6 dígitos a su correo electrónico asociado.
+                        Hemos enviado un código de 6 dígitos a tu correo electrónico
                     </Text>
                     <Text style={styles.emailText}>{email}</Text>
-                </View>
+                </Animated.View>
 
+                {/* Code Input Grid - 6 separate inputs */}
                 <View style={styles.codeContainer}>
                     {code.map((digit, index) => (
-                        <TextInput
+                        <Animated.View
                             key={index}
-                            ref={(el) => (inputs.current[index] = el)}
-                            style={styles.codeInput}
-                            maxLength={1}
-                            keyboardType="number-pad"
-                            value={digit}
-                            onChangeText={(text) => handleChange(text, index)}
-                            onKeyPress={(e) => handleKeyPress(e, index)}
-                            placeholder="-"
-                            placeholderTextColor="#333"
-                        />
+                            style={{
+                                transform: [{ scale: scaleAnims[index] }],
+                            }}
+                        >
+                            <TextInput
+                                ref={(el) => (inputs.current[index] = el)}
+                                style={[
+                                    styles.codeInput,
+                                    digit !== '' && styles.codeInputFilled,
+                                ]}
+                                maxLength={1}
+                                keyboardType="number-pad"
+                                value={digit}
+                                onChangeText={(text) => handleChange(text, index)}
+                                onKeyPress={(e) => handleKeyPress(e, index)}
+                                placeholder="-"
+                                placeholderTextColor="rgba(99,255,21,0.3)"
+                                accessibilityLabel={`Dígito ${index + 1} de 6`}
+                            />
+                        </Animated.View>
                     ))}
                 </View>
 
+                {/* Verify Button */}
                 <TouchableOpacity
                     style={styles.verifyBtn}
                     onPress={handleVerify}
                     disabled={isLoading}
+                    activeOpacity={0.8}
                 >
-                    {isLoading ? (
-                        <ActivityIndicator color="black" />
-                    ) : (
-                        <Text style={styles.verifyBtnText}>VERIFICAR CUENTA</Text>
-                    )}
+                    <LinearGradient
+                        colors={['#63ff15', '#4dd10e']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.verifyBtnGradient}
+                    >
+                        {isLoading ? (
+                            <ActivityIndicator color="#000" size="small" />
+                        ) : (
+                            <Text style={styles.verifyBtnText}>VERIFICAR CÓDIGO</Text>
+                        )}
+                    </LinearGradient>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                    style={styles.resendBtn}
-                    onPress={handleResend}
-                    disabled={isLoading}
-                >
-                    <Text style={styles.resendText}>¿No recibiste el código? <Text style={styles.resendAction}>Reenviar</Text></Text>
-                </TouchableOpacity>
+                {/* Resend Section */}
+                <View style={styles.resendSection}>
+                    {canResend ? (
+                        <TouchableOpacity
+                            onPress={handleResend}
+                            disabled={isLoading}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={styles.resendLink}>¿No recibiste el código? <Text style={styles.resendAction}>Reenviar</Text></Text>
+                        </TouchableOpacity>
+                    ) : (
+                        <Text style={styles.resendCountdown}>
+                            Reenviar en <Text style={styles.timeLeft}>{timeLeft}s</Text>
+                        </Text>
+                    )}
+                </View>
+
             </Animated.View>
 
             <NexusAlert
@@ -249,93 +328,122 @@ export default function Verification() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0a0a0a',
+        backgroundColor: '#0A0A0A',
     },
     content: {
         flex: 1,
-        padding: 30,
-    },
-    backBtn: {
-        marginBottom: 20,
+        padding: 28,
+        justifyContent: 'space-between',
     },
     header: {
         alignItems: 'center',
-        marginTop: 20,
-        marginBottom: 40,
+        marginTop: 12,
+        marginBottom: 48,
     },
     iconCircle: {
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: '#111',
+        backgroundColor: '#141414',
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#0ce81020',
+        borderWidth: 1.5,
+        borderColor: 'rgba(99,255,21,0.4)',
         marginBottom: 20,
     },
     title: {
-        fontSize: 28,
-        fontWeight: '900',
-        color: 'white',
-        marginBottom: 10,
+        fontSize: 24,
+        fontWeight: '800',
+        color: '#fff',
+        marginBottom: 12,
+        letterSpacing: 1,
     },
     subtitle: {
         fontSize: 14,
         color: '#888',
         textAlign: 'center',
         lineHeight: 22,
+        marginBottom: 12,
+        fontWeight: '500',
     },
     emailText: {
-        color: '#0ce810',
-        fontWeight: 'bold',
-        marginTop: 5,
+        color: '#63ff15',
+        fontWeight: '700',
+        fontSize: 14,
+        letterSpacing: 0.5,
     },
     codeContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 40,
-    },
-    codeInput: {
-        width: '14%',
-        height: 60,
-        backgroundColor: '#111',
-        borderRadius: 12,
-        borderWidth: 1.5,
-        borderColor: '#222',
-        color: '#0ce810',
-        fontSize: 24,
-        fontWeight: 'bold',
-        textAlign: 'center',
-    },
-    verifyBtn: {
-        backgroundColor: '#0ce810',
-        height: 60,
-        borderRadius: 15,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#0ce810',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 10,
-        elevation: 5,
+        gap: 12,
+        marginBottom: 48,
+        width: '100%',
     },
-    verifyBtnText: {
-        color: 'black',
-        fontSize: 16,
-        fontWeight: '900',
-        letterSpacing: 1,
+    codeInput: {
+        width: 60,
+        height: 60,
+        backgroundColor: '#111',
+        borderWidth: 2,
+        borderColor: 'rgba(99,255,21,0.15)',
+        borderRadius: 12,
+        color: '#63ff15',
+        fontSize: 28,
+        fontWeight: '800',
+        textAlign: 'center',
+        shadowColor: '#63ff15',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 8,
+        elevation: 2,
     },
-    resendBtn: {
-        marginTop: 30,
+    codeInputFilled: {
+        backgroundColor: 'rgba(99,255,21,0.08)',
+        borderColor: '#63ff15',
+    },
+    verifyBtn: {
+        borderRadius: 12,
+        overflow: 'hidden',
+        marginBottom: 24,
+        shadowColor: '#63ff15',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
+        elevation: 4,
+    },
+    verifyBtnGradient: {
+        height: 58,
+        justifyContent: 'center',
         alignItems: 'center',
     },
-    resendText: {
-        color: '#666',
+    verifyBtnText: {
+        color: '#000',
+        fontSize: 16,
+        fontWeight: '800',
+        letterSpacing: 1.5,
+    },
+    resendSection: {
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    resendLink: {
+        color: '#71717A',
         fontSize: 14,
+        textAlign: 'center',
     },
     resendAction: {
-        color: '#0ce810',
-        fontWeight: 'bold',
-    }
+        color: '#63ff15',
+        fontWeight: '700',
+    },
+    resendCountdown: {
+        color: '#52525B',
+        fontSize: 13,
+        fontWeight: '600',
+        textAlign: 'center',
+    },
+    timeLeft: {
+        color: '#63ff15',
+        fontWeight: '800',
+        fontSize: 14,
+    },
 });

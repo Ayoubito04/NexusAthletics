@@ -19,6 +19,14 @@ export default function StepCounter() {
     const [dailyGoal] = useState(10000);
     const [subscription, setSubscription] = useState(null);
 
+    // Ref para evitar stale closure en intervals y callbacks
+    const currentStepsRef = useRef(0);
+
+    const updateSteps = (steps) => {
+        currentStepsRef.current = steps;
+        setCurrentSteps(steps);
+    };
+
     // Animaciones
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -28,19 +36,6 @@ export default function StepCounter() {
     useEffect(() => {
         initPedometer();
         loadTodaySteps();
-
-        // Loop de pulso
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(pulseAnim, { toValue: 1.03, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                Animated.timing(pulseAnim, { toValue: 1, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
-            ])
-        ).start();
-
-        // Rotación sutil
-        Animated.loop(
-            Animated.timing(rotateAnim, { toValue: 1, duration: 20000, easing: Easing.linear, useNativeDriver: true })
-        ).start();
 
         return () => {
             if (subscription) subscription.remove();
@@ -63,7 +58,7 @@ export default function StepCounter() {
         const interval = setInterval(() => {
             loadTodaySteps();
             syncWithBackend();
-        }, 10000); // 10 segundos
+        }, 30000); // 30 segundos
 
         return () => clearInterval(interval);
     }, []);
@@ -72,8 +67,7 @@ export default function StepCounter() {
     const loadTodaySteps = async () => {
         try {
             const today = new Date().toDateString();
-            
-            // Obtener el ID del usuario actual
+
             const userJson = await AsyncStorage.getItem('user');
             const userDataParsed = userJson ? JSON.parse(userJson) : null;
             const userId = userDataParsed?._id || userDataParsed?.id || 'default';
@@ -83,13 +77,13 @@ export default function StepCounter() {
             if (stored) {
                 const data = JSON.parse(stored);
                 if (data.date === today) {
-                    // Solo actualizar si el valor en storage es mayor al actual (evita saltos hacia atrás)
-                    if (data.steps > currentSteps) {
-                        setCurrentSteps(data.steps);
+                    // Usar ref para comparación actualizada (evita stale closure)
+                    if (data.steps > currentStepsRef.current) {
+                        updateSteps(data.steps);
                     }
                 } else {
                     await AsyncStorage.setItem(STEPS_KEY, JSON.stringify({ date: today, steps: 0 }));
-                    setCurrentSteps(0);
+                    updateSteps(0);
                     lastResultSteps.current = 0;
                 }
             }
@@ -112,19 +106,33 @@ export default function StepCounter() {
         try {
             const token = await AsyncStorage.getItem('token');
             if (!token) return;
+            // Usar ref para evitar stale closure (el interval captura el valor inicial de currentSteps)
             await fetch(`${BACKEND_URL}/user/sync-steps`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ steps: currentSteps, date: new Date().toISOString() })
+                body: JSON.stringify({ steps: currentStepsRef.current, date: new Date().toISOString() })
             });
         } catch (error) { }
     };
 
     const handleManualRefresh = async () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await loadTodaySteps();
+
+        // Intentar obtener pasos actualizados del sistema antes de sincronizar
+        try {
+            const startOfDay = new Date();
+            startOfDay.setHours(0, 0, 0, 0);
+            const systemResult = await Pedometer.getStepCountAsync(startOfDay, new Date());
+            if (systemResult && systemResult.steps > currentStepsRef.current) {
+                updateSteps(systemResult.steps);
+                saveImmediate(systemResult.steps);
+            }
+        } catch (e) {
+            await loadTodaySteps();
+        }
+
         await syncWithBackend();
-        
+
         Animated.sequence([
             Animated.timing(scaleAnim, { toValue: 0.95, duration: 100, useNativeDriver: true }),
             Animated.spring(scaleAnim, { toValue: 1, friction: 3, useNativeDriver: true })
@@ -136,21 +144,32 @@ export default function StepCounter() {
         setIsPedometerAvailable(String(isAvailable));
 
         if (isAvailable) {
-            lastResultSteps.current = 0; // Reset inicial
+            // Intentar obtener los pasos reales del día desde el sistema (más preciso que solo AsyncStorage)
+            try {
+                const startOfDay = new Date();
+                startOfDay.setHours(0, 0, 0, 0);
+                const systemResult = await Pedometer.getStepCountAsync(startOfDay, new Date());
+                if (systemResult && systemResult.steps > currentStepsRef.current) {
+                    updateSteps(systemResult.steps);
+                    saveImmediate(systemResult.steps);
+                }
+            } catch (e) {
+                // getStepCountAsync no disponible en todos los dispositivos, continuar con AsyncStorage
+            }
+
+            lastResultSteps.current = 0;
             const sub = Pedometer.watchStepCount(result => {
                 const delta = result.steps - lastResultSteps.current;
                 lastResultSteps.current = result.steps;
 
                 if (delta > 0) {
-                    setCurrentSteps(prev => {
-                        const newTotal = prev + delta;
-                        saveImmediate(newTotal);
-                        return newTotal;
-                    });
+                    const newTotal = currentStepsRef.current + delta;
+                    updateSteps(newTotal);
+                    saveImmediate(newTotal);
 
                     Animated.sequence([
-                        Animated.timing(scaleAnim, { toValue: 1.15, duration: 100, useNativeDriver: true }),
-                        Animated.spring(scaleAnim, { toValue: 1, friction: 3, useNativeDriver: true })
+                        Animated.timing(scaleAnim, { toValue: 1.1, duration: 80, useNativeDriver: true }),
+                        Animated.spring(scaleAnim, { toValue: 1, friction: 4, useNativeDriver: true })
                     ]).start();
                 }
             });

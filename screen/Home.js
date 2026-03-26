@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     StyleSheet, Text, View, TouchableOpacity, ScrollView, Image,
-    Animated, Easing, Dimensions, RefreshControl, Platform
+    Animated, Easing, Dimensions, RefreshControl, Platform, StatusBar
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -12,7 +12,6 @@ import NativeAd from '../components/NativeAd';
 import { BlurView } from 'expo-blur';
 import StepCounter from '../components/StepCounter';
 import AchievementUnlockedModal from '../components/AchievementUnlockedModal';
-import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
 
 import Config from '../constants/Config';
@@ -21,6 +20,7 @@ import { registerForPushNotificationsAsync, saveTokenToBackend } from '../servic
 
 const BACKEND_URL = Config.BACKEND_URL;
 const { width } = Dimensions.get('window');
+
 
 export default function Home() {
     const navigation = useNavigation();
@@ -32,6 +32,12 @@ export default function Home() {
     const [refreshing, setRefreshing] = useState(false);
     const [stats, setStats] = useState({ totalKm: 0, totalKcal: 0, count: 0 });
     const [greeting, setGreeting] = useState('');
+
+    // StatusBar dark
+    useEffect(() => {
+        StatusBar.setBarStyle('light-content');
+        Platform.OS === 'android' && StatusBar.setBackgroundColor('#0A0A0A');
+    }, []);
 
     // Animaciones
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -71,8 +77,6 @@ export default function Home() {
 
         setMotivation(motivations[Math.floor(Math.random() * motivations.length)]);
         loadAllData();
-        requestLocationPermission();
-
         // Animación de entrada escalonada
         Animated.stagger(100, [
             Animated.parallel([
@@ -91,7 +95,7 @@ export default function Home() {
             });
         }
 
-        const interval = setInterval(loadNotifications, 10000);
+        const interval = setInterval(loadNotifications, 60000);
         return () => clearInterval(interval);
     }, []);
 
@@ -127,25 +131,6 @@ export default function Home() {
         if (user) checkForNewAchievements(user);
     };
 
-    const requestLocationPermission = async () => {
-        try {
-            const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
-            if (foregroundStatus === 'granted') {
-                const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
-                if (backgroundStatus === 'granted') {
-                    const { startLocationTracking } = require('../services/LocationTracker');
-                    await startLocationTracking();
-                    console.log('Permisos concedidos y rastreo de fondo activado');
-                } else {
-                    console.log('Permiso de ubicación en segundo plano denegado');
-                }
-            } else {
-                console.log('Permiso de ubicación en primer plano denegado');
-            }
-        } catch (error) {
-            console.error('Error solicitando permisos de ubicación:', error);
-        }
-    };
 
     const onRefresh = async () => {
         setRefreshing(true);
@@ -506,11 +491,9 @@ export default function Home() {
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.premiumHorizontalScroll}
                 >
-                    <QuickAction icon="flash" label="Nexus IA" color="#A259FF" onPress={() => navigation.navigate('EntrenadorIA')} delay={0} />
                     <QuickAction icon="mic-outline" label="Voz Coach" color="#00D1FF" onPress={() => navigation.navigate('VoiceCoach')} delay={1} />
-                    <QuickAction icon="finger-print" label="Biometrics" color="#63ff15" onPress={() => navigation.navigate('HealthSync')} delay={2} />
-                    <QuickAction icon="diamond" label="Elite Vault" color="#FFD700" onPress={() => navigation.navigate('SavedElitePlans')} delay={3} />
-                    <QuickAction icon="bar-chart" label="Ranking" color="#FF6B6B" onPress={() => navigation.navigate('Ranking')} delay={4} />
+                    <QuickAction icon="diamond" label="Elite Vault" color="#FFD700" onPress={() => navigation.navigate('SavedElitePlans')} delay={2} />
+                    <QuickAction icon="bar-chart" label="Ranking" color="#FF6B6B" onPress={() => navigation.navigate('Ranking')} delay={3} />
                 </ScrollView>
 
                 {/* SECTIONS: BENTO STYLE LISTS */}
@@ -532,7 +515,6 @@ export default function Home() {
                         <Text style={styles.premiumSectionTitle}>PROTOCOLO DE ENTRENAMIENTO</Text>
                     </View>
                     <View style={styles.bentoFeatureList}>
-                        <FeatureCard title="Bio-Sincronización" icon="sync" color="#63ff15" screen="HealthSync" description="Integración de biometría" />
                         <FeatureCard title="Centro de Comando" icon="calendar" color="#007AFF" screen="TrainingCalendar" description="Programación de ciclos" />
                     </View>
                 </View>
@@ -554,8 +536,6 @@ export default function Home() {
                         <Text style={styles.premiumSectionTitle}>COMUNIDAD NEXUS</Text>
                     </View>
                     <View style={styles.bentoFeatureList}>
-                        <FeatureCard title="Feed Social" icon="globe" color="#FF6B6B" screen="Community" description="Ver actividades" />
-                        <FeatureCard title="Ranking Global" icon="trophy" color="#FFD700" screen="Ranking" description="Compite y gana" />
                         <FeatureCard title="Amigos" icon="people-circle" color="#00D1FF" screen="Friends" description="Tu red fitness" />
                         <FeatureCard title="Logros" icon="medal" color="#FFA500" screen="Achievements" description="Desbloquea badges" />
                     </View>
@@ -676,10 +656,6 @@ export default function Home() {
                             <Text style={styles.sidebarItemText}>Estadísticas</Text>
                         </TouchableOpacity>
                         <View style={styles.sidebarDivider} />
-                        <TouchableOpacity style={styles.sidebarItem} onPress={() => { toggleSidebar(false); navigation.navigate('AccountSettings'); }}>
-                            <Ionicons name="settings-outline" size={22} color="#888" />
-                            <Text style={styles.sidebarItemText}>Configuración</Text>
-                        </TouchableOpacity>
                         <TouchableOpacity style={styles.sidebarItem} onPress={async () => {
                             await AsyncStorage.multiRemove(['token', 'user']);
                             navigation.replace('Login');
@@ -706,135 +682,310 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#000' },
+    container: { flex: 1, backgroundColor: '#0A0A0A' },
     scrollContent: { paddingHorizontal: 0, paddingBottom: 100 },
 
-    // REINVENTED HEADER
-    header: { paddingHorizontal: 20, paddingTop: 10, marginBottom: 20 },
+    // HEADER PREMIUM CON NEON
+    header: { paddingHorizontal: 16, paddingTop: 12, marginBottom: 24 },
     mainHeaderCard: {
-        borderRadius: 32,
-        padding: 24,
+        borderRadius: 24,
+        padding: 20,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
+        borderColor: 'rgba(99,255,21,0.15)',
         overflow: 'hidden',
+        backgroundColor: '#121212',
+        shadowColor: '#63ff15',
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: 3,
     },
-    headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
     headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    menuNavBtn: { borderRadius: 14, overflow: 'hidden' },
-    glassBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)' },
-    welcomeTextContainer: { gap: 0 },
-    greetingText: { color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
-    userName: { color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: -0.5 },
+    menuNavBtn: { borderRadius: 12, overflow: 'hidden' },
+    glassBtn: {
+        width: 44,
+        height: 44,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(99,255,21,0.08)',
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.15)',
+    },
+    welcomeTextContainer: { gap: 2 },
+    greetingText: { color: '#888', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.2 },
+    userName: { color: '#FFFFFF', fontSize: 24, fontWeight: '900', letterSpacing: -0.5 },
 
-    headerRight: { flexDirection: 'row', alignItems: 'center', gap: 15 },
-    notifBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.05)', justifyContent: 'center', alignItems: 'center' },
-    pulsatingDot: { position: 'absolute', top: 12, right: 12, width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF3366', borderWeight: 2, borderColor: '#000' },
-    
-    avatarWrapper: { width: 46, height: 46, borderRadius: 23, justifyContent: 'center', alignItems: 'center' },
-    avatarGlow: { ...StyleSheet.absoluteFillObject, borderRadius: 23, opacity: 0.3 },
-    avatarImg: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+    headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    notifBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        backgroundColor: 'rgba(99,255,21,0.08)',
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.15)',
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    pulsatingDot: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: '#FF3366',
+        shadowColor: '#FF3366',
+        shadowOpacity: 0.6,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+
+    avatarWrapper: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: 'rgba(99,255,21,0.3)',
+    },
+    avatarGlow: {
+        ...StyleSheet.absoluteFillObject,
+        borderRadius: 24,
+        opacity: 0.2,
+    },
+    avatarImg: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.2)'
+    },
 
     membershipStrip: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.03)',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderRadius: 16,
-        marginTop: 5,
+        backgroundColor: 'rgba(99,255,21,0.05)',
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: 12,
+        marginTop: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.12)',
     },
     membershipInfo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    membershipText: { fontSize: 11, fontWeight: '800', letterSpacing: 1 },
+    membershipText: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: '#63ff15' },
 
-    // BENTO SYSTEM
-    bentoGrid: { paddingHorizontal: 20, gap: 12, marginBottom: 24 },
+    // BENTO GRID PREMIUM
+    bentoGrid: { paddingHorizontal: 16, gap: 12, marginBottom: 24 },
     bentoRow: { flexDirection: 'row', gap: 12 },
     bentoCard: {
-        borderRadius: 28,
-        padding: 20,
-        backgroundColor: '#0A0A0A',
-        borderWeight: 1,
-        borderColor: 'rgba(255,255,255,0.06)',
+        borderRadius: 20,
+        padding: 18,
+        backgroundColor: '#121212',
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.12)',
         overflow: 'hidden',
+        shadowColor: '#63ff15',
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+        elevation: 2,
     },
     cardHalf: { flex: 1, height: 160, justifyContent: 'space-between' },
     cardFull: { flex: 1, height: 100, justifyContent: 'center' },
     bentoCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-    bentoIconBox: { width: 36, height: 36, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.05)', justifyContent: 'center', alignItems: 'center' },
-    bentoValue: { color: '#fff', fontSize: 26, fontWeight: '900', letterSpacing: -1 },
-    unitText: { fontSize: 14, color: 'rgba(255,255,255,0.4)', fontWeight: '600' },
-    bentoLabel: { color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: '800', letterSpacing: 0.5, marginTop: 4 },
-    bentoMiniGraph: { height: 4, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 2, marginTop: 12, overflow: 'hidden' },
+    bentoIconBox: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: 'rgba(99,255,21,0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.15)',
+    },
+    bentoValue: { color: '#63ff15', fontSize: 28, fontWeight: '900', letterSpacing: -0.8, marginTop: 8 },
+    unitText: { fontSize: 13, color: '#888', fontWeight: '600' },
+    bentoLabel: { color: '#666', fontSize: 10, fontWeight: '800', letterSpacing: 0.6, marginTop: 6 },
+    bentoMiniGraph: { height: 4, backgroundColor: 'rgba(99,255,21,0.08)', borderRadius: 2, marginTop: 12, overflow: 'hidden' },
     graphBar: { height: '100%', borderRadius: 2 },
-    
-    bentoFullContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    streakVisual: { flexDirection: 'row', gap: 4 },
-    streakDot: { width: 12, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.1)' },
 
-    // HORIZONTAL SCROLL
-    premiumHorizontalScroll: { paddingLeft: 20, paddingRight: 20, gap: 15, marginBottom: 30 },
+    bentoFullContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    streakVisual: { flexDirection: 'row', gap: 5 },
+    streakDot: { width: 10, height: 5, borderRadius: 2.5, backgroundColor: 'rgba(99,255,21,0.15)' },
+    streakInfo: { flex: 1 },
+
+    // QUICK ACTIONS & FEATURES
+    premiumHorizontalScroll: { paddingLeft: 16, paddingRight: 16, gap: 12, marginBottom: 28 },
+    quickAction: {
+        width: 100,
+        height: 110,
+        borderRadius: 18,
+        backgroundColor: '#1a1a1a',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.12)',
+    },
+    quickActionGradient: { ...StyleSheet.absoluteFill, borderRadius: 18 },
+    quickActionIconBox: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+    quickActionLabelText: { color: '#fff', fontSize: 11, fontWeight: '800', marginTop: 6, textAlign: 'center' },
 
     // SECTION SYSTEM
-    sectionGroup: { paddingHorizontal: 20, marginBottom: 32 },
+    sectionGroup: { paddingHorizontal: 16, marginBottom: 32 },
     premiumSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
-    accentLine: { width: 3, height: 14, backgroundColor: '#63ff15', borderRadius: 2 },
-    premiumSectionTitle: { color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: '900', letterSpacing: 1.5 },
+    accentLine: { width: 3, height: 16, backgroundColor: '#63ff15', borderRadius: 1.5 },
+    premiumSectionTitle: { color: '#888', fontSize: 11, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' },
     bentoFeatureList: { gap: 10 },
 
-    // STEP COUNTER
-    premiumStepWrapper: { paddingHorizontal: 20, marginBottom: 30 },
+    // FEATURE CARD PREMIUM
+    featureCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        borderRadius: 18,
+        backgroundColor: '#121212',
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.12)',
+        marginBottom: 8,
+        shadowColor: '#63ff15',
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        elevation: 1,
+    },
+    featureCardContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+    featureIconWrap: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.2)',
+    },
+    featureTextWrap: { flex: 1 },
+    featureTitle: { color: '#fff', fontSize: 16, fontWeight: '800' },
+    featureDesc: { color: '#666', fontSize: 12, fontWeight: '600', marginTop: 2 },
+    featureBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, marginLeft: 8 },
+    featureBadgeText: { color: '#000', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
+    featureArrow: { marginLeft: 8 },
 
-    // PROMO BANNER & MOTIVATION (PREMIUM GLASS)
-    promoBanner: { marginHorizontal: 20, borderRadius: 28, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(99,255,21,0.15)', marginBottom: 20 },
-    promoBannerGrad: { padding: 22 },
+    // STEP COUNTER
+    premiumStepWrapper: { paddingHorizontal: 16, marginBottom: 28 },
+
+    // PROMO BANNER & MOTIVATION
+    promoBanner: {
+        marginHorizontal: 16,
+        borderRadius: 20,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.2)',
+        marginBottom: 20,
+        shadowColor: '#63ff15',
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    promoBannerGrad: { padding: 20 },
     promoBannerContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     promoBannerText: { flex: 1 },
-    promoBadge: { backgroundColor: '#63ff15', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, marginBottom: 10 },
+    promoBadge: {
+        backgroundColor: '#63ff15',
+        alignSelf: 'flex-start',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        marginBottom: 8
+    },
     promoBadgeText: { color: '#000', fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
     promoBannerTitle: { color: '#fff', fontSize: 20, fontWeight: '900', letterSpacing: -0.5 },
-    promoBannerSub: { color: 'rgba(255,255,255,0.5)', fontSize: 13, marginTop: 4, lineHeight: 18, fontWeight: '600' },
-    promoBannerAction: { marginLeft: 15 },
-    promoActionCircle: { width: 52, height: 52, borderRadius: 26, justifyContent: 'center', alignItems: 'center', shadowColor: '#63ff15', shadowOpacity: 0.3, shadowRadius: 10, elevation: 5 },
+    promoBannerSub: { color: '#888', fontSize: 13, marginTop: 4, lineHeight: 18, fontWeight: '600' },
+    promoBannerAction: { marginLeft: 16 },
+    promoActionCircle: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#63ff15',
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+        elevation: 5,
+    },
 
     motivationCard: {
-        marginHorizontal: 20, padding: 24, borderRadius: 28, borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.06)', overflow: 'hidden', alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.02)', marginBottom: 20
+        marginHorizontal: 16,
+        padding: 22,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.15)',
+        overflow: 'hidden',
+        alignItems: 'center',
+        backgroundColor: 'rgba(99,255,21,0.04)',
+        marginBottom: 20,
+        shadowColor: '#63ff15',
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 2,
     },
-    motivationHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
-    motivationLabel: { color: '#63ff15', fontSize: 11, fontWeight: '900', letterSpacing: 2 },
-    motivationText: { color: 'rgba(255,255,255,0.6)', fontSize: 16, fontStyle: 'italic', textAlign: 'center', lineHeight: 26, fontWeight: '500' },
+    motivationHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+    motivationLabel: { color: '#63ff15', fontSize: 10, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' },
+    motivationText: { color: '#CCC', fontSize: 15, fontStyle: 'italic', textAlign: 'center', lineHeight: 24, fontWeight: '500' },
 
-    // SIDEBAR PREMIUM REINVENTED
-    sidebar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: width * 0.82, backgroundColor: '#000', zIndex: 1000, borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.08)' },
+    // SIDEBAR
+    sidebar: {
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: width * 0.75,
+        backgroundColor: '#0A0A0A',
+        zIndex: 1000,
+        borderRightWidth: 1,
+        borderRightColor: 'rgba(99,255,21,0.15)'
+    },
     sidebarOverlay: { backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 999 },
-    sidebarHeader: { padding: 30, paddingBottom: 20, flexDirection: 'row', alignItems: 'center', gap: 15 },
-    sidebarLogo: { width: 44, height: 44, borderRadius: 12 },
-    sidebarTitle: { color: 'white', fontSize: 22, fontWeight: '900', letterSpacing: -0.5 },
-    sidebarUserSection: { paddingHorizontal: 20, marginBottom: 25 },
-    sidebarUserCard: { padding: 20, borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-    sidebarUserTop: { flexDirection: 'row', alignItems: 'center', gap: 15 },
-    sidebarAvatar: { width: 54, height: 54, borderRadius: 27, borderWidth: 2, borderColor: 'rgba(255,255,255,0.1)' },
-    sidebarUserInfo: { flex: 1 },
-    sidebarUserNameText: { color: 'white', fontSize: 18, fontWeight: '800' },
-    sidebarPlanBadge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, marginTop: 6 },
-    sidebarPlanText: { fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
-    sidebarMenu: { flex: 1, paddingHorizontal: 15 },
-    sidebarItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 18, gap: 15, borderRadius: 16, marginBottom: 4 },
-    sidebarItemText: { color: '#AAA', fontSize: 15, fontWeight: '700' },
-    sidebarDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginVertical: 15, marginHorizontal: 20 },
-    sidebarFooter: { padding: 30, alignItems: 'center', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.03)' },
-    versionText: { color: '#444', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
-
-    // FALLBACKS
-    quickAction: { width: 100, height: 110, borderRadius: 24, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' },
-    quickActionLabelText: { color: '#fff', fontSize: 11, fontWeight: '800', marginTop: 8 },
-    featureCard: {
-        flexDirection: 'row', alignItems: 'center', padding: 18, borderRadius: 22,
-        backgroundColor: '#0A0A0A', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', marginBottom: 5
+    sidebarHeader: {
+        padding: 20,
+        paddingBottom: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(99,255,21,0.1)',
     },
-    featureIconWrap: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-    featureTitle: { color: '#fff', fontSize: 15, fontWeight: '800' },
-    featureDesc: { color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: '600', marginTop: 2 },
+    sidebarLogo: { width: 40, height: 40, borderRadius: 10 },
+    sidebarTitle: { color: 'white', fontSize: 20, fontWeight: '900', letterSpacing: -0.5 },
+    sidebarUserSection: { paddingHorizontal: 16, paddingVertical: 20, marginBottom: 12 },
+    sidebarUserCard: {
+        padding: 16,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.12)',
+        backgroundColor: '#121212',
+    },
+    sidebarUserTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    sidebarAvatar: { width: 50, height: 50, borderRadius: 25, borderWidth: 2, borderColor: 'rgba(99,255,21,0.3)' },
+    sidebarUserInfo: { flex: 1 },
+    sidebarUserNameText: { color: 'white', fontSize: 16, fontWeight: '800' },
+    sidebarPlanBadge: { alignSelf: 'flex-start', paddingHorizontal: 9, paddingVertical: 3, borderRadius: 10, marginTop: 4, backgroundColor: 'rgba(99,255,21,0.15)', borderWidth: 1, borderColor: 'rgba(99,255,21,0.3)' },
+    sidebarPlanText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.5, color: '#63ff15' },
+    sidebarMenu: { flex: 1, paddingHorizontal: 12 },
+    sidebarItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 14,
+        paddingHorizontal: 14,
+        borderRadius: 14,
+        gap: 12,
+        borderRadius: 12,
+        marginBottom: 6,
+        backgroundColor: 'rgba(255,255,255,0.02)',
+    },
+    sidebarItemText: { color: '#AAA', fontSize: 15, fontWeight: '700' },
+    sidebarDivider: { height: 1, backgroundColor: 'rgba(99,255,21,0.1)', marginVertical: 14, marginHorizontal: 16 },
+    sidebarFooter: { padding: 20, alignItems: 'center', borderTopWidth: 1, borderTopColor: 'rgba(99,255,21,0.1)' },
+    versionText: { color: '#444', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
 });

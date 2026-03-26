@@ -20,7 +20,19 @@ import { isValidEmail, parseAuthError } from '../utils/authErrorHandler';
 
 const BACKEND_URL = Config.BACKEND_URL;
 
-// Carga segura de GoogleSignin para evitar crash en Expo Go
+const NeoPulseRing = ({ scale }) => {
+    return (
+        <Animated.View
+            style={[
+                styles.logoPulseRing,
+                {
+                    transform: [{ scale }],
+                }
+            ]}
+        />
+    );
+};
+
 let GoogleSignin = null;
 let statusCodes = {};
 try {
@@ -40,7 +52,6 @@ export default function Login() {
     const [contraseña, setContraseña] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-
     const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', type: 'info', onConfirm: null });
 
     const showAlert = (title, message, type = 'info', onConfirm = null) => {
@@ -59,6 +70,7 @@ export default function Login() {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(40)).current;
     const logoScale = useRef(new Animated.Value(0.8)).current;
+    const pulseRingScale = useRef(new Animated.Value(0.8)).current;
 
     const syncWithBackend = async (supabaseAccessToken) => {
         try {
@@ -72,19 +84,11 @@ export default function Login() {
             });
 
             console.log('📊 Response status:', response.status);
-            console.log('📊 Response headers:', {
-                contentType: response.headers.get('content-type'),
-                contentLength: response.headers.get('content-length')
-            });
-
             const text = await response.text();
 
-            // Validar que la respuesta sea JSON
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 console.error('❌ Respuesta no es JSON. Content-Type:', contentType);
-                console.error('📄 Respuesta recibida:', text.substring(0, 1000));
-
                 if (response.status === 404) {
                     showAlert(
                         'Error de Configuración',
@@ -106,7 +110,6 @@ export default function Login() {
                 data = JSON.parse(text);
             } catch (e) {
                 console.error('❌ Error parseando JSON:', e);
-                console.error('📄 Respuesta del servidor:', text.substring(0, 500));
                 showAlert(
                     'Error de Respuesta',
                     'El servidor devolvió datos inválidos. Por favor, intenta de nuevo.',
@@ -137,7 +140,7 @@ export default function Login() {
                 if (data.isNewUser || !data.user.peso || !data.user.altura) {
                     navigation.navigate('WelcomePlans');
                 } else {
-                    navigation.replace('Home');
+                    navigation.replace('MainTabs');
                 }
             } else {
                 console.error('❌ Sincronización fallida (sin token):', data.error || 'Error desconocido');
@@ -160,7 +163,6 @@ export default function Login() {
     useEffect(() => {
         checkAutoLogin();
 
-        // Configuración de Google Sign-In (Protegido para Expo Go)
         try {
             if (GoogleSignin && typeof GoogleSignin.configure === 'function') {
                 GoogleSignin.configure({
@@ -175,7 +177,6 @@ export default function Login() {
             console.error('Error al configurar Google Sign-In:', e);
         }
 
-        // Listener para cambios de sesión de Supabase
         const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
             console.log('📡 Auth event:', event, !!session ? 'con sesión' : 'sin sesión');
 
@@ -192,32 +193,47 @@ export default function Login() {
                         providerIdToken ? 'idToken' : 'accessToken'
                     );
                 } else {
-                    // Si no hay token del proveedor (ej. INITIAL_SESSION con sesión persistida)
-                    // Usamos el accessToken de Supabase para sincronizar con el backend
                     syncWithBackend(session.access_token);
                 }
             }
         });
 
+        // Animación inicial
         Animated.parallel([
             Animated.timing(fadeAnim, {
                 toValue: 1,
-                duration: 800,
+                duration: 600,
                 useNativeDriver: true,
                 easing: Easing.out(Easing.ease),
             }),
             Animated.timing(slideAnim, {
                 toValue: 0,
-                duration: 800,
+                duration: 600,
                 useNativeDriver: true,
                 easing: Easing.out(Easing.ease),
             }),
             Animated.spring(logoScale, {
                 toValue: 1,
-                friction: 5,
+                friction: 6,
                 useNativeDriver: true,
             }),
         ]).start();
+
+        // Pulse ring animation loop
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulseRingScale, {
+                    toValue: 1.1,
+                    duration: 2000,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(pulseRingScale, {
+                    toValue: 0.8,
+                    duration: 2000,
+                    useNativeDriver: true,
+                }),
+            ])
+        ).start();
 
         return () => {
             if (authListener && authListener.subscription) {
@@ -231,9 +247,8 @@ export default function Login() {
             const token = await AsyncStorage.getItem('token');
             const user = await AsyncStorage.getItem('user');
             if (token && user) {
-                // Pequeño delay para dejar que la animación brille un poco
                 setTimeout(() => {
-                    navigation.replace('Home');
+                    navigation.replace('MainTabs');
                 }, 500);
             }
         } catch (e) { }
@@ -258,7 +273,6 @@ export default function Login() {
 
             console.log(`📡 Respuesta del backend recibida (${response.status})`);
 
-            // Validar que la respuesta sea JSON
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 console.error('❌ Respuesta no es JSON. Content-Type:', contentType);
@@ -296,7 +310,6 @@ export default function Login() {
             }
 
             if (data.token) {
-                // Aseguramos que el usuario tenga un plan por defecto en el almacenamiento local
                 const userData = {
                     ...data.user,
                     plan: data.user.plan || "Gratis"
@@ -306,11 +319,10 @@ export default function Login() {
 
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-                // Si es un usuario nuevo (o le faltan datos biométricos), mandarlo a WelcomePlans
                 if (data.isNewUser || !data.user.peso || !data.user.altura) {
                     navigation.navigate('WelcomePlans');
                 } else {
-                    navigation.navigate('Home');
+                    navigation.replace('MainTabs');
                 }
             } else {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -340,7 +352,6 @@ export default function Login() {
             return;
         }
 
-        // Validar formato de email
         if (!isValidEmail(usuario)) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             showAlert("Email Inválido", "Por favor, introduce un email válido (ej: usuario@ejemplo.com)", "warning");
@@ -387,12 +398,11 @@ export default function Login() {
                 return;
             }
 
-            // Login exitoso
             await AsyncStorage.setItem('user', JSON.stringify(data.user));
             await AsyncStorage.setItem('token', data.token);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             console.log('✅ Login exitoso');
-            navigation.navigate('Home');
+            navigation.replace('MainTabs');
 
         } catch (error) {
             console.error('❌ Error en handleLogin:', error.message);
@@ -408,7 +418,6 @@ export default function Login() {
             try {
                 setIsLoading(true);
 
-                // Evitar crash en Expo Go (donde el módulo nativo no existe)
                 try {
                     if (!GoogleSignin) throw new Error('Native module missing');
                     await GoogleSignin.hasPlayServices();
@@ -438,7 +447,6 @@ export default function Login() {
                         const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
 
                         if (result.type === 'success' && result.url) {
-                            // Extraer tokens del hash de la URL (#access_token=...)
                             const urlObj = new URL(result.url.replace('#', '?'));
                             const access_token = urlObj.searchParams.get('access_token');
                             const refresh_token = urlObj.searchParams.get('refresh_token');
@@ -451,13 +459,11 @@ export default function Login() {
                                         refresh_token: refresh_token || '',
                                     });
                                 } catch (sessionError) {
-                                    // Ignorar error de realtime.setAuth que es un bug interno de Supabase
                                     if (!sessionError.message?.includes('setAuth')) {
                                         throw sessionError;
                                     }
                                 }
                             } else {
-                                // No se obtuvo token del callback, desbloquear UI
                                 setIsLoading(false);
                             }
                         } else {
@@ -467,17 +473,13 @@ export default function Login() {
                     return;
                 }
 
-                // Iniciar sesión nativa
                 const userInfo = await GoogleSignin.signIn();
-
-                // Extraer el idToken
                 const idToken = userInfo.data?.idToken || userInfo.idToken;
 
                 if (!idToken) {
                     throw new Error('No se pudo obtener el ID Token de Google');
                 }
 
-                // Autenticar con Supabase usando el idToken
                 try {
                     const { error: authError } = await supabase.auth.signInWithIdToken({
                         provider: 'google',
@@ -486,7 +488,6 @@ export default function Login() {
 
                     if (authError) throw authError;
                 } catch (internalError) {
-                    // Ignorar error de realtime.setAuth que es un bug interno de Supabase
                     if (!internalError.message?.includes('setAuth')) {
                         throw internalError;
                     }
@@ -495,9 +496,7 @@ export default function Login() {
             } catch (error) {
                 console.error('Google Sign-In Error:', error);
                 if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-                    // El usuario canceló
                 } else if (error.code === statusCodes.IN_PROGRESS) {
-                    // Ya hay un proceso en curso
                 } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
                     showAlert("Servicios", "Google Play Services no está disponible", "error");
                 } else {
@@ -509,7 +508,6 @@ export default function Login() {
             try {
                 setIsLoading(true);
 
-                // IMPORTANTE: Para Facebook en Expo Go, el redirectUri debe ser estable
                 const redirectUri = AuthSession.makeRedirectUri({
                     useProxy: true,
                     projectNameForProxy: '@ayoubito04/nexus-fitness'
@@ -533,7 +531,6 @@ export default function Login() {
 
                     if (result.type === 'success' && result.url) {
                         console.log('✅ Retorno exitoso de Facebook');
-                        // Extraer tokens del hash de la URL (#access_token=...)
                         const urlObj = new URL(result.url.replace('#', '?'));
                         const access_token = urlObj.searchParams.get('access_token');
                         const refresh_token = urlObj.searchParams.get('refresh_token');
@@ -544,7 +541,6 @@ export default function Login() {
                                 access_token,
                                 refresh_token: refresh_token || '',
                             });
-                            // El listener onAuthStateChange se encargará de la redirección a Home
                         }
                     } else {
                         console.log('⚠️ Login de Facebook cancelado o fallido:', result.type);
@@ -564,7 +560,6 @@ export default function Login() {
                     scheme: 'nexus-fitness',
                 });
 
-                // Usamos el CLIENT_ID de Instagram (o fallback al de Facebook si aplica)
                 const instagramClientId = Config.INSTAGRAM_CLIENT_ID || Config.FACEBOOK_APP_ID;
 
                 if (!instagramClientId || instagramClientId === 'tu_instagram_client_id') {
@@ -584,7 +579,6 @@ export default function Login() {
                 if (result.type === 'success' && result.url) {
                     const code = new URLSearchParams(result.url.split('?')[1]).get('code');
                     if (code) {
-                        // Sincronizamos con el backend tradicional (Instagram no tiene proveedor Supabase directo aún)
                         handleSocialAuth('instagram', code);
                     }
                 } else {
@@ -601,38 +595,44 @@ export default function Login() {
     return (
         <SafeAreaView style={styles.mainContainer}>
             <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 style={{ flex: 1 }}
             >
                 <StatusBar style="light" />
                 <ScrollView contentContainerStyle={styles.scrollWrapper} keyboardShouldPersistTaps="handled">
 
                     {/* Logo / Header */}
-                    <Animated.View style={[styles.headerSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: logoScale }] }]}>
+                    <Animated.View style={[
+                        styles.headerSection,
+                        {
+                            opacity: fadeAnim,
+                            transform: [
+                                { translateY: slideAnim },
+                                { scale: logoScale },
+                            ]
+                        }
+                    ]}>
                         <View style={styles.logoContainer}>
-                            <LinearGradient
-                                colors={['rgba(99,255,21,0.2)', 'transparent']}
-                                style={styles.logoGlow}
-                            />
+                            <NeoPulseRing scale={pulseRingScale} />
                             <View style={styles.logoBox}>
                                 <Text style={styles.logoText}>N</Text>
                             </View>
                         </View>
                         <Text style={styles.brandName}>NEXUS</Text>
-                        <Text style={styles.brandTagline}>Tu entrenador con IA</Text>
+                        <Text style={styles.brandTagline}>EL FUTURO DEL ENTRENAMIENTO</Text>
                     </Animated.View>
 
                     {/* Login Card */}
                     <Animated.View style={[styles.loginCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-                        <Text style={styles.cardTitle}>Iniciar Sesión</Text>
+                        <Text style={styles.cardTitle}>INICIAR SESIÓN</Text>
 
                         <View style={styles.inputContainer}>
                             <Text style={styles.fieldLabel}>Email</Text>
                             <View style={[styles.inputWrapper, focusedInput === 'email' && styles.inputFocused]}>
-                                <Ionicons name="mail-outline" size={18} color={focusedInput === 'email' ? '#63ff15' : '#52525B'} />
+                                <Ionicons name="mail-outline" size={18} color="#555" />
                                 <TextInput
                                     placeholder="tu@email.com"
-                                    placeholderTextColor="#3F3F46"
+                                    placeholderTextColor="#52525B"
                                     value={usuario}
                                     onChangeText={setUsuario}
                                     style={styles.input}
@@ -649,10 +649,10 @@ export default function Login() {
                         <View style={styles.inputContainer}>
                             <Text style={styles.fieldLabel}>Contraseña</Text>
                             <View style={[styles.inputWrapper, focusedInput === 'password' && styles.inputFocused]}>
-                                <Ionicons name="lock-closed-outline" size={18} color={focusedInput === 'password' ? '#63ff15' : '#52525B'} />
+                                <Ionicons name="lock-closed-outline" size={18} color="#555" />
                                 <TextInput
                                     placeholder="••••••••"
-                                    placeholderTextColor="#3F3F46"
+                                    placeholderTextColor="#52525B"
                                     secureTextEntry={!showPassword}
                                     value={contraseña}
                                     onChangeText={setContraseña}
@@ -663,7 +663,7 @@ export default function Login() {
                                     data-testid="password-input"
                                 />
                                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)} activeOpacity={0.7}>
-                                    <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={18} color="#52525B" />
+                                    <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={18} color="#555" />
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -680,19 +680,21 @@ export default function Login() {
                         >
                             <LinearGradient
                                 colors={['#63ff15', '#4dd10e']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
                                 style={styles.mainBtnGradient}
                             >
                                 {isLoading ? (
                                     <ActivityIndicator color="#000" size="small" />
                                 ) : (
-                                    <Text style={styles.btnText}>ENTRAR</Text>
+                                    <Text style={styles.btnText}>INICIAR SESIÓN</Text>
                                 )}
                             </LinearGradient>
                         </TouchableOpacity>
 
                         <View style={styles.dividerBox}>
                             <View style={styles.line} />
-                            <Text style={styles.dividerText}>O continúa con</Text>
+                            <Text style={styles.dividerText}>O CONTINÚA CON</Text>
                             <View style={styles.line} />
                         </View>
 
@@ -705,7 +707,8 @@ export default function Login() {
                                 accessibilityLabel="Iniciar sesión con Google"
                                 accessibilityRole="button"
                             >
-                                <Ionicons name="logo-google" size={20} color="#EA4335" />
+                                <Ionicons name="logo-google" size={18} color="#fff" />
+                                <Text style={styles.socialText}>Google</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
@@ -716,7 +719,8 @@ export default function Login() {
                                 accessibilityLabel="Iniciar sesión con Facebook"
                                 accessibilityRole="button"
                             >
-                                <Ionicons name="logo-facebook" size={20} color="#1877F2" />
+                                <Ionicons name="logo-facebook" size={18} color="#fff" />
+                                <Text style={styles.socialText}>Facebook</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
@@ -727,7 +731,8 @@ export default function Login() {
                                 accessibilityLabel="Iniciar sesión con Instagram"
                                 accessibilityRole="button"
                             >
-                                <Ionicons name="logo-instagram" size={20} color="#E4405F" />
+                                <Ionicons name="logo-instagram" size={18} color="#fff" />
+                                <Text style={styles.socialText}>Instagram</Text>
                             </TouchableOpacity>
                         </View>
                     </Animated.View>
@@ -765,133 +770,160 @@ const styles = StyleSheet.create({
     },
     scrollWrapper: {
         padding: 24,
-        paddingTop: 40,
+        paddingTop: 20,
         alignItems: 'center',
     },
     headerSection: {
         alignItems: 'center',
-        marginBottom: 36,
+        marginBottom: 32,
     },
     logoContainer: {
         position: 'relative',
-        marginBottom: 16,
+        marginBottom: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    logoGlow: {
+    logoPulseRing: {
         position: 'absolute',
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        top: -20,
-        left: -20,
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        borderWidth: 2,
+        borderColor: '#63ff15',
+        opacity: 0.4,
     },
     logoBox: {
         width: 80,
         height: 80,
         borderRadius: 20,
         backgroundColor: '#121212',
-        borderWidth: 2,
+        borderWidth: 1.5,
         borderColor: '#63ff15',
         justifyContent: 'center',
         alignItems: 'center',
+        shadowColor: '#63ff15',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 1,
+        shadowRadius: 20,
+        elevation: 25,
     },
     logoText: {
-        fontSize: 40,
+        fontSize: 42,
         fontWeight: '900',
         color: '#63ff15',
+        letterSpacing: 1,
     },
     brandName: {
-        fontSize: 28,
+        fontSize: 32,
         fontWeight: '900',
         color: '#fff',
-        letterSpacing: 6,
+        letterSpacing: 8,
+        marginTop: 6,
     },
     brandTagline: {
-        fontSize: 13,
-        color: '#52525B',
-        marginTop: 6,
-        fontWeight: '500',
+        fontSize: 11,
+        color: '#63ff15',
+        marginTop: 10,
+        fontWeight: '700',
+        letterSpacing: 2,
     },
     loginCard: {
         width: '100%',
         maxWidth: 400,
-        backgroundColor: '#121212',
-        borderRadius: 24,
-        padding: 28,
+        backgroundColor: '#111',
+        borderRadius: 20,
+        padding: 24,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.06)',
+        borderColor: 'rgba(99,255,21,0.18)',
+        marginBottom: 20,
+        shadowColor: '#63ff15',
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 3,
     },
     cardTitle: {
         color: 'white',
-        fontSize: 22,
+        fontSize: 20,
         fontWeight: '800',
-        marginBottom: 24,
+        marginBottom: 28,
         textAlign: 'center',
-        letterSpacing: -0.5,
+        letterSpacing: 2,
     },
     inputContainer: {
-        marginBottom: 18,
+        marginBottom: 20,
     },
     fieldLabel: {
-        color: '#71717A',
-        fontSize: 11,
+        color: '#63ff15',
+        fontSize: 10,
         fontWeight: '700',
         textTransform: 'uppercase',
-        marginBottom: 8,
-        marginLeft: 4,
-        letterSpacing: 0.5,
+        marginBottom: 10,
+        marginLeft: 2,
+        letterSpacing: 1,
+        opacity: 0.7,
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#18181B',
-        borderColor: '#27272A',
+        backgroundColor: '#1a1a1a',
         borderWidth: 1,
-        borderRadius: 12,
-        paddingHorizontal: 14,
+        borderColor: '#2a2a2a',
+        paddingHorizontal: 16,
         height: 52,
-        gap: 10,
+        gap: 12,
+        borderRadius: 10,
     },
     inputFocused: {
         borderColor: '#63ff15',
-        backgroundColor: 'rgba(99,255,21,0.03)',
+        backgroundColor: 'rgba(99,255,21,0.08)',
+        shadowColor: '#63ff15',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.6,
+        shadowRadius: 16,
     },
     input: {
         flex: 1,
         color: '#fff',
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: '500',
     },
     mainBtn: {
-        borderRadius: 12,
+        borderRadius: 14,
         overflow: 'hidden',
-        marginTop: 8,
+        marginTop: 16,
+        shadowColor: '#63ff15',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.7,
+        shadowRadius: 24,
+        elevation: 15,
     },
     mainBtnGradient: {
-        height: 54,
+        height: 56,
         justifyContent: 'center',
         alignItems: 'center',
     },
     btnText: {
         color: '#000',
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: '800',
-        letterSpacing: 1,
+        letterSpacing: 1.5,
     },
     dividerBox: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginVertical: 24,
+        marginVertical: 28,
     },
     line: {
         flex: 1,
         height: 1,
-        backgroundColor: '#27272A',
+        backgroundColor: 'rgba(99,255,21,0.2)',
     },
     dividerText: {
         color: '#52525B',
         marginHorizontal: 14,
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: '600',
+        letterSpacing: 0.5,
     },
     socialGrid: {
         flexDirection: 'row',
@@ -900,27 +932,29 @@ const styles = StyleSheet.create({
     },
     socialBtn: {
         flex: 1,
-        height: 50,
-        backgroundColor: '#18181B',
+        height: 56,
+        backgroundColor: 'rgba(30,30,30,0.8)',
         borderRadius: 12,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
         borderWidth: 1,
-        borderColor: '#27272A',
+        borderColor: 'rgba(99,255,21,0.15)',
     },
-    socialBtnText: {
+    socialText: {
         color: '#E4E4E7',
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: '600',
     },
     footerLink: {
-        marginTop: 28,
+        marginTop: 16,
+        marginBottom: 20,
     },
     footerText: {
         color: '#71717A',
         fontSize: 14,
+        textAlign: 'center',
     },
     neonText: {
         color: '#63ff15',

@@ -7,8 +7,6 @@ try {
     console.error('🔥 ERROR DE CARGA INICIAL:', e);
 }
 
-// Cargar rastreador de ubicación en segundo plano
-import './services/LocationTracker';
 import App from './App';
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);

@@ -16,29 +16,30 @@ import NativeAd from '../components/NativeAd';
 const BACKEND_URL = Config.BACKEND_URL;
 
 const MessageBubble = React.memo(({ item: m }) => (
-    <View style={[styles.bubble, m.sender === 'usuario' ? styles.userBubble : styles.iaBubble]}>
+    <View style={[styles.messageRow, m.sender === 'usuario' ? styles.userMessageRow : styles.iaMessageRow]}>
         {m.sender === 'ia' && (
-            <View style={styles.iaIconContainer}>
-                <MaterialCommunityIcons name="robot" size={20} color="#63ff15" />
+            <View style={styles.iaAvatarContainer}>
+                <LinearGradient
+                    colors={['rgba(99,255,21,0.3)', 'rgba(99,255,21,0.1)']}
+                    style={styles.iaAvatarGlow}
+                />
+                <View style={styles.iaAvatarCircle}>
+                    <Text style={styles.iaAvatarText}>N</Text>
+                </View>
             </View>
         )}
-        <View style={[styles.textWrapper, m.sender === 'usuario' && styles.userWrapper]}>
-            {m.sender === 'usuario' && (
-                <LinearGradient
-                    colors={['#63ff15', '#4ad912']}
-                    style={StyleSheet.absoluteFill}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                />
-            )}
+        <View style={[styles.bubble, m.sender === 'usuario' ? styles.userBubble : styles.iaBubble]}>
             {m.image && (
-                <View>
-                    <Image source={{ uri: m.image }} style={styles.sentImage} />
-                </View>
+                <Image source={{ uri: m.image }} style={styles.sentImage} />
             )}
             <Text style={[styles.msgText, m.sender === 'usuario' ? styles.userText : styles.iaText]}>
                 {m.text}
             </Text>
+            {m.timestamp && (
+                <Text style={styles.messageTimestamp}>
+                    {new Date(m.timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+            )}
         </View>
     </View>
 ));
@@ -917,66 +918,74 @@ export default function EntrenadorIA() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0a0a0a',
+        backgroundColor: '#0A0A0A',
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 20,
-        paddingHorizontal: 20,
-        backgroundColor: '#111',
+        paddingVertical: 16,
+        paddingHorizontal: 16,
+        backgroundColor: '#121212',
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(99, 255, 21, 0.2)',
+        borderBottomColor: 'rgba(99,255,21,0.12)',
         overflow: 'hidden',
+        shadowColor: '#63ff15',
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 2,
     },
     backBtn: {
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         borderRadius: 12,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: 'rgba(99,255,21,0.08)',
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.15)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 15,
+        marginRight: 12,
     },
     headerTitleContainer: {
         flex: 1,
     },
     headerTitle: {
         color: 'white',
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: '900',
-        letterSpacing: 0.5,
+        letterSpacing: -0.5,
     },
     titleHighlight: {
         color: '#63ff15',
     },
     headerActions: {
         flexDirection: 'row',
-        gap: 12,
+        gap: 10,
     },
     headerActionBtn: {
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         borderRadius: 12,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: 'rgba(99,255,21,0.08)',
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.15)',
         justifyContent: 'center',
         alignItems: 'center',
     },
     statusRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 2,
+        marginTop: 4,
     },
     dot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
         backgroundColor: '#63ff15',
         marginRight: 6,
         shadowColor: '#63ff15',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 1,
-        shadowRadius: 4,
+        shadowOpacity: 0.8,
+        shadowRadius: 3,
+        elevation: 2,
     },
     statusText: {
         color: '#888',
@@ -985,83 +994,121 @@ const styles = StyleSheet.create({
     },
     chatContainer: {
         flex: 1,
-        paddingHorizontal: 20,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+    },
+
+    // MESSAGE BUBBLES PREMIUM
+    messageRow: {
+        flexDirection: 'row',
+        marginBottom: 16,
+        alignItems: 'flex-end',
+    },
+    userMessageRow: {
+        justifyContent: 'flex-end',
+    },
+    iaMessageRow: {
+        justifyContent: 'flex-start',
     },
     bubble: {
-        flexDirection: 'row',
-        marginBottom: 20,
-        maxWidth: '85%',
+        maxWidth: '80%',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 18,
     },
     userBubble: {
-        alignSelf: 'flex-end',
-    },
-    iaBubble: {
-        alignSelf: 'flex-start',
-    },
-    iaIconContainer: {
-        width: 36,
-        height: 36,
-        borderRadius: 12,
-        backgroundColor: '#1a1a1a',
-        borderWidth: 1,
-        borderColor: 'rgba(99, 255, 21, 0.3)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 10,
-        marginTop: 5,
-    },
-    textWrapper: {
-        backgroundColor: '#1a1a1a',
-        padding: 16,
-        borderRadius: 20,
-        borderBottomLeftRadius: 4,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
-        overflow: 'hidden',
-    },
-    userWrapper: {
         backgroundColor: '#63ff15',
-        borderBottomLeftRadius: 20,
         borderBottomRightRadius: 4,
-        borderWidth: 0,
         shadowColor: '#63ff15',
-        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
-        elevation: 5,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 3,
+    },
+    iaBubble: {
+        backgroundColor: '#1a1a1a',
+        borderBottomLeftRadius: 4,
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.15)',
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 1,
+    },
+    iaAvatarContainer: {
+        marginRight: 10,
+        marginBottom: 4,
+        position: 'relative',
+    },
+    iaAvatarGlow: {
+        position: 'absolute',
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        top: -2,
+        left: -2,
+        zIndex: 0,
+    },
+    iaAvatarCircle: {
+        width: 40,
+        height: 40,
+        borderRadius: 10,
+        backgroundColor: 'rgba(99,255,21,0.12)',
+        borderWidth: 1.5,
+        borderColor: 'rgba(99,255,21,0.3)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1,
+    },
+    iaAvatarText: {
+        color: '#63ff15',
+        fontWeight: '900',
+        fontSize: 18,
+        letterSpacing: -0.5,
     },
     userText: {
         color: '#000',
         fontWeight: '700',
         fontSize: 15,
+        lineHeight: 21,
     },
     iaText: {
-        color: '#ddd',
-        lineHeight: 22,
+        color: '#E0E0E0',
+        fontWeight: '500',
         fontSize: 15,
+        lineHeight: 21,
     },
     msgText: {
         fontSize: 15,
         lineHeight: 22,
     },
+    messageTimestamp: {
+        color: '#555',
+        fontSize: 11,
+        fontWeight: '600',
+        marginTop: 6,
+        letterSpacing: 0.5,
+    },
     sentImage: {
         width: 200,
         height: 200,
-        borderRadius: 15,
+        borderRadius: 14,
         marginBottom: 10,
         resizeMode: 'cover',
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.2)',
     },
     loadingContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 30,
-        backgroundColor: 'rgba(99, 255, 21, 0.05)',
-        paddingHorizontal: 15,
-        paddingVertical: 10,
-        borderRadius: 15,
+        marginBottom: 24,
+        backgroundColor: 'rgba(99,255,21,0.08)',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 14,
         alignSelf: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(99, 255, 21, 0.1)',
+        borderColor: 'rgba(99,255,21,0.15)',
     },
     loadingText: {
         color: '#63ff15',

@@ -2,17 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Platform, RefreshControl, Image, Alert, Share } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import MapView, { Polyline } from 'react-native-maps';
 import { useNavigation } from '@react-navigation/native';
 import Config from '../constants/Config';
 
 const BACKEND_URL = Config.BACKEND_URL;
 
-const MI_ESTILO_MINI = [
-    { "elementType": "geometry", "stylers": [{ "color": "#121212" }] },
-    { "featureType": "road", "elementType": "geometry.fill", "stylers": [{ "color": "#1a1a1a" }] },
-    { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#000000" }] }
-];
 
 const UserSearchResult = React.memo(({ item, onAddFriend, onChat }) => (
     <View style={styles.userResultCard}>
@@ -77,24 +71,9 @@ const PostItem = React.memo(({ item, currentUserId, onLike, onComment, onShare, 
         </View>
 
         {item.ruta && Array.isArray(item.ruta) && item.ruta.length > 0 && (
-            <View style={styles.mapContainer}>
-                <MapView
-                    style={styles.map}
-                    initialRegion={{
-                        latitude: item.ruta[0].latitude,
-                        longitude: item.ruta[0].longitude,
-                        latitudeDelta: 0.01,
-                        longitudeDelta: 0.01
-                    }}
-                    scrollEnabled={false}
-                    zoomEnabled={false}
-                    pitchEnabled={false}
-                    rotateEnabled={false}
-                    liteMode={true}
-                    customMapStyle={MI_ESTILO_MINI}
-                >
-                    <Polyline coordinates={item.ruta} strokeColor="#63ff15" strokeWidth={3} />
-                </MapView>
+            <View style={styles.routeBadge}>
+                <Ionicons name="map-outline" size={14} color="#63ff15" />
+                <Text style={styles.routeBadgeText}>Ruta GPS · {item.ruta.length} puntos</Text>
             </View>
         )}
 
@@ -422,8 +401,8 @@ const styles = StyleSheet.create({
     userResultName: { color: 'white', fontWeight: 'bold', fontSize: 13 },
     userResultPlan: { color: '#63ff15', fontSize: 10, fontWeight: 'bold' },
     userResultActions: { flexDirection: 'row', justifyContent: 'space-between' },
-    addBtn: { backgroundColor: '#63ff15', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, flex: 1, marginRight: 8, alignItems: 'center' },
-    chatBtn: { backgroundColor: '#111', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, flex: 0.5, borderWeight: 1, borderColor: '#333', alignItems: 'center' },
+    addBtn: { backgroundColor: '#63ff15', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, flex: 1, marginRight: 8, alignItems: 'center' },
+    chatBtn: { backgroundColor: '#111', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, flex: 0.5, borderWidth: 1, borderColor: '#333', alignItems: 'center' },
     listContent: { padding: 20, paddingBottom: 100 },
     postCard: { backgroundColor: '#111', borderRadius: 25, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: '#222' },
     postHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
@@ -445,8 +424,8 @@ const styles = StyleSheet.create({
     postAvatar: { width: 45, height: 45, borderRadius: 22.5 },
     postImageContainer: { width: '100%', height: 250, borderRadius: 20, overflow: 'hidden', marginBottom: 15, backgroundColor: '#000' },
     postImage: { width: '100%', height: '100%' },
-    mapContainer: { height: 160, borderRadius: 20, overflow: 'hidden', marginBottom: 15 },
-    map: { flex: 1 },
+    routeBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(99,255,21,0.08)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, marginBottom: 15, alignSelf: 'flex-start', borderWidth: 1, borderColor: 'rgba(99,255,21,0.2)' },
+    routeBadgeText: { color: '#63ff15', fontSize: 12, fontWeight: '600' },
     interactions: { borderTopWidth: 1, borderTopColor: '#222', paddingTop: 12 },
     interactionStats: { flexDirection: 'row', gap: 15, marginBottom: 12 },
     statCount: { color: '#888', fontSize: 13 },
@@ -455,18 +434,13 @@ const styles = StyleSheet.create({
     actionText: { color: '#666', fontSize: 13 },
     likedText: { color: '#ff4d4d' },
     commentsSection: { marginTop: 15, gap: 5 },
-    commentUser: { color: '#63ff15', fontWeight: 'bold', fontSize: 12 },
-    commentText: { color: '#bbb', fontWeight: 'normal' },
-    commentInputContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 15, gap: 10 },
-    commentInput: { flex: 1, backgroundColor: '#1a1a1a', borderRadius: 12, padding: 10, color: '#fff', fontSize: 14 },
-    sendButton: { backgroundColor: '#63ff15', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
     suggestedSection: { paddingHorizontal: 20, marginBottom: 10 },
     sectionTitle: { color: 'white', fontSize: 16, fontWeight: 'bold', marginBottom: 15 },
     suggestedCard: { backgroundColor: '#111', width: 130, padding: 15, borderRadius: 20, marginRight: 12, alignItems: 'center', borderWidth: 1, borderColor: '#222' },
     suggestedAvatar: { width: 50, height: 50, borderRadius: 25, marginBottom: 10 },
     suggestedName: { color: 'white', fontWeight: 'bold', fontSize: 12, marginBottom: 2 },
     suggestedGoal: { color: '#63ff15', fontSize: 10, marginBottom: 10 },
-    suggestedAddBtn: { backgroundColor: '#63ff15', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
+    suggestedAddBtn: { backgroundColor: '#63ff15', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 5 },
     suggestedAddText: { color: 'black', fontWeight: 'bold', fontSize: 10 },
     emptyFeed: { alignItems: 'center', padding: 40, marginTop: 20 },
     emptyFeedTitle: { color: 'white', fontSize: 18, fontWeight: 'bold', marginTop: 15 },

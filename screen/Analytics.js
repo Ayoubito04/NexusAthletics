@@ -5,8 +5,8 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { LinearGradient } from 'expo-linear-gradient';
 import Config from '../constants/Config';
-import NexusChart from '../components/NexusChart';
 const BACKEND_URL = Config.BACKEND_URL;
 
 export default function Analytics() {
@@ -171,9 +171,6 @@ export default function Analytics() {
                     </View>
                 )}
 
-                {/* Gráfico de Evolución Semanal */}
-                <NexusChart data={stats.weeklyProgress} />
-
                 <TouchableOpacity
                     style={styles.aiAnalysisBtn}
                     onPress={handleAIAnalysis}
@@ -246,9 +243,6 @@ export default function Analytics() {
     );
 }
 
-// Nota: Necesitamos importar LinearGradient de expo-linear-gradient
-import { LinearGradient } from 'expo-linear-gradient';
-
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#0a0a0a' },
     centered: { justifyContent: 'center', alignItems: 'center' },
@@ -262,7 +256,7 @@ const styles = StyleSheet.create({
     grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 15 },
     statCard: { width: '47%', backgroundColor: '#111', borderRadius: 20, padding: 15, borderLeftWidth: 4, borderWidth: 1, borderColor: '#161616' },
     cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-    iconBox: { width: 32, height: 32, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+    iconBox: { width: 32, height: 32, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
     cardTitle: { color: '#888', fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase' },
     cardValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
     cardValue: { color: 'white', fontSize: 24, fontWeight: 'bold' },
