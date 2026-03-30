@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NexusAlert from '../components/NexusAlert';
 import { Image } from 'react-native';
 import Config from '../constants/Config';
+import { supabase } from '../lib/supabase';
 const BACKEND_URL = Config.BACKEND_URL;
 
 export default function AccountSettings() {
@@ -162,7 +163,10 @@ export default function AccountSettings() {
             "¿Estás seguro de que quieres salir de tu cuenta?",
             "info",
             async () => {
-                await AsyncStorage.multiRemove(['token', 'user']);
+                try {
+                    await supabase.auth.signOut();
+                } catch (e) {}
+                await AsyncStorage.multiRemove(['token', 'user', 'promo_banner_shown', 'location_step_done']);
                 navigation.reset({
                     index: 0,
                     routes: [{ name: 'Login' }],

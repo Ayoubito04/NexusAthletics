@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, memo, useCallback } from 'react';
 import { View, Text, KeyboardAvoidingView, ScrollView, TextInput, TouchableOpacity, StyleSheet, Platform, ActivityIndicator, Animated, Easing } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,17 +29,55 @@ try {
 
 const BACKEND_URL = Config.BACKEND_URL;
 
+const InputField = memo(({ label, icon, value, onChangeText, editable, keyboardType, isPassword, placeholder, autoCapitalize }) => {
+    const [showText, setShowText] = useState(false);
+    const toggleShow = useCallback(() => setShowText(v => !v), []);
+
+    return (
+        <View style={styles.inputContainer}>
+            <Text style={styles.fieldLabel}>{label}</Text>
+            <View style={styles.inputWrapper}>
+                <Ionicons name={icon} size={18} color="#555" />
+                <TextInput
+                    placeholder={placeholder}
+                    placeholderTextColor="#52525B"
+                    value={value}
+                    onChangeText={onChangeText}
+                    style={styles.input}
+                    editable={editable}
+                    keyboardType={keyboardType}
+                    secureTextEntry={isPassword && !showText}
+                    autoCapitalize={autoCapitalize || 'none'}
+                    autoCorrect={false}
+                    autoComplete="off"
+                    spellCheck={false}
+                    underlineColorAndroid="transparent"
+                    selectionColor="#63ff15"
+                />
+                {isPassword && (
+                    <TouchableOpacity onPress={toggleShow} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                        <Ionicons name={showText ? 'eye-outline' : 'eye-off-outline'} size={18} color="#555" />
+                    </TouchableOpacity>
+                )}
+            </View>
+        </View>
+    );
+});
+
 export default function Register() {
     const navigation = useNavigation();
-    const [focusedInput, setFocusedInput] = useState(null);
     const [nombre, setNombre] = useState('');
     const [apellido, setApellido] = useState('');
     const [email, setEmail] = useState('');
     const [contraseña, setContraseña] = useState('');
     const [confirmarContraseña, setConfirmarContraseña] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+    const handleNombre = useCallback((t) => setNombre(t), []);
+    const handleApellido = useCallback((t) => setApellido(t), []);
+    const handleEmail = useCallback((t) => setEmail(t), []);
+    const handleContraseña = useCallback((t) => setContraseña(t), []);
+    const handleConfirmar = useCallback((t) => setConfirmarContraseña(t), []);
 
     const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', type: 'info', onConfirm: null });
 
@@ -327,105 +365,55 @@ export default function Register() {
                     {/* Form Card */}
                     <View style={styles.formCard}>
 
-                        {/* Nombre Input */}
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.fieldLabel}>Nombre</Text>
-                            <View style={[styles.inputWrapper, focusedInput === 'nombre' && styles.inputFocused]}>
-                                <Ionicons name="person-outline" size={18} color="#555" />
-                                <TextInput
-                                    placeholder="Tu nombre"
-                                    placeholderTextColor="#52525B"
-                                    value={nombre}
-                                    onChangeText={setNombre}
-                                    onFocus={() => setFocusedInput('nombre')}
-                                    onBlur={() => setFocusedInput(null)}
-                                    editable={!isLoading}
-                                    style={styles.input}
-                                />
-                            </View>
-                        </View>
+                        <InputField
+                            label="Nombre"
+                            icon="person-outline"
+                            value={nombre}
+                            onChangeText={handleNombre}
+                            editable={!isLoading}
+                            placeholder="Tu nombre"
+                            autoCapitalize="words"
+                        />
 
-                        {/* Apellido Input */}
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.fieldLabel}>Apellido</Text>
-                            <View style={[styles.inputWrapper, focusedInput === 'apellido' && styles.inputFocused]}>
-                                <Ionicons name="people-outline" size={18} color="#555" />
-                                <TextInput
-                                    placeholder="Tu apellido"
-                                    placeholderTextColor="#52525B"
-                                    value={apellido}
-                                    onChangeText={setApellido}
-                                    onFocus={() => setFocusedInput('apellido')}
-                                    onBlur={() => setFocusedInput(null)}
-                                    editable={!isLoading}
-                                    style={styles.input}
-                                />
-                            </View>
-                        </View>
+                        <InputField
+                            label="Apellido"
+                            icon="people-outline"
+                            value={apellido}
+                            onChangeText={handleApellido}
+                            editable={!isLoading}
+                            placeholder="Tu apellido"
+                            autoCapitalize="words"
+                        />
 
-                        {/* Email Input */}
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.fieldLabel}>Email</Text>
-                            <View style={[styles.inputWrapper, focusedInput === 'email' && styles.inputFocused]}>
-                                <Ionicons name="mail-outline" size={18} color="#555" />
-                                <TextInput
-                                    placeholder="tu@email.com"
-                                    placeholderTextColor="#52525B"
-                                    value={email}
-                                    onChangeText={setEmail}
-                                    onFocus={() => setFocusedInput('email')}
-                                    onBlur={() => setFocusedInput(null)}
-                                    editable={!isLoading}
-                                    keyboardType="email-address"
-                                    autoCapitalize="none"
-                                    style={styles.input}
-                                />
-                            </View>
-                        </View>
+                        <InputField
+                            label="Email"
+                            icon="mail-outline"
+                            value={email}
+                            onChangeText={handleEmail}
+                            editable={!isLoading}
+                            keyboardType="email-address"
+                            placeholder="tu@email.com"
+                        />
 
-                        {/* Contraseña Input */}
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.fieldLabel}>Contraseña</Text>
-                            <View style={[styles.inputWrapper, focusedInput === 'password' && styles.inputFocused]}>
-                                <Ionicons name="lock-closed-outline" size={18} color="#555" />
-                                <TextInput
-                                    placeholder="••••••••"
-                                    placeholderTextColor="#52525B"
-                                    value={contraseña}
-                                    onChangeText={setContraseña}
-                                    onFocus={() => setFocusedInput('password')}
-                                    onBlur={() => setFocusedInput(null)}
-                                    editable={!isLoading}
-                                    secureTextEntry={!showPassword}
-                                    style={styles.input}
-                                />
-                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} activeOpacity={0.7}>
-                                    <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={18} color="#555" />
-                                </TouchableOpacity>
-                            </View>
-                        </View>
+                        <InputField
+                            label="Contraseña"
+                            icon="lock-closed-outline"
+                            value={contraseña}
+                            onChangeText={handleContraseña}
+                            editable={!isLoading}
+                            isPassword={true}
+                            placeholder="••••••••"
+                        />
 
-                        {/* Confirmar Contraseña Input */}
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.fieldLabel}>Confirmar Contraseña</Text>
-                            <View style={[styles.inputWrapper, focusedInput === 'confirmPassword' && styles.inputFocused]}>
-                                <Ionicons name="shield-checkmark-outline" size={18} color="#555" />
-                                <TextInput
-                                    placeholder="••••••••"
-                                    placeholderTextColor="#52525B"
-                                    value={confirmarContraseña}
-                                    onChangeText={setConfirmarContraseña}
-                                    onFocus={() => setFocusedInput('confirmPassword')}
-                                    onBlur={() => setFocusedInput(null)}
-                                    editable={!isLoading}
-                                    secureTextEntry={!showConfirmPassword}
-                                    style={styles.input}
-                                />
-                                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} activeOpacity={0.7}>
-                                    <Ionicons name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'} size={18} color="#555" />
-                                </TouchableOpacity>
-                            </View>
-                        </View>
+                        <InputField
+                            label="Confirmar Contraseña"
+                            icon="shield-checkmark-outline"
+                            value={confirmarContraseña}
+                            onChangeText={handleConfirmar}
+                            editable={!isLoading}
+                            isPassword={true}
+                            placeholder="••••••••"
+                        />
 
                         {/* Register Button */}
                         <TouchableOpacity
@@ -461,7 +449,7 @@ export default function Register() {
                         {/* Social Buttons */}
                         <View style={styles.socialGrid}>
                             <TouchableOpacity
-                                style={styles.socialBtn}
+                                style={[styles.socialBtn, { flex: 1 }]}
                                 onPress={() => handleSocialRegister('Google')}
                                 disabled={isLoading}
                                 activeOpacity={0.7}
@@ -469,31 +457,7 @@ export default function Register() {
                                 accessibilityRole="button"
                             >
                                 <Ionicons name="logo-google" size={18} color="#fff" />
-                                <Text style={styles.socialText}>Google</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.socialBtn}
-                                onPress={() => handleSocialRegister('Facebook')}
-                                disabled={isLoading}
-                                activeOpacity={0.7}
-                                accessibilityLabel="Registrarse con Facebook"
-                                accessibilityRole="button"
-                            >
-                                <Ionicons name="logo-facebook" size={18} color="#fff" />
-                                <Text style={styles.socialText}>Facebook</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.socialBtn}
-                                onPress={() => handleSocialRegister('Instagram')}
-                                disabled={isLoading}
-                                activeOpacity={0.7}
-                                accessibilityLabel="Registrarse con Instagram"
-                                accessibilityRole="button"
-                            >
-                                <Ionicons name="logo-instagram" size={18} color="#fff" />
-                                <Text style={styles.socialText}>Instagram</Text>
+                                <Text style={styles.socialText}>Continuar con Google</Text>
                             </TouchableOpacity>
                         </View>
 

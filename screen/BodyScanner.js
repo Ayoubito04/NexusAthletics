@@ -14,29 +14,8 @@ export default function BodyScanner() {
     const [image, setImage] = useState(null);
     const [analyzing, setAnalyzing] = useState(false);
     const [result, setResult] = useState(null);
-    const [plan, setPlan] = useState('Gratis');
-
-    useEffect(() => {
-        loadUser();
-    }, []);
-
-    const loadUser = async () => {
-        const userData = await AsyncStorage.getItem('user');
-        if (userData) {
-            const user = JSON.parse(userData);
-            setPlan(user.plan);
-        }
-    };
 
     const pickImage = async () => {
-        if (plan === 'Gratis') {
-            Alert.alert("Función Premium", "El escáner de visión IA requiere un plan Pro o Ultimate.", [
-                { text: "Ver Planes", onPress: () => navigation.navigate('PlanesPago') },
-                { text: "Cancelar", style: "cancel" }
-            ]);
-            return;
-        }
-
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
@@ -52,14 +31,6 @@ export default function BodyScanner() {
     };
 
     const takePhoto = async () => {
-        if (plan === 'Gratis') {
-            Alert.alert("Función Premium", "El escáner de visión IA requiere un plan Pro o Ultimate.", [
-                { text: "Ver Planes", onPress: () => navigation.navigate('PlanesPago') },
-                { text: "Cancelar", style: "cancel" }
-            ]);
-            return;
-        }
-
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
             Alert.alert("Permiso denegado", "Necesitamos acceso a la cámara.");

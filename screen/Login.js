@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
 import { StyleSheet, Text, View, ScrollView, KeyboardAvoidingView, TouchableOpacity, TextInput, Platform, Animated, ActivityIndicator, Easing } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
@@ -45,14 +45,51 @@ try {
     console.log('Error al cargar módulo nativo de Google:', e);
 }
 
+const InputField = memo(({ label, icon, value, onChangeText, editable, keyboardType, isPassword, placeholder, returnKeyType }) => {
+    const [showText, setShowText] = useState(false);
+    const toggleShow = useCallback(() => setShowText(v => !v), []);
+
+    return (
+        <View style={styles.inputContainer}>
+            <Text style={styles.fieldLabel}>{label}</Text>
+            <View style={styles.inputWrapper}>
+                <Ionicons name={icon} size={18} color="#555" />
+                <TextInput
+                    placeholder={placeholder}
+                    placeholderTextColor="#52525B"
+                    value={value}
+                    onChangeText={onChangeText}
+                    style={styles.input}
+                    editable={editable}
+                    keyboardType={keyboardType}
+                    secureTextEntry={isPassword && !showText}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="off"
+                    spellCheck={false}
+                    returnKeyType={returnKeyType}
+                    underlineColorAndroid="transparent"
+                    selectionColor="#63ff15"
+                />
+                {isPassword && (
+                    <TouchableOpacity onPress={toggleShow} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                        <Ionicons name={showText ? 'eye-outline' : 'eye-off-outline'} size={18} color="#555" />
+                    </TouchableOpacity>
+                )}
+            </View>
+        </View>
+    );
+});
+
 export default function Login() {
     const navigation = useNavigation();
-    const [focusedInput, setFocusedInput] = useState(null);
     const [usuario, setUsuario] = useState('');
     const [contraseña, setContraseña] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
     const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', type: 'info', onConfirm: null });
+
+    const handleUsuarioChange = useCallback((text) => setUsuario(text), []);
+    const handleContraseñaChange = useCallback((text) => setContraseña(text), []);
 
     const showAlert = (title, message, type = 'info', onConfirm = null) => {
         setAlertConfig({
@@ -626,47 +663,27 @@ export default function Login() {
                     <Animated.View style={[styles.loginCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
                         <Text style={styles.cardTitle}>INICIAR SESIÓN</Text>
 
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.fieldLabel}>Email</Text>
-                            <View style={[styles.inputWrapper, focusedInput === 'email' && styles.inputFocused]}>
-                                <Ionicons name="mail-outline" size={18} color="#555" />
-                                <TextInput
-                                    placeholder="tu@email.com"
-                                    placeholderTextColor="#52525B"
-                                    value={usuario}
-                                    onChangeText={setUsuario}
-                                    style={styles.input}
-                                    onFocus={() => setFocusedInput('email')}
-                                    onBlur={() => setFocusedInput(null)}
-                                    editable={!isLoading}
-                                    keyboardType="email-address"
-                                    autoCapitalize="none"
-                                    data-testid="email-input"
-                                />
-                            </View>
-                        </View>
+                        <InputField
+                            label="Email"
+                            icon="mail-outline"
+                            value={usuario}
+                            onChangeText={handleUsuarioChange}
+                            editable={!isLoading}
+                            keyboardType="email-address"
+                            placeholder="tu@email.com"
+                            returnKeyType="next"
+                        />
 
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.fieldLabel}>Contraseña</Text>
-                            <View style={[styles.inputWrapper, focusedInput === 'password' && styles.inputFocused]}>
-                                <Ionicons name="lock-closed-outline" size={18} color="#555" />
-                                <TextInput
-                                    placeholder="••••••••"
-                                    placeholderTextColor="#52525B"
-                                    secureTextEntry={!showPassword}
-                                    value={contraseña}
-                                    onChangeText={setContraseña}
-                                    style={styles.input}
-                                    onFocus={() => setFocusedInput('password')}
-                                    onBlur={() => setFocusedInput(null)}
-                                    editable={!isLoading}
-                                    data-testid="password-input"
-                                />
-                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} activeOpacity={0.7}>
-                                    <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={18} color="#555" />
-                                </TouchableOpacity>
-                            </View>
-                        </View>
+                        <InputField
+                            label="Contraseña"
+                            icon="lock-closed-outline"
+                            value={contraseña}
+                            onChangeText={handleContraseñaChange}
+                            editable={!isLoading}
+                            isPassword={true}
+                            placeholder="••••••••"
+                            returnKeyType="done"
+                        />
 
                         <TouchableOpacity
                             style={styles.mainBtn}
@@ -700,7 +717,7 @@ export default function Login() {
 
                         <View style={styles.socialGrid}>
                             <TouchableOpacity
-                                style={styles.socialBtn}
+                                style={[styles.socialBtn, { flex: 1 }]}
                                 onPress={() => handleSocialLogin('Google')}
                                 disabled={isLoading}
                                 activeOpacity={0.7}
@@ -708,31 +725,7 @@ export default function Login() {
                                 accessibilityRole="button"
                             >
                                 <Ionicons name="logo-google" size={18} color="#fff" />
-                                <Text style={styles.socialText}>Google</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.socialBtn}
-                                onPress={() => handleSocialLogin('Facebook')}
-                                disabled={isLoading}
-                                activeOpacity={0.7}
-                                accessibilityLabel="Iniciar sesión con Facebook"
-                                accessibilityRole="button"
-                            >
-                                <Ionicons name="logo-facebook" size={18} color="#fff" />
-                                <Text style={styles.socialText}>Facebook</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.socialBtn}
-                                onPress={() => handleSocialLogin('Instagram')}
-                                disabled={isLoading}
-                                activeOpacity={0.7}
-                                accessibilityLabel="Iniciar sesión con Instagram"
-                                accessibilityRole="button"
-                            >
-                                <Ionicons name="logo-instagram" size={18} color="#fff" />
-                                <Text style={styles.socialText}>Instagram</Text>
+                                <Text style={styles.socialText}>Continuar con Google</Text>
                             </TouchableOpacity>
                         </View>
                     </Animated.View>
@@ -869,9 +862,10 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#2a2a2a',
         paddingHorizontal: 16,
-        height: 52,
+        paddingVertical: 14,
         gap: 12,
         borderRadius: 10,
+        minHeight: 52,
     },
     inputFocused: {
         borderColor: '#63ff15',
@@ -886,6 +880,8 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '500',
+        padding: 0,
+        margin: 0,
     },
     mainBtn: {
         borderRadius: 14,

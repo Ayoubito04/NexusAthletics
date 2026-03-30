@@ -16,16 +16,35 @@ export default function WelcomePlans() {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(50)).current;
 
-    const [locationStep, setLocationStep] = useState(true); // true = mostrar pantalla de ubicación
+    const [locationStep, setLocationStep] = useState(false);
     const [locationLoading, setLocationLoading] = useState(false);
 
     useEffect(() => {
         loadUser();
+        checkLocationStep();
         Animated.parallel([
             Animated.timing(fadeAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
             Animated.timing(slideAnim, { toValue: 0, duration: 1000, useNativeDriver: true })
         ]).start();
     }, []);
+
+    const checkLocationStep = async () => {
+        try {
+            // Si ya pedimos ubicación antes, no volver a preguntar
+            const alreadyAsked = await AsyncStorage.getItem('location_step_done');
+            if (alreadyAsked) return;
+
+            // Si el SO ya tiene una respuesta (granted o denied), tampoco preguntar
+            const { status } = await Location.getForegroundPermissionsAsync();
+            if (status === 'granted' || status === 'denied') {
+                await AsyncStorage.setItem('location_step_done', '1');
+                return;
+            }
+
+            // Solo mostrar el paso si nunca se ha preguntado
+            setLocationStep(true);
+        } catch (e) {}
+    };
 
     const loadUser = async () => {
         const userData = await AsyncStorage.getItem('user');
@@ -53,9 +72,13 @@ export default function WelcomePlans() {
         } catch (e) {}
         setLocationLoading(false);
         setLocationStep(false);
+        await AsyncStorage.setItem('location_step_done', '1');
     };
 
-    const handleSkipLocation = () => setLocationStep(false);
+    const handleSkipLocation = async () => {
+        setLocationStep(false);
+        await AsyncStorage.setItem('location_step_done', '1');
+    };
 
     const handleContinueFree = () => {
         navigation.replace('MainTabs');

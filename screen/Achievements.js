@@ -11,14 +11,17 @@ const BACKEND_URL = Config.BACKEND_URL;
 export default function Achievements() {
     const navigation = useNavigation();
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState({ totalKm: 0, totalKcal: 0, count: 0 });
+    const [stats, setStats] = useState({ totalKm: 0, totalKcal: 0, count: 0, totalSegundos: 0 });
 
     const ACHIEVEMENTS_DATA = [
-        { id: 1, title: 'Iniciado', desc: 'Completa tu primera actividad.', req: (s) => s.count >= 1, icon: 'flag' },
-        { id: 2, title: 'Atleta de Hierro', desc: 'Recorre más de 50km totales.', req: (s) => s.totalKm >= 50, icon: 'barbell' },
-        { id: 3, title: 'Antorcha Humana', desc: 'Quema más de 5000 kcal.', req: (s) => s.totalKcal >= 5000, icon: 'flame' },
-        { id: 4, title: 'Explorador Elite', desc: 'Realiza 10 actividades GPS.', req: (s) => s.count >= 10, icon: 'map' },
-        { id: 5, title: 'Influencer Fitness', desc: 'Invita a 3 amigos con éxito.', req: (s) => false, icon: 'people' }, // Requiere check extra
+        { id: 1, title: 'Primera Sesión', desc: 'Completa tu primera sesión de entrenamiento en el gym.', req: (s) => s.count >= 1, icon: 'barbell' },
+        { id: 2, title: 'Guerrero del Hierro', desc: 'Completa 10 sesiones de entrenamiento.', req: (s) => s.count >= 10, icon: 'fitness' },
+        { id: 3, title: 'Banca de Élite', desc: 'Acumula más de 5 horas de entrenamiento en total.', req: (s) => s.totalSegundos >= 18000, icon: 'trophy' },
+        { id: 4, title: 'Maestro del Gym', desc: 'Completa 50 sesiones de entrenamiento.', req: (s) => s.count >= 50, icon: 'medal' },
+        { id: 5, title: 'Leyenda del Hierro', desc: 'Completa 100 sesiones de entrenamiento.', req: (s) => s.count >= 100, icon: 'star' },
+        { id: 6, title: 'Resistencia Total', desc: 'Acumula más de 50 horas de entrenamiento.', req: (s) => s.totalSegundos >= 180000, icon: 'flame' },
+        { id: 7, title: 'Consistencia es Clave', desc: 'Completa 25 sesiones de entrenamiento.', req: (s) => s.count >= 25, icon: 'checkmark-circle' },
+        { id: 8, title: 'Comunidad Nexus', desc: 'Invita a 3 compañeros de entrenamiento.', req: (s) => false, icon: 'people' },
     ];
 
     useEffect(() => {

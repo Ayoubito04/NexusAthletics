@@ -10,11 +10,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import NativeAd from '../components/NativeAd';
 import { BlurView } from 'expo-blur';
-import StepCounter from '../components/StepCounter';
 import AchievementUnlockedModal from '../components/AchievementUnlockedModal';
 import * as Haptics from 'expo-haptics';
 
 import Config from '../constants/Config';
+import { supabase } from '../lib/supabase';
 import Constants from 'expo-constants';
 import { registerForPushNotificationsAsync, saveTokenToBackend } from '../services/NotificationService';
 
@@ -32,6 +32,7 @@ export default function Home() {
     const [refreshing, setRefreshing] = useState(false);
     const [stats, setStats] = useState({ totalKm: 0, totalKcal: 0, count: 0 });
     const [greeting, setGreeting] = useState('');
+    const [promoVisible, setPromoVisible] = useState(false);
 
     // StatusBar dark
     useEffect(() => {
@@ -45,9 +46,6 @@ export default function Home() {
     const scaleAnim = useRef(new Animated.Value(0.95)).current;
     const cardAnims = useRef([...Array(8)].map(() => new Animated.Value(0))).current;
 
-    // Hidratación y Racha
-    const [waterCount, setWaterCount] = useState(0);
-    const [streak, setStreak] = useState(0);
     const [motivation, setMotivation] = useState("");
 
     // Achievement System
@@ -123,12 +121,25 @@ export default function Home() {
     const loadAllData = async () => {
         const user = await loadUserData();
         await Promise.all([
-            loadWater(),
             loadNotifications(),
-            loadStats()
+            loadStats(),
+            checkPromoVisible()
         ]);
-        // Verificar logros después de cargar todos los datos
         if (user) checkForNewAchievements(user);
+    };
+
+    const checkPromoVisible = async () => {
+        try {
+            const shown = await AsyncStorage.getItem('promo_banner_shown');
+            if (!shown) setPromoVisible(true);
+        } catch (e) {}
+    };
+
+    const dismissPromo = async () => {
+        setPromoVisible(false);
+        try {
+            await AsyncStorage.setItem('promo_banner_shown', '1');
+        } catch (e) {}
     };
 
 
@@ -136,41 +147,6 @@ export default function Home() {
         setRefreshing(true);
         await loadAllData();
         setRefreshing(false);
-    };
-
-    const loadWater = async () => {
-        try {
-            const today = new Date().toDateString();
-            
-            const userJson = await AsyncStorage.getItem('user');
-            const userDataParsed = userJson ? JSON.parse(userJson) : null;
-            const userId = userDataParsed?._id || userDataParsed?.id || 'default';
-            const WATER_KEY = `water_data_${userId}`;
-
-            const savedData = await AsyncStorage.getItem(WATER_KEY);
-            if (savedData) {
-                const data = JSON.parse(savedData);
-                if (data.date === today) {
-                    setWaterCount(data.count);
-                } else {
-                    setWaterCount(0);
-                    await AsyncStorage.setItem(WATER_KEY, JSON.stringify({ date: today, count: 0 }));
-                }
-            }
-        } catch (error) { }
-    };
-
-    const addWater = async () => {
-        const newCount = waterCount + 1;
-        setWaterCount(newCount);
-        const today = new Date().toDateString();
-        
-        const userJson = await AsyncStorage.getItem('user');
-        const userDataParsed = userJson ? JSON.parse(userJson) : null;
-        const userId = userDataParsed?._id || userDataParsed?.id || 'default';
-        const WATER_KEY = `water_data_${userId}`;
-
-        await AsyncStorage.setItem(WATER_KEY, JSON.stringify({ date: today, count: newCount }));
     };
 
     const loadStats = async () => {
@@ -198,7 +174,6 @@ export default function Home() {
                 if (parsedUser.plan) setPlan(parsedUser.plan);
                 if (parsedUser.avatar) setAvatar(parsedUser.avatar);
                 if (parsedUser.role) setRole(parsedUser.role);
-                if (parsedUser.streak) setStreak(parsedUser.streak);
             }
 
             if (token) {
@@ -312,39 +287,30 @@ export default function Home() {
     const ACHIEVEMENTS = [
         {
             id: 'welcome',
-            title: 'Recién Llegado',
-            icon: 'hand-wave',
-            iconType: 'MaterialCommunityIcons',
+            title: 'Primer Rep',
+            icon: 'barbell',
+            iconType: 'Ionicons',
             color: '#63ff15',
             check: (user) => !!user.id,
-            description: 'Te uniste a la comunidad de Nexus Athletics.'
+            description: 'Bienvenido a Nexus Athletics. ¡Empieza a entrenar!'
         },
         {
-            id: 'walker',
-            title: 'Caminante Pro',
-            icon: 'footsteps',
-            iconType: 'Ionicons',
-            color: '#00D1FF',
-            check: (user) => (user.healthSteps || 0) >= 5000,
-            description: 'Has superado los 5,000 pasos en un solo día.'
-        },
-        {
-            id: 'ai_user',
-            title: 'IA Friend',
+            id: 'ai_coach',
+            title: 'Coach IA',
             icon: 'robot',
             iconType: 'MaterialCommunityIcons',
             color: '#A259FF',
             check: (user) => (user.mensajesHoy || 0) > 0,
-            description: 'Has consultado a Nexus AI para mejorar tu entrenamiento.'
+            description: 'Consultaste a Nexus AI para optimizar tu entrenamiento.'
         },
         {
-            id: 'premium',
-            title: 'Atleta Elite',
+            id: 'elite_athlete',
+            title: 'Atleta de Élite',
             icon: 'crown',
             iconType: 'MaterialCommunityIcons',
             color: '#FFD700',
             check: (user) => user.plan !== 'Gratis',
-            description: 'Suscrito a un plan de alto rendimiento.'
+            description: 'Suscrito a un plan de rendimiento premium.'
         }
     ];
 
@@ -434,57 +400,6 @@ export default function Home() {
                     </BlurView>
                 </Animated.View>
 
-                {/* BENTO DASHBOARD: STATS & FOCUS */}
-                <View style={styles.bentoGrid}>
-                    <View style={styles.bentoRow}>
-                        {/* Kcal Card */}
-                        <TouchableOpacity style={[styles.bentoCard, styles.cardHalf]}>
-                            <BlurView intensity={10} tint="dark" style={StyleSheet.absoluteFill} />
-                            <LinearGradient colors={['rgba(255,107,53,0.1)', 'transparent']} style={StyleSheet.absoluteFill} />
-                            <View style={styles.bentoIconBox}>
-                                <Ionicons name="flame" size={20} color="#FF6B35" />
-                            </View>
-                            <Text style={styles.bentoValue}>{Math.round(stats.totalKcal || 0)}</Text>
-                            <Text style={styles.bentoLabel}>KCAL QUEMADAS</Text>
-                            <View style={styles.bentoMiniGraph}>
-                                <View style={[styles.graphBar, { width: '70%', backgroundColor: '#FF6B35' }]} />
-                            </View>
-                        </TouchableOpacity>
-
-                        {/* Hydration Card */}
-                        <TouchableOpacity style={[styles.bentoCard, styles.cardHalf]} onPress={addWater}>
-                            <BlurView intensity={10} tint="dark" style={StyleSheet.absoluteFill} />
-                            <LinearGradient colors={['rgba(0,209,255,0.1)', 'transparent']} style={StyleSheet.absoluteFill} />
-                            <View style={styles.bentoCardHeader}>
-                                <View style={styles.bentoIconBox}>
-                                    <Ionicons name="water" size={20} color="#00D1FF" />
-                                </View>
-                                <Ionicons name="add-circle" size={24} color="#00D1FF" />
-                            </View>
-                            <Text style={styles.bentoValue}>{waterCount * 250}<Text style={styles.unitText}>ml</Text></Text>
-                            <Text style={styles.bentoLabel}>HIDRATACIÓN</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    <View style={styles.bentoRow}>
-                        {/* Session Streak Card */}
-                        <TouchableOpacity style={[styles.bentoCard, styles.cardFull]}>
-                            <BlurView intensity={10} tint="dark" style={StyleSheet.absoluteFill} />
-                            <View style={styles.bentoFullContent}>
-                                <View style={styles.streakInfo}>
-                                    <Text style={styles.bentoValue}>{streak} DÍAS</Text>
-                                    <Text style={styles.bentoLabel}>RACHA DE RENDIMIENTO</Text>
-                                </View>
-                                <View style={styles.streakVisual}>
-                                    {[1,2,3,4,5,6,7].map(d => (
-                                        <View key={d} style={[styles.streakDot, streak >= d && { backgroundColor: '#63ff15', shadowColor: '#63ff15', shadowOpacity: 0.5, shadowRadius: 5 }]} />
-                                    ))}
-                                </View>
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
                 {/* QUICK NAV: HORIZONTAL SCROLL */}
                 <ScrollView
                     horizontal
@@ -519,13 +434,8 @@ export default function Home() {
                     </View>
                 </View>
 
-                {/* STEP COUNTER PREMIUM */}
-                <View style={styles.premiumStepWrapper}>
-                    <StepCounter />
-                </View>
-
-                {/* PUBLICIDAD SUTIL PARA PLAN GRATIS */}
-                {plan === 'Gratis' && (
+                {/* PUBLICIDAD SUTIL - SOLO 1 VEZ */}
+                {promoVisible && plan === 'Gratis' && (
                     <NativeAd type="fitness" />
                 )}
 
@@ -556,36 +466,33 @@ export default function Home() {
                     </>
                 )}
 
-                {/* BANNER PUBLICITARIO PARA USUARIOS GRATIS */}
-                {plan === 'Gratis' && (
-                    <TouchableOpacity
-                        style={styles.promoBanner}
-                        onPress={() => navigation.navigate('PlanesPago')}
-                        activeOpacity={0.9}
-                    >
+                {/* BANNER PUBLICITARIO - SOLO 1 VEZ */}
+                {promoVisible && plan === 'Gratis' && (
+                    <View style={styles.promoBanner}>
                         <LinearGradient
                             colors={['#1a1a1a', '#000']}
                             style={styles.promoBannerGrad}
                         >
                             <View style={styles.promoBannerContent}>
-                                <View style={styles.promoBannerText}>
-                                    <View style={styles.promoBadge}>
-                                        <Text style={styles.promoBadgeText}>OFERTA LIMITADA</Text>
+                                <TouchableOpacity
+                                    style={{ flex: 1 }}
+                                    onPress={() => navigation.navigate('PlanesPago')}
+                                    activeOpacity={0.9}
+                                >
+                                    <View style={styles.promoBannerText}>
+                                        <View style={styles.promoBadge}>
+                                            <Text style={styles.promoBadgeText}>OFERTA LIMITADA</Text>
+                                        </View>
+                                        <Text style={styles.promoBannerTitle}>Desbloquea Nexus Élite</Text>
+                                        <Text style={styles.promoBannerSub}>Rutinas Canvas IA Ilimitadas y Fisiología Master.</Text>
                                     </View>
-                                    <Text style={styles.promoBannerTitle}>Desbloquea Nexus Élite</Text>
-                                    <Text style={styles.promoBannerSub}>Rutinas Canvas IA Ilimitadas y Fisiología Master.</Text>
-                                </View>
-                                <View style={styles.promoBannerAction}>
-                                    <LinearGradient
-                                        colors={['#63ff15', '#00D1FF']}
-                                        style={styles.promoActionCircle}
-                                    >
-                                        <Ionicons name="star" size={20} color="#000" />
-                                    </LinearGradient>
-                                </View>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={dismissPromo} style={styles.promoCloseBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                                    <Ionicons name="close" size={18} color="#666" />
+                                </TouchableOpacity>
                             </View>
                         </LinearGradient>
-                    </TouchableOpacity>
+                    </View>
                 )}
 
                 {/* MOTIVACIÓN */}
@@ -657,8 +564,9 @@ export default function Home() {
                         </TouchableOpacity>
                         <View style={styles.sidebarDivider} />
                         <TouchableOpacity style={styles.sidebarItem} onPress={async () => {
-                            await AsyncStorage.multiRemove(['token', 'user']);
-                            navigation.replace('Login');
+                            try { await supabase.auth.signOut(); } catch (e) {}
+                            await AsyncStorage.multiRemove(['token', 'user', 'promo_banner_shown', 'location_step_done']);
+                            navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
                         }}>
                             <Ionicons name="log-out-outline" size={22} color="#ff4d4d" />
                             <Text style={[styles.sidebarItemText, { color: '#ff4d4d' }]}>Cerrar Sesión</Text>
@@ -903,6 +811,7 @@ const styles = StyleSheet.create({
     promoBannerTitle: { color: '#fff', fontSize: 20, fontWeight: '900', letterSpacing: -0.5 },
     promoBannerSub: { color: '#888', fontSize: 13, marginTop: 4, lineHeight: 18, fontWeight: '600' },
     promoBannerAction: { marginLeft: 16 },
+    promoCloseBtn: { padding: 8, justifyContent: 'center', alignItems: 'center' },
     promoActionCircle: {
         width: 56,
         height: 56,

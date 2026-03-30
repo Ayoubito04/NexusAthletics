@@ -124,23 +124,16 @@ export default function Analytics() {
             >
                 <View style={styles.summaryBox}>
                     <Text style={styles.summaryTitle}>Resumen de Rendimiento</Text>
-                    <Text style={styles.summarySubtitle}>Has completado {stats.count} actividades en total.</Text>
+                    <Text style={styles.summarySubtitle}>Has completado {stats.count} sesiones de entrenamiento en total.</Text>
                 </View>
 
                 <View style={styles.grid}>
                     <StatCard
-                        title="Distancia Total"
-                        value={stats.totalKm.toFixed(1)}
-                        unit="KM"
-                        icon="walk"
+                        title="Entrenamientos"
+                        value={stats.count}
+                        unit="SESIONES"
+                        icon="barbell"
                         color="#63ff15"
-                    />
-                    <StatCard
-                        title="Calorías"
-                        value={stats.healthSynced ? stats.healthCalories.toFixed(0) : stats.totalKcal.toFixed(0)}
-                        unit="KCAL"
-                        icon="flame"
-                        color="#FF6B6B"
                     />
                     <StatCard
                         title="Tiempo Activo"
@@ -149,27 +142,7 @@ export default function Analytics() {
                         icon="time"
                         color="#007AFF"
                     />
-                    <StatCard
-                        title="Pasos Hoy"
-                        value={stats.healthSynced ? stats.healthSteps : "Manual"}
-                        unit="STEPS"
-                        icon="footsteps"
-                        color="#A259FF"
-                    />
                 </View>
-
-                {stats.healthSynced && (
-                    <View style={styles.healthSyncBox}>
-                        <View style={styles.healthSyncHeader}>
-                            <Ionicons name="checkmark-circle" size={20} color="#63ff15" />
-                            <Text style={styles.healthSyncTitle}>Bio-Sincronización Activa: {stats.healthService}</Text>
-                        </View>
-                        <Text style={styles.healthSyncDesc}>
-                            Tus métricas están siendo auditadas en tiempo real por {stats.healthService}.
-                            Los datos de calorías incluyen metabolismo basal + actividad.
-                        </Text>
-                    </View>
-                )}
 
                 <TouchableOpacity
                     style={styles.aiAnalysisBtn}

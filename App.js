@@ -43,7 +43,6 @@ import VoiceCoach from './screen/VoiceCoach';
 import MuscleRankings from './screen/MuscleRankings';
 import WelcomePlans from './screen/WelcomePlans';
 import Notifications from './screen/Notifications';
-import StepsHistory from './screen/StepsHistory';
 
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -286,7 +285,6 @@ export default function App() {
           <Stack.Screen name="MuscleRankings" component={MuscleRankings} />
           <Stack.Screen name="WelcomePlans" component={WelcomePlans} />
           <Stack.Screen name="Notifications" component={Notifications} />
-          <Stack.Screen name="StepsHistory" component={StepsHistory} />
         </Stack.Navigator>
       </NavigationContainer>
     </StripeProvider>

@@ -1,7 +1,11 @@
 const bcrypt = require('bcrypt');
 const { PrismaClient } = require('@prisma/client');
 
-const prisma = new PrismaClient();
+const DB_URL = "postgresql://postgres.gbtxcjprfqmghdhqvyfb:Nexus_Athletics_2026_Secure_DB%21@aws-0-eu-west-1.pooler.supabase.com:5432/postgres";
+
+const prisma = new PrismaClient({
+    datasources: { db: { url: DB_URL } }
+});
 
 async function resetAdminPassword() {
     try {

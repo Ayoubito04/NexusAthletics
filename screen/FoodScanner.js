@@ -15,7 +15,6 @@ export default function FoodScanner({ navigation }) {
     const [image, setImage] = useState(null);
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
-    const [userPlan, setUserPlan] = useState('Gratis');
 
     // NexusAlert State
     const [alert, setAlert] = useState({ visible: false, title: '', message: '', type: 'info', onConfirm: null });
@@ -32,17 +31,6 @@ export default function FoodScanner({ navigation }) {
             }
         });
     };
-
-    React.useEffect(() => {
-        const loadPlan = async () => {
-            const userData = await AsyncStorage.getItem('user');
-            if (userData) {
-                const user = JSON.parse(userData);
-                setUserPlan(user.plan || 'Gratis');
-            }
-        };
-        loadPlan();
-    }, []);
 
     const pickImage = async () => {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
