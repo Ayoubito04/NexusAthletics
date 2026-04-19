@@ -727,68 +727,73 @@ export default function EntrenadorIA() {
 
             {/* MODAL ONBOARDING — faltan datos de perfil */}
             <Modal animationType="slide" transparent visible={modalOnboarding} onRequestClose={() => setModalOnboarding(false)}>
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContentPlan, { maxHeight: '75%' }]}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Cuéntame sobre ti</Text>
-                            <TouchableOpacity onPress={() => setModalOnboarding(false)}>
-                                <Ionicons name="close" size={28} color="white" />
-                            </TouchableOpacity>
-                        </View>
-                        <Text style={{ color: '#888', fontSize: 13, marginBottom: 20, lineHeight: 20 }}>
-                            Necesito conocerte un poco mejor para personalizar tu plan al máximo. Solo tarda 10 segundos.
-                        </Text>
-
-                        <Text style={styles.labelPlan}>Tu peso (kg)</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={obPeso}
-                            onChangeText={setObPeso}
-                            placeholder="Ej: 75"
-                            placeholderTextColor="#444"
-                            keyboardType="numeric"
-                        />
-
-                        <Text style={styles.labelPlan}>Tu altura (cm)</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={obAltura}
-                            onChangeText={setObAltura}
-                            placeholder="Ej: 178"
-                            placeholderTextColor="#444"
-                            keyboardType="numeric"
-                        />
-
-                        <Text style={styles.labelPlan}>Tu edad</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={obEdad}
-                            onChangeText={setObEdad}
-                            placeholder="Ej: 25"
-                            placeholderTextColor="#444"
-                            keyboardType="numeric"
-                        />
-
-                        <Text style={styles.labelPlan}>Sexo</Text>
-                        <View style={styles.optionsGrid}>
-                            {['Hombre', 'Mujer', 'Otro'].map(g => (
-                                <TouchableOpacity
-                                    key={g}
-                                    style={[styles.optBtn, obGenero === g && styles.optBtnSelected]}
-                                    onPress={() => setObGenero(g)}
-                                >
-                                    <Text style={[styles.optText, obGenero === g && styles.optTextSelected]}>{g}</Text>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+                    <View style={styles.modalOverlay}>
+                        <View style={[styles.modalContentPlan, { maxHeight: '85%' }]}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Cuéntame sobre ti</Text>
+                                <TouchableOpacity onPress={() => setModalOnboarding(false)}>
+                                    <Ionicons name="close" size={28} color="white" />
                                 </TouchableOpacity>
-                            ))}
-                        </View>
+                            </View>
 
-                        <TouchableOpacity onPress={handleSaveOnboarding} style={{ marginTop: 24, borderRadius: 16, overflow: 'hidden' }}>
-                            <LinearGradient colors={['#63ff15', '#4ad912']} style={{ padding: 18, alignItems: 'center' }}>
-                                <Text style={{ color: '#000', fontWeight: '900', fontSize: 15, letterSpacing: 1 }}>CONTINUAR AL PLAN</Text>
-                            </LinearGradient>
-                        </TouchableOpacity>
+                            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 20 }}>
+                                <Text style={{ color: '#888', fontSize: 13, marginBottom: 20, lineHeight: 20 }}>
+                                    Necesito conocerte un poco mejor para personalizar tu plan al máximo. Solo tarda 10 segundos.
+                                </Text>
+
+                                <Text style={styles.labelPlan}>Tu peso (kg)</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    value={obPeso}
+                                    onChangeText={setObPeso}
+                                    placeholder="Ej: 75"
+                                    placeholderTextColor="#444"
+                                    keyboardType="numeric"
+                                />
+
+                                <Text style={styles.labelPlan}>Tu altura (cm)</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    value={obAltura}
+                                    onChangeText={setObAltura}
+                                    placeholder="Ej: 178"
+                                    placeholderTextColor="#444"
+                                    keyboardType="numeric"
+                                />
+
+                                <Text style={styles.labelPlan}>Tu edad</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    value={obEdad}
+                                    onChangeText={setObEdad}
+                                    placeholder="Ej: 25"
+                                    placeholderTextColor="#444"
+                                    keyboardType="numeric"
+                                />
+
+                                <Text style={styles.labelPlan}>Sexo</Text>
+                                <View style={styles.optionsGrid}>
+                                    {['Hombre', 'Mujer', 'Otro'].map(g => (
+                                        <TouchableOpacity
+                                            key={g}
+                                            style={[styles.optBtn, obGenero === g && styles.optBtnSelected]}
+                                            onPress={() => setObGenero(g)}
+                                        >
+                                            <Text style={[styles.optText, obGenero === g && styles.optTextSelected]}>{g}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+
+                                <TouchableOpacity onPress={handleSaveOnboarding} style={{ marginTop: 24, borderRadius: 16, overflow: 'hidden' }}>
+                                    <LinearGradient colors={['#63ff15', '#4ad912']} style={{ padding: 18, alignItems: 'center' }}>
+                                        <Text style={{ color: '#000', fontWeight: '900', fontSize: 15, letterSpacing: 1 }}>CONTINUAR AL PLAN</Text>
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                            </ScrollView>
+                        </View>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
 
             {/* MODAL CONFIGURACIÓN PLAN GENERATIVO */}

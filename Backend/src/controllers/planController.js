@@ -161,7 +161,16 @@ Duración: ${semanas} semanas | Periodización: ${periodi || 'DUP'} | Técnicas:
   "suplementacion": [{ "nombre": "...", "dosis": "Xg", "timing": "...", "motivo": "..." }]
 }
 
-REGLAS: semana ${semanas} = Deload (vol -40%, intensidad -50%). imgKey solo: press_banca, sentadilla, peso_muerto, curls, yoga_stretch, cardio_burn, pilates_core, flex_stretch, dominadas, remo, press_hombros, extension_triceps, zancadas. Usa 70-85% del 1RM según fase.`;
+REGLAS: semana ${semanas} = Deload (vol -40%, intensidad -50%). Usa 70-85% del 1RM según fase.
+imgKey debe ser UNO de estos (usa el más específico para cada ejercicio):
+press_banca, press_inclinado, press_declinado, aperturas, fondos, push_up, press_mancuernas,
+peso_muerto, dominadas, remo, jalon, remo_sentado, face_pull, buenos_dias, remo_mancuerna,
+press_hombros, press_militar, elevaciones_laterales, elevaciones_frontales, vuelo_posterior,
+curls, curl_martillo, curl_concentrado, curl_barra, extension_triceps, triceps_frances, patada_triceps,
+sentadilla, sentadilla_goblet, zancadas, prensa, extension_cuadriceps, curl_femoral, hip_thrust, gemelos, peso_muerto_rumano, sentadilla_bulgara,
+pilates_core, abdominales, russian_twist, leg_raise, superman, mountain_climber,
+muscle_up, fondos_paralelas, australian_row, pike_push, pistol_squat, burpees, salto_caja,
+cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor`;
 
         } else {
             // ── Pro: plan semanal estándar ──
@@ -193,7 +202,15 @@ REGLAS: semana ${semanas} = Deload (vol -40%, intensidad -50%). imgKey solo: pre
         4. Si busca "Perder grasa", prioriza fuerza con intervalos o circuitos.
         5. Si busca "Flexibilidad/Pilates", genera secuencias fluidas y controladas.
         6. Genera 3 días si no se especifica lo contrario.
-        7. imgKey permitidas: press_banca, sentadilla, peso_muerto, curls, yoga_stretch, cardio_burn, pilates_core, flex_stretch.`;
+        7. imgKey debe ser el más específico para cada ejercicio. Opciones disponibles:
+        press_banca, press_inclinado, press_declinado, aperturas, fondos, push_up, press_mancuernas,
+        peso_muerto, dominadas, remo, jalon, remo_sentado, face_pull, buenos_dias, remo_mancuerna,
+        press_hombros, press_militar, elevaciones_laterales, elevaciones_frontales, vuelo_posterior,
+        curls, curl_martillo, curl_concentrado, curl_barra, extension_triceps, triceps_frances, patada_triceps,
+        sentadilla, sentadilla_goblet, zancadas, prensa, extension_cuadriceps, curl_femoral, hip_thrust, gemelos, peso_muerto_rumano, sentadilla_bulgara,
+        pilates_core, abdominales, russian_twist, leg_raise, superman, mountain_climber,
+        muscle_up, fondos_paralelas, australian_row, pike_push, pistol_squat, burpees, salto_caja,
+        cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor`;
         }
 
         const contents = [{ parts: [{ text: systemPrompt }] }];
@@ -441,7 +458,15 @@ Técnicas avanzadas a incluir: ${tecnicas.length > 0 ? tecnicas.join(', ') : 'La
 1. Usa los datos reales de 1RM para calcular pesos sugeridos (usa 70-85% del 1RM según la fase)
 2. Si ${masFlojo} es el músculo más débil, aumenta su volumen un 25-30%
 3. La semana ${semanas} SIEMPRE es Deload (reduce volumen 40%, intensidad 50%)
-4. imgKey solo puede ser: press_banca, sentadilla, peso_muerto, curls, yoga_stretch, cardio_burn, pilates_core, flex_stretch, dominadas, remo, press_hombros, extension_triceps, zancadas
+4. imgKey debe ser el más específico para cada ejercicio. Opciones:
+press_banca, press_inclinado, press_declinado, aperturas, fondos, push_up, press_mancuernas,
+peso_muerto, dominadas, remo, jalon, remo_sentado, face_pull, buenos_dias, remo_mancuerna,
+press_hombros, press_militar, elevaciones_laterales, elevaciones_frontales, vuelo_posterior,
+curls, curl_martillo, curl_concentrado, curl_barra, extension_triceps, triceps_frances, patada_triceps,
+sentadilla, sentadilla_goblet, zancadas, prensa, extension_cuadriceps, curl_femoral, hip_thrust, gemelos, peso_muerto_rumano, sentadilla_bulgara,
+pilates_core, abdominales, russian_twist, leg_raise, superman, mountain_climber,
+muscle_up, fondos_paralelas, australian_row, pike_push, pistol_squat, burpees, salto_caja,
+cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor
 5. Adapta el plan a las lesiones: ${lesiones || 'ninguna restricción'}
 6. Con estrés ${nivelEstres || 'moderado'} y ${horasSueno || '7-8h'} de sueño, ajusta el volumen apropiadamente
 7. Genera exactamente ${semanas} semanas con progresión lógica`;
