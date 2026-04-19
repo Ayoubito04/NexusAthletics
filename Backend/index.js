@@ -164,7 +164,7 @@ if (exerciseRoutes) app.use('/', exerciseRoutes);
 // --- CUALQUIER OTRA RUTA QUE QUEDE EN INDEX.JS ---
 // (Aquí irán pagos, admin y PDF por ahora hasta que los movamos)
 
-app.get('/', (req, res) => res.json({ status: "Nexus AI Server running", version: "2.1-ultimate-plan" }));
+app.get('/', (req, res) => res.json({ status: "Nexus AI Server running", version: "2.2-exercise-gifs" }));
 
 // SECURITY: 404 handler
 app.use((req, res) => {
