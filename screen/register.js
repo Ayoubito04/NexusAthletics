@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, memo, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, KeyboardAvoidingView, ScrollView, TextInput, TouchableOpacity, StyleSheet, Platform, ActivityIndicator, Animated, Easing } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, typography, spacing, radius, shadows } from '../theme';
 
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
@@ -29,55 +30,17 @@ try {
 
 const BACKEND_URL = Config.BACKEND_URL;
 
-const InputField = memo(({ label, icon, value, onChangeText, editable, keyboardType, isPassword, placeholder, autoCapitalize }) => {
-    const [showText, setShowText] = useState(false);
-    const toggleShow = useCallback(() => setShowText(v => !v), []);
-
-    return (
-        <View style={styles.inputContainer}>
-            <Text style={styles.fieldLabel}>{label}</Text>
-            <View style={styles.inputWrapper}>
-                <Ionicons name={icon} size={18} color="#555" />
-                <TextInput
-                    placeholder={placeholder}
-                    placeholderTextColor="#52525B"
-                    value={value}
-                    onChangeText={onChangeText}
-                    style={styles.input}
-                    editable={editable}
-                    keyboardType={keyboardType}
-                    secureTextEntry={isPassword && !showText}
-                    autoCapitalize={autoCapitalize || 'none'}
-                    autoCorrect={false}
-                    autoComplete="off"
-                    spellCheck={false}
-                    underlineColorAndroid="transparent"
-                    selectionColor="#63ff15"
-                />
-                {isPassword && (
-                    <TouchableOpacity onPress={toggleShow} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <Ionicons name={showText ? 'eye-outline' : 'eye-off-outline'} size={18} color="#555" />
-                    </TouchableOpacity>
-                )}
-            </View>
-        </View>
-    );
-});
-
 export default function Register() {
     const navigation = useNavigation();
+    const [focusedInput, setFocusedInput] = useState(null);
     const [nombre, setNombre] = useState('');
     const [apellido, setApellido] = useState('');
     const [email, setEmail] = useState('');
     const [contraseña, setContraseña] = useState('');
     const [confirmarContraseña, setConfirmarContraseña] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-
-    const handleNombre = useCallback((t) => setNombre(t), []);
-    const handleApellido = useCallback((t) => setApellido(t), []);
-    const handleEmail = useCallback((t) => setEmail(t), []);
-    const handleContraseña = useCallback((t) => setContraseña(t), []);
-    const handleConfirmar = useCallback((t) => setConfirmarContraseña(t), []);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', type: 'info', onConfirm: null });
 
@@ -365,55 +328,105 @@ export default function Register() {
                     {/* Form Card */}
                     <View style={styles.formCard}>
 
-                        <InputField
-                            label="Nombre"
-                            icon="person-outline"
-                            value={nombre}
-                            onChangeText={handleNombre}
-                            editable={!isLoading}
-                            placeholder="Tu nombre"
-                            autoCapitalize="words"
-                        />
+                        {/* Nombre Input */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.fieldLabel}>Nombre</Text>
+                            <View style={[styles.inputWrapper, focusedInput === 'nombre' && styles.inputFocused]}>
+                                <Ionicons name="person-outline" size={18} color={colors.textDim} />
+                                <TextInput
+                                    placeholder="Tu nombre"
+                                    placeholderTextColor={colors.textPlaceholder}
+                                    value={nombre}
+                                    onChangeText={setNombre}
+                                    onFocus={() => setFocusedInput('nombre')}
+                                    onBlur={() => setFocusedInput(null)}
+                                    editable={!isLoading}
+                                    style={styles.input}
+                                />
+                            </View>
+                        </View>
 
-                        <InputField
-                            label="Apellido"
-                            icon="people-outline"
-                            value={apellido}
-                            onChangeText={handleApellido}
-                            editable={!isLoading}
-                            placeholder="Tu apellido"
-                            autoCapitalize="words"
-                        />
+                        {/* Apellido Input */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.fieldLabel}>Apellido</Text>
+                            <View style={[styles.inputWrapper, focusedInput === 'apellido' && styles.inputFocused]}>
+                                <Ionicons name="people-outline" size={18} color="#555" />
+                                <TextInput
+                                    placeholder="Tu apellido"
+                                    placeholderTextColor={colors.textPlaceholder}
+                                    value={apellido}
+                                    onChangeText={setApellido}
+                                    onFocus={() => setFocusedInput('apellido')}
+                                    onBlur={() => setFocusedInput(null)}
+                                    editable={!isLoading}
+                                    style={styles.input}
+                                />
+                            </View>
+                        </View>
 
-                        <InputField
-                            label="Email"
-                            icon="mail-outline"
-                            value={email}
-                            onChangeText={handleEmail}
-                            editable={!isLoading}
-                            keyboardType="email-address"
-                            placeholder="tu@email.com"
-                        />
+                        {/* Email Input */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.fieldLabel}>Email</Text>
+                            <View style={[styles.inputWrapper, focusedInput === 'email' && styles.inputFocused]}>
+                                <Ionicons name="mail-outline" size={18} color="#555" />
+                                <TextInput
+                                    placeholder="tu@email.com"
+                                    placeholderTextColor={colors.textPlaceholder}
+                                    value={email}
+                                    onChangeText={setEmail}
+                                    onFocus={() => setFocusedInput('email')}
+                                    onBlur={() => setFocusedInput(null)}
+                                    editable={!isLoading}
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                    style={styles.input}
+                                />
+                            </View>
+                        </View>
 
-                        <InputField
-                            label="Contraseña"
-                            icon="lock-closed-outline"
-                            value={contraseña}
-                            onChangeText={handleContraseña}
-                            editable={!isLoading}
-                            isPassword={true}
-                            placeholder="••••••••"
-                        />
+                        {/* Contraseña Input */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.fieldLabel}>Contraseña</Text>
+                            <View style={[styles.inputWrapper, focusedInput === 'password' && styles.inputFocused]}>
+                                <Ionicons name="lock-closed-outline" size={18} color="#555" />
+                                <TextInput
+                                    placeholder="••••••••"
+                                    placeholderTextColor={colors.textPlaceholder}
+                                    value={contraseña}
+                                    onChangeText={setContraseña}
+                                    onFocus={() => setFocusedInput('password')}
+                                    onBlur={() => setFocusedInput(null)}
+                                    editable={!isLoading}
+                                    secureTextEntry={!showPassword}
+                                    style={styles.input}
+                                />
+                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} activeOpacity={0.7}>
+                                    <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={18} color="#555" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
 
-                        <InputField
-                            label="Confirmar Contraseña"
-                            icon="shield-checkmark-outline"
-                            value={confirmarContraseña}
-                            onChangeText={handleConfirmar}
-                            editable={!isLoading}
-                            isPassword={true}
-                            placeholder="••••••••"
-                        />
+                        {/* Confirmar Contraseña Input */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.fieldLabel}>Confirmar Contraseña</Text>
+                            <View style={[styles.inputWrapper, focusedInput === 'confirmPassword' && styles.inputFocused]}>
+                                <Ionicons name="shield-checkmark-outline" size={18} color="#555" />
+                                <TextInput
+                                    placeholder="••••••••"
+                                    placeholderTextColor={colors.textPlaceholder}
+                                    value={confirmarContraseña}
+                                    onChangeText={setConfirmarContraseña}
+                                    onFocus={() => setFocusedInput('confirmPassword')}
+                                    onBlur={() => setFocusedInput(null)}
+                                    editable={!isLoading}
+                                    secureTextEntry={!showConfirmPassword}
+                                    style={styles.input}
+                                />
+                                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} activeOpacity={0.7}>
+                                    <Ionicons name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'} size={18} color="#555" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
 
                         {/* Register Button */}
                         <TouchableOpacity
@@ -426,7 +439,7 @@ export default function Register() {
                             activeOpacity={0.8}
                         >
                             <LinearGradient
-                                colors={['#63ff15', '#4dd10e']}
+                                colors={colors.gradients.primary}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 0 }}
                                 style={styles.mainBtnGradient}
@@ -447,19 +460,17 @@ export default function Register() {
                         </View>
 
                         {/* Social Buttons */}
-                        <View style={styles.socialGrid}>
-                            <TouchableOpacity
-                                style={[styles.socialBtn, { flex: 1 }]}
-                                onPress={() => handleSocialRegister('Google')}
-                                disabled={isLoading}
-                                activeOpacity={0.7}
-                                accessibilityLabel="Registrarse con Google"
-                                accessibilityRole="button"
-                            >
-                                <Ionicons name="logo-google" size={18} color="#fff" />
-                                <Text style={styles.socialText}>Continuar con Google</Text>
-                            </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity
+                            style={styles.googleBtn}
+                            onPress={() => handleSocialRegister('Google')}
+                            disabled={isLoading}
+                            activeOpacity={0.75}
+                            accessibilityLabel="Registrarse con Google"
+                            accessibilityRole="button"
+                        >
+                            <Ionicons name="logo-google" size={20} color="#fff" />
+                            <Text style={styles.googleBtnText}>Continuar con Google</Text>
+                        </TouchableOpacity>
 
                     </View>
 
@@ -493,88 +504,73 @@ export default function Register() {
 const styles = StyleSheet.create({
     mainContainer: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: colors.background,
     },
     scrollWrapper: {
-        padding: 24,
-        paddingTop: 20,
+        padding: spacing.xl,
+        paddingTop: spacing.lg,
         alignItems: 'center',
     },
     headerSection: {
-        marginBottom: 28,
+        marginBottom: spacing.xxl,
         alignItems: 'center',
     },
     registerTitle: {
         fontSize: 28,
         fontWeight: '900',
-        color: '#fff',
+        color: colors.textPrimary,
         letterSpacing: 1.5,
         textAlign: 'center',
-        marginBottom: 8,
+        marginBottom: spacing.sm,
     },
     registerSubtitle: {
         fontSize: 13,
-        color: '#63ff15',
+        color: colors.primary,
         fontWeight: '700',
         letterSpacing: 1.5,
     },
     formCard: {
         width: '100%',
         maxWidth: 400,
-        backgroundColor: '#121212',
-        borderRadius: 24,
-        padding: 28,
+        backgroundColor: colors.surface,
+        borderRadius: radius.modal,
+        padding: spacing.xxl,
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.18)',
-        marginBottom: 20,
-        shadowColor: '#63ff15',
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 3,
+        borderColor: colors.borderPrimary,
+        marginBottom: spacing.lg,
+        ...shadows.cardMd,
     },
     inputContainer: {
         marginBottom: 18,
     },
     fieldLabel: {
-        color: '#63ff15',
-        fontSize: 10,
-        fontWeight: '700',
-        textTransform: 'uppercase',
-        marginBottom: 10,
-        marginLeft: 2,
-        letterSpacing: 1,
-        opacity: 0.7,
+        ...typography.inputLabel,
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1a1a1a',
+        backgroundColor: colors.surfaceHighlight,
         borderWidth: 1,
-        borderColor: '#2a2a2a',
+        borderColor: colors.surfaceElevated,
         paddingHorizontal: 14,
         height: 56,
-        gap: 12,
-        borderRadius: 10,
+        gap: spacing.md,
+        borderRadius: radius.md,
     },
     inputFocused: {
-        borderColor: '#63ff15',
-        backgroundColor: 'rgba(99,255,21,0.05)',
+        borderColor: colors.primary,
+        backgroundColor: colors.primaryDim,
     },
     input: {
         flex: 1,
-        color: '#fff',
-        fontSize: 15,
-        fontWeight: '500',
+        color: colors.textPrimary,
+        ...typography.inputText,
     },
     mainBtn: {
-        borderRadius: 14,
+        borderRadius: radius.lg,
         overflow: 'hidden',
-        marginTop: 20,
-        shadowColor: '#63ff15',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.7,
-        shadowRadius: 24,
-        elevation: 15,
+        marginTop: spacing.lg,
+        ...shadows.primaryGlowLg,
     },
     mainBtnGradient: {
         height: 58,
@@ -582,61 +578,52 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     btnText: {
-        color: '#000',
-        fontSize: 15,
-        fontWeight: '800',
-        letterSpacing: 1.5,
+        ...typography.buttonPrimary,
     },
     dividerBox: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginVertical: 24,
+        marginVertical: spacing.xl,
     },
     line: {
         flex: 1,
         height: 1,
-        backgroundColor: '#222',
+        backgroundColor: colors.surfaceElevated,
     },
     dividerText: {
-        color: '#52525B',
-        marginHorizontal: 12,
+        color: colors.textMuted,
+        marginHorizontal: spacing.md,
         fontSize: 11,
         fontWeight: '600',
         letterSpacing: 0.5,
     },
-    socialGrid: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        gap: 12,
-    },
-    socialBtn: {
-        flex: 1,
+    googleBtn: {
         height: 56,
-        backgroundColor: 'rgba(30,30,30,0.8)',
-        borderRadius: 12,
+        backgroundColor: colors.surfaceElevated,
+        borderRadius: radius.lg,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 8,
+        gap: spacing.md,
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.15)',
+        borderColor: colors.borderPrimary,
     },
-    socialText: {
-        color: '#E4E4E7',
-        fontSize: 12,
-        fontWeight: '600',
+    googleBtnText: {
+        color: colors.textSecondary,
+        fontSize: 14,
+        fontWeight: '700',
     },
     footerLink: {
-        marginTop: 12,
-        marginBottom: 20,
+        marginTop: spacing.md,
+        marginBottom: spacing.lg,
     },
     footerText: {
-        color: '#71717A',
+        color: colors.textTertiary,
         fontSize: 14,
         textAlign: 'center',
     },
     neonText: {
-        color: '#63ff15',
+        color: colors.primary,
         fontWeight: '700',
     },
 });

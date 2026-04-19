@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LogBox } from 'react-native';
+import { colors, shadows, radius, rs } from './theme';
 
 // Ignorar advertencias de NativeEventEmitter y notificaciones en Expo Go
 LogBox.ignoreLogs([
@@ -43,6 +44,7 @@ import VoiceCoach from './screen/VoiceCoach';
 import MuscleRankings from './screen/MuscleRankings';
 import WelcomePlans from './screen/WelcomePlans';
 import Notifications from './screen/Notifications';
+import UserRanking from './screen/UserRanking';
 
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -62,32 +64,28 @@ function TabNavigator() {
         headerShown: false,
         tabBarShowLabel: true,
         tabBarLabelStyle: {
-          fontSize: 10,
+          fontSize: rs(10),
           fontWeight: '600',
           marginBottom: 4,
           letterSpacing: 0.3,
         },
         tabBarStyle: {
-          backgroundColor: '#111111',
+          backgroundColor: colors.tabBar,
           position: 'absolute',
           bottom: 16,
           left: 16,
           right: 16,
           height: 64,
-          borderRadius: 20,
+          borderRadius: radius.tab,
           borderTopWidth: 0,
           borderWidth: 1,
-          borderColor: 'rgba(99,255,21,0.2)',
-          elevation: 20,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.4,
-          shadowRadius: 12,
+          borderColor: colors.tabBarBorder,
+          ...shadows.tabBar,
           overflow: 'hidden',
         },
         tabBarBackground: () => null,
-        tabBarActiveTintColor: '#63ff15',
-        tabBarInactiveTintColor: '#555',
+        tabBarActiveTintColor: colors.tabBarActive,
+        tabBarInactiveTintColor: colors.tabBarInactive,
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
           if (route.name === 'Dashboard') {
@@ -103,13 +101,13 @@ function TabNavigator() {
           }
           return (
             <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 6 }}>
-              <Ionicons name={iconName} size={23} color={color} />
+              <Ionicons name={iconName} size={rs(23)} color={color} />
               {focused && (
                 <View style={{
                   width: 4,
                   height: 4,
                   borderRadius: 2,
-                  backgroundColor: '#63ff15',
+                  backgroundColor: colors.primary,
                   marginTop: 4,
                 }} />
               )}
@@ -162,31 +160,13 @@ function TabNavigator() {
   );
 }
 
-const forFade = ({ current, next }) => {
-// ... (mantenemos el resto igual)
-  const opacity = Animated.add(
-    current.progress,
-    next ? next.progress : 0
-  ).interpolate({
-    inputRange: [0, 1, 2],
-    outputRange: [0, 1, 0],
-  });
-
-  return {
-    leftButtonStyle: { opacity },
-    rightButtonStyle: { opacity },
-    titleStyle: { opacity },
-    backgroundStyle: { opacity },
-  };
-};
-
-const config = {
+const screenTransition = {
   animation: 'spring',
   config: {
-    stiffness: 1000,
-    damping: 500,
-    mass: 3,
-    overshootClamping: true,
+    stiffness: 280,
+    damping: 32,
+    mass: 1,
+    overshootClamping: false,
     restDisplacementThreshold: 0.01,
     restSpeedThreshold: 0.01,
   },
@@ -219,8 +199,8 @@ export default function App() {
             gestureEnabled: true,
             gestureDirection: 'horizontal',
             transitionSpec: {
-              open: config,
-              close: config,
+              open: screenTransition,
+              close: screenTransition,
             },
             cardStyleInterpolator: ({ current, next, layouts }) => {
               return {
@@ -285,6 +265,7 @@ export default function App() {
           <Stack.Screen name="MuscleRankings" component={MuscleRankings} />
           <Stack.Screen name="WelcomePlans" component={WelcomePlans} />
           <Stack.Screen name="Notifications" component={Notifications} />
+          <Stack.Screen name="UserRanking" component={UserRanking} />
         </Stack.Navigator>
       </NavigationContainer>
     </StripeProvider>

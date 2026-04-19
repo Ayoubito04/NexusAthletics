@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import NexusAlert from '../components/NexusAlert';
 import Config from '../constants/Config';
 import AchievementsShowcase from '../components/AchievementsShowcase';
+import { colors, typography, spacing, radius, shadows } from '../theme';
 
 const BACKEND_URL = Config.BACKEND_URL;
 
@@ -90,11 +91,11 @@ export default function Profile() {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={28} color="white" />
+                    <Ionicons name="arrow-back" size={28} color={colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Mi Perfil</Text>
                 <TouchableOpacity onPress={handleLogout}>
-                    <Ionicons name="log-out-outline" size={28} color="#ff4d4d" />
+                    <Ionicons name="log-out-outline" size={28} color={colors.error} />
                 </TouchableOpacity>
             </View>
 
@@ -115,12 +116,12 @@ export default function Profile() {
 
                 <View style={styles.statsRow}>
                     <View style={styles.statBox}>
-                        <LinearGradient colors={['#1a1a1a', '#0a0a0a']} style={StyleSheet.absoluteFill} borderRadius={20} />
+                        <LinearGradient colors={colors.gradients.dark} style={StyleSheet.absoluteFill} borderRadius={radius.xxl} />
                         <Text style={styles.statVal}>{user.mensajesHoy || 0}</Text>
                         <Text style={styles.statLab}>Consultas IA</Text>
                     </View>
                     <View style={styles.statBox}>
-                        <LinearGradient colors={['#1a1a1a', '#0a0a0a']} style={StyleSheet.absoluteFill} borderRadius={20} />
+                        <LinearGradient colors={colors.gradients.dark} style={StyleSheet.absoluteFill} borderRadius={radius.xxl} />
                         <Text style={styles.statVal}>{user.healthSteps || 0}</Text>
                         <Text style={styles.statLab}>Pasos Hoy</Text>
                     </View>
@@ -135,9 +136,9 @@ export default function Profile() {
                         style={styles.menuItem}
                         onPress={() => navigation.navigate('BiometricData')}
                     >
-                        <Ionicons name="fitness-outline" size={22} color="#63ff15" />
+                        <Ionicons name="fitness-outline" size={22} color={colors.primary} />
                         <Text style={styles.menuText}>Datos Biométricos</Text>
-                        <Ionicons name="chevron-forward" size={20} color="#444" />
+                        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
                     </TouchableOpacity>
                 </View>
 
@@ -147,9 +148,9 @@ export default function Profile() {
                         style={styles.menuItem}
                         onPress={() => navigation.navigate('PlanesPago')}
                     >
-                        <Ionicons name="card-outline" size={22} color="#63ff15" />
+                        <Ionicons name="card-outline" size={22} color={colors.primary} />
                         <Text style={styles.menuText}>Gestionar mi Plan ({user.plan})</Text>
-                        <Ionicons name="chevron-forward" size={20} color="#444" />
+                        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
                     </TouchableOpacity>
                 </View>
 
@@ -160,9 +161,9 @@ export default function Profile() {
                             style={styles.menuItem}
                             onPress={() => navigation.navigate('AdminDashboard')}
                         >
-                            <Ionicons name="shield-outline" size={22} color="#63ff15" />
+                            <Ionicons name="shield-outline" size={22} color={colors.primary} />
                             <Text style={styles.menuText}>Panel de Administración</Text>
-                            <Ionicons name="chevron-forward" size={20} color="#444" />
+                            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
                         </TouchableOpacity>
                     </View>
                 )}
@@ -173,9 +174,9 @@ export default function Profile() {
                         style={styles.menuItem}
                         onPress={() => navigation.navigate('AccountSettings')}
                     >
-                        <Ionicons name="settings-outline" size={22} color="#aaa" />
+                        <Ionicons name="settings-outline" size={22} color={colors.textSecondary} />
                         <Text style={styles.menuText}>Configuración de Cuenta</Text>
-                        <Ionicons name="chevron-forward" size={20} color="#444" />
+                        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
                     </TouchableOpacity>
                 </View>
 
@@ -185,9 +186,9 @@ export default function Profile() {
                         style={styles.menuItem}
                         onPress={() => navigation.navigate('FAQ')}
                     >
-                        <Ionicons name="help-buoy-outline" size={22} color="#aaa" />
+                        <Ionicons name="help-buoy-outline" size={22} color={colors.textSecondary} />
                         <Text style={styles.menuText}>Preguntas Frecuentes</Text>
-                        <Ionicons name="chevron-forward" size={20} color="#444" />
+                        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
                     </TouchableOpacity>
                 </View>
 
@@ -212,120 +213,112 @@ export default function Profile() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0a0a0a',
+        backgroundColor: colors.background,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 20,
+        padding: spacing.lg,
         paddingTop: 50,
         justifyContent: 'space-between',
     },
     headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: 'white',
+        ...typography.h3,
     },
     content: {
-        padding: 20,
+        padding: spacing.lg,
         alignItems: 'center',
     },
     profileCard: {
         alignItems: 'center',
-        marginBottom: 30,
+        marginBottom: spacing.xxxl,
     },
     avatarContainer: {
         position: 'relative',
-        marginBottom: 15,
+        marginBottom: spacing.lg,
     },
     avatar: {
         width: 100,
         height: 100,
         borderRadius: 50,
         borderWidth: 2,
-        borderColor: '#63ff15',
+        borderColor: colors.primary,
     },
     planBadge: {
         position: 'absolute',
         bottom: 0,
         right: 0,
-        backgroundColor: '#63ff15',
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 15,
+        backgroundColor: colors.primary,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+        borderRadius: radius.full,
     },
     planText: {
-        color: 'black',
+        color: '#000000',
         fontSize: 10,
         fontWeight: 'bold',
     },
     userName: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: 'white',
+        ...typography.h2,
     },
     userEmail: {
-        fontSize: 14,
-        color: '#666',
-        marginTop: 5,
+        ...typography.bodySmall,
+        color: colors.textTertiary,
+        marginTop: spacing.sm,
     },
     statsRow: {
         flexDirection: 'row',
         width: '100%',
         justifyContent: 'space-between',
-        marginBottom: 30,
+        marginBottom: spacing.xxxl,
     },
     statBox: {
         width: '48%',
-        backgroundColor: '#1a1a1a',
-        padding: 20,
-        borderRadius: 20,
+        backgroundColor: colors.surfaceHighlight,
+        padding: spacing.lg,
+        borderRadius: radius.xxl,
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#222',
+        borderColor: colors.surfaceElevated,
     },
     statVal: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#63ff15',
+        ...typography.statValue,
     },
     statLab: {
-        fontSize: 12,
-        color: '#888',
-        marginTop: 5,
+        ...typography.caption,
+        marginTop: spacing.sm,
     },
     menuSection: {
         width: '100%',
-        marginBottom: 25,
+        marginBottom: spacing.xxl,
     },
     sectionTitle: {
-        color: '#444',
-        fontSize: 12,
-        fontWeight: 'bold',
-        textTransform: 'uppercase',
-        marginBottom: 10,
-        marginLeft: 5,
+        ...typography.label,
+        color: colors.textMuted,
+        marginBottom: spacing.md,
+        marginLeft: spacing.sm,
     },
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#111',
-        padding: 15,
-        borderRadius: 15,
-        marginBottom: 10,
+        backgroundColor: colors.surface,
+        padding: spacing.lg,
+        borderRadius: radius.lg,
+        marginBottom: spacing.md,
+        minHeight: 44,
     },
     menuText: {
         flex: 1,
-        color: 'white',
+        color: colors.textPrimary,
         fontSize: 16,
-        marginLeft: 15,
+        marginLeft: spacing.lg,
     },
     deleteAccount: {
-        marginTop: 20,
+        marginTop: spacing.lg,
         marginBottom: 40,
     },
     deleteText: {
-        color: '#444',
+        color: colors.textMuted,
         fontSize: 14,
         textDecorationLine: 'underline',
     }

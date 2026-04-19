@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, ScrollView, KeyboardAvoidingView, TouchableOpacity, TextInput, Platform, Animated, ActivityIndicator, Easing } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import NexusAlert from '../components/NexusAlert';
 import * as Haptics from 'expo-haptics';
+import { colors, typography, spacing, radius, shadows, rs } from '../theme';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -45,51 +46,14 @@ try {
     console.log('Error al cargar módulo nativo de Google:', e);
 }
 
-const InputField = memo(({ label, icon, value, onChangeText, editable, keyboardType, isPassword, placeholder, returnKeyType }) => {
-    const [showText, setShowText] = useState(false);
-    const toggleShow = useCallback(() => setShowText(v => !v), []);
-
-    return (
-        <View style={styles.inputContainer}>
-            <Text style={styles.fieldLabel}>{label}</Text>
-            <View style={styles.inputWrapper}>
-                <Ionicons name={icon} size={18} color="#555" />
-                <TextInput
-                    placeholder={placeholder}
-                    placeholderTextColor="#52525B"
-                    value={value}
-                    onChangeText={onChangeText}
-                    style={styles.input}
-                    editable={editable}
-                    keyboardType={keyboardType}
-                    secureTextEntry={isPassword && !showText}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    autoComplete="off"
-                    spellCheck={false}
-                    returnKeyType={returnKeyType}
-                    underlineColorAndroid="transparent"
-                    selectionColor="#63ff15"
-                />
-                {isPassword && (
-                    <TouchableOpacity onPress={toggleShow} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <Ionicons name={showText ? 'eye-outline' : 'eye-off-outline'} size={18} color="#555" />
-                    </TouchableOpacity>
-                )}
-            </View>
-        </View>
-    );
-});
-
 export default function Login() {
     const navigation = useNavigation();
+    const [focusedInput, setFocusedInput] = useState(null);
     const [usuario, setUsuario] = useState('');
     const [contraseña, setContraseña] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', type: 'info', onConfirm: null });
-
-    const handleUsuarioChange = useCallback((text) => setUsuario(text), []);
-    const handleContraseñaChange = useCallback((text) => setContraseña(text), []);
 
     const showAlert = (title, message, type = 'info', onConfirm = null) => {
         setAlertConfig({
@@ -541,91 +505,6 @@ export default function Login() {
                 }
                 setIsLoading(false);
             }
-        } else if (platform === 'Facebook') {
-            try {
-                setIsLoading(true);
-
-                const redirectUri = AuthSession.makeRedirectUri({
-                    useProxy: true,
-                    projectNameForProxy: '@ayoubito04/nexus-fitness'
-                });
-
-                console.log('🔗 Facebook Redirect URI:', redirectUri);
-
-                const { data, error } = await supabase.auth.signInWithOAuth({
-                    provider: 'facebook',
-                    options: {
-                        redirectTo: redirectUri,
-                        skipBrowserRedirect: true,
-                    }
-                });
-
-                if (error) throw error;
-
-                if (data?.url) {
-                    console.log('🌐 Abriendo navegador para Facebook...');
-                    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
-
-                    if (result.type === 'success' && result.url) {
-                        console.log('✅ Retorno exitoso de Facebook');
-                        const urlObj = new URL(result.url.replace('#', '?'));
-                        const access_token = urlObj.searchParams.get('access_token');
-                        const refresh_token = urlObj.searchParams.get('refresh_token');
-
-                        if (access_token) {
-                            console.log('💎 Token de Facebook obtenido, registrando sesión...');
-                            await supabase.auth.setSession({
-                                access_token,
-                                refresh_token: refresh_token || '',
-                            });
-                        }
-                    } else {
-                        console.log('⚠️ Login de Facebook cancelado o fallido:', result.type);
-                        setIsLoading(false);
-                    }
-                }
-            } catch (error) {
-                console.error('Facebook Sign-In Error:', error);
-                showAlert("Error", "No se pudo iniciar sesión con Facebook", "error");
-                setIsLoading(false);
-            }
-        } else if (platform === 'Instagram') {
-            try {
-                setIsLoading(true);
-
-                const redirectUri = AuthSession.makeRedirectUri({
-                    scheme: 'nexus-fitness',
-                });
-
-                const instagramClientId = Config.INSTAGRAM_CLIENT_ID || Config.FACEBOOK_APP_ID;
-
-                if (!instagramClientId || instagramClientId === 'tu_instagram_client_id') {
-                    showAlert("Configuración", "Instagram no está configurado. Se requiere un Client ID válido.", "info");
-                    setIsLoading(false);
-                    return;
-                }
-
-                const authUrl = `https://api.instagram.com/oauth/authorize?` +
-                    `client_id=${instagramClientId}` +
-                    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-                    `&scope=user_profile,user_media` +
-                    `&response_type=code`;
-
-                const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
-
-                if (result.type === 'success' && result.url) {
-                    const code = new URLSearchParams(result.url.split('?')[1]).get('code');
-                    if (code) {
-                        handleSocialAuth('instagram', code);
-                    }
-                } else {
-                    setIsLoading(false);
-                }
-            } catch (error) {
-                console.error('Instagram Sign-In Error:', error);
-                setIsLoading(false);
-                showAlert("Error", "No se pudo iniciar sesión con Instagram", "error");
-            }
         }
     };
 
@@ -663,27 +542,47 @@ export default function Login() {
                     <Animated.View style={[styles.loginCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
                         <Text style={styles.cardTitle}>INICIAR SESIÓN</Text>
 
-                        <InputField
-                            label="Email"
-                            icon="mail-outline"
-                            value={usuario}
-                            onChangeText={handleUsuarioChange}
-                            editable={!isLoading}
-                            keyboardType="email-address"
-                            placeholder="tu@email.com"
-                            returnKeyType="next"
-                        />
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.fieldLabel}>Email</Text>
+                            <View style={[styles.inputWrapper, focusedInput === 'email' && styles.inputFocused]}>
+                                <Ionicons name="mail-outline" size={18} color="#555" />
+                                <TextInput
+                                    placeholder="tu@email.com"
+                                    placeholderTextColor="#52525B"
+                                    value={usuario}
+                                    onChangeText={setUsuario}
+                                    style={styles.input}
+                                    onFocus={() => setFocusedInput('email')}
+                                    onBlur={() => setFocusedInput(null)}
+                                    editable={!isLoading}
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                    data-testid="email-input"
+                                />
+                            </View>
+                        </View>
 
-                        <InputField
-                            label="Contraseña"
-                            icon="lock-closed-outline"
-                            value={contraseña}
-                            onChangeText={handleContraseñaChange}
-                            editable={!isLoading}
-                            isPassword={true}
-                            placeholder="••••••••"
-                            returnKeyType="done"
-                        />
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.fieldLabel}>Contraseña</Text>
+                            <View style={[styles.inputWrapper, focusedInput === 'password' && styles.inputFocused]}>
+                                <Ionicons name="lock-closed-outline" size={18} color="#555" />
+                                <TextInput
+                                    placeholder="••••••••"
+                                    placeholderTextColor="#52525B"
+                                    secureTextEntry={!showPassword}
+                                    value={contraseña}
+                                    onChangeText={setContraseña}
+                                    style={styles.input}
+                                    onFocus={() => setFocusedInput('password')}
+                                    onBlur={() => setFocusedInput(null)}
+                                    editable={!isLoading}
+                                    data-testid="password-input"
+                                />
+                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} activeOpacity={0.7}>
+                                    <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={18} color="#555" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
 
                         <TouchableOpacity
                             style={styles.mainBtn}
@@ -715,19 +614,17 @@ export default function Login() {
                             <View style={styles.line} />
                         </View>
 
-                        <View style={styles.socialGrid}>
-                            <TouchableOpacity
-                                style={[styles.socialBtn, { flex: 1 }]}
-                                onPress={() => handleSocialLogin('Google')}
-                                disabled={isLoading}
-                                activeOpacity={0.7}
-                                accessibilityLabel="Iniciar sesión con Google"
-                                accessibilityRole="button"
-                            >
-                                <Ionicons name="logo-google" size={18} color="#fff" />
-                                <Text style={styles.socialText}>Continuar con Google</Text>
-                            </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity
+                            style={styles.googleBtn}
+                            onPress={() => handleSocialLogin('Google')}
+                            disabled={isLoading}
+                            activeOpacity={0.75}
+                            accessibilityLabel="Iniciar sesión con Google"
+                            accessibilityRole="button"
+                        >
+                            <Ionicons name="logo-google" size={20} color="#fff" />
+                            <Text style={styles.googleBtnText}>Continuar con Google</Text>
+                        </TouchableOpacity>
                     </Animated.View>
 
                     <Animated.View style={{ opacity: fadeAnim }}>
@@ -759,98 +656,91 @@ export default function Login() {
 const styles = StyleSheet.create({
     mainContainer: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: colors.background,
     },
     scrollWrapper: {
-        padding: 24,
-        paddingTop: 20,
+        padding: spacing.xl,
+        paddingTop: spacing.lg,
         alignItems: 'center',
     },
     headerSection: {
         alignItems: 'center',
-        marginBottom: 32,
+        marginBottom: spacing.xxl,
     },
     logoContainer: {
         position: 'relative',
-        marginBottom: 20,
+        marginBottom: spacing.lg,
         justifyContent: 'center',
         alignItems: 'center',
     },
     logoPulseRing: {
         position: 'absolute',
-        width: 100,
-        height: 100,
-        borderRadius: 50,
+        width: rs(100),
+        height: rs(100),
+        borderRadius: rs(50),
         borderWidth: 2,
-        borderColor: '#63ff15',
+        borderColor: colors.primary,
         opacity: 0.4,
     },
     logoBox: {
-        width: 80,
-        height: 80,
-        borderRadius: 20,
-        backgroundColor: '#121212',
+        width: rs(80),
+        height: rs(80),
+        borderRadius: radius.xxl,
+        backgroundColor: colors.surface,
         borderWidth: 1.5,
-        borderColor: '#63ff15',
+        borderColor: colors.primary,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#63ff15',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 1,
-        shadowRadius: 20,
-        elevation: 25,
+        ...shadows.logoGlow,
     },
     logoText: {
-        fontSize: 42,
+        fontSize: rs(42),
         fontWeight: '900',
-        color: '#63ff15',
+        color: colors.primary,
         letterSpacing: 1,
     },
     brandName: {
-        fontSize: 32,
+        fontSize: rs(32),
         fontWeight: '900',
-        color: '#fff',
+        color: colors.textPrimary,
         letterSpacing: 8,
-        marginTop: 6,
+        marginTop: spacing.xs,
     },
     brandTagline: {
-        fontSize: 11,
-        color: '#63ff15',
-        marginTop: 10,
+        fontSize: rs(11),
+        color: colors.primary,
+        marginTop: spacing.sm,
         fontWeight: '700',
         letterSpacing: 2,
     },
     loginCard: {
         width: '100%',
         maxWidth: 400,
-        backgroundColor: '#111',
-        borderRadius: 20,
-        padding: 24,
+        backgroundColor: colors.surfaceHighlight,
+        borderRadius: radius.xxl,
+        padding: spacing.xl,
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.18)',
-        marginBottom: 20,
-        shadowColor: '#63ff15',
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 3,
+        borderColor: colors.primaryBorder,
+        marginBottom: spacing.lg,
+        ...shadows.cardMd,
     },
     cardTitle: {
-        color: 'white',
-        fontSize: 20,
+        color: colors.textPrimary,
+        fontSize: rs(20),
         fontWeight: '800',
-        marginBottom: 28,
+        marginBottom: spacing.xxl,
         textAlign: 'center',
         letterSpacing: 2,
     },
     inputContainer: {
-        marginBottom: 20,
+        marginBottom: spacing.lg,
     },
     fieldLabel: {
-        color: '#63ff15',
-        fontSize: 10,
+        color: colors.primary,
+        fontSize: rs(10),
         fontWeight: '700',
         textTransform: 'uppercase',
-        marginBottom: 10,
+        marginBottom: spacing.sm,
         marginLeft: 2,
         letterSpacing: 1,
         opacity: 0.7,
@@ -858,102 +748,91 @@ const styles = StyleSheet.create({
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1a1a1a',
+        backgroundColor: colors.surface,
         borderWidth: 1,
-        borderColor: '#2a2a2a',
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        gap: 12,
-        borderRadius: 10,
-        minHeight: 52,
+        borderColor: colors.borderDim,
+        paddingHorizontal: spacing.base,
+        height: rs(52),
+        gap: spacing.md,
+        borderRadius: radius.md,
     },
     inputFocused: {
-        borderColor: '#63ff15',
-        backgroundColor: 'rgba(99,255,21,0.08)',
-        shadowColor: '#63ff15',
+        borderColor: colors.primary,
+        backgroundColor: colors.primaryGlow,
+        shadowColor: colors.primary,
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.6,
         shadowRadius: 16,
     },
     input: {
         flex: 1,
-        color: '#fff',
-        fontSize: 16,
+        color: colors.textPrimary,
+        fontSize: rs(16),
         fontWeight: '500',
-        padding: 0,
-        margin: 0,
     },
     mainBtn: {
-        borderRadius: 14,
+        borderRadius: radius.lg,
         overflow: 'hidden',
-        marginTop: 16,
-        shadowColor: '#63ff15',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.7,
-        shadowRadius: 24,
-        elevation: 15,
+        marginTop: spacing.base,
+        ...shadows.primaryGlowLg,
     },
     mainBtnGradient: {
-        height: 56,
+        height: rs(56),
         justifyContent: 'center',
         alignItems: 'center',
     },
     btnText: {
         color: '#000',
-        fontSize: 15,
+        fontSize: rs(15),
         fontWeight: '800',
         letterSpacing: 1.5,
     },
     dividerBox: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginVertical: 28,
+        marginVertical: spacing.xxl,
     },
     line: {
         flex: 1,
         height: 1,
-        backgroundColor: 'rgba(99,255,21,0.2)',
+        backgroundColor: colors.primaryDim,
     },
     dividerText: {
-        color: '#52525B',
+        color: colors.textMuted,
         marginHorizontal: 14,
-        fontSize: 11,
+        fontSize: rs(11),
         fontWeight: '600',
         letterSpacing: 0.5,
     },
-    socialGrid: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        gap: 12,
-    },
-    socialBtn: {
-        flex: 1,
-        height: 56,
-        backgroundColor: 'rgba(30,30,30,0.8)',
-        borderRadius: 12,
+    googleBtn: {
+        height: rs(56),
+        backgroundColor: colors.surface,
+        borderRadius: radius.lg,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 8,
+        gap: spacing.md,
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.15)',
+        borderColor: colors.primaryBorder,
     },
-    socialText: {
-        color: '#E4E4E7',
-        fontSize: 12,
-        fontWeight: '600',
+    googleBtnText: {
+        color: colors.textSecondary,
+        fontSize: rs(14),
+        fontWeight: '700',
     },
     footerLink: {
-        marginTop: 16,
-        marginBottom: 20,
+        marginTop: spacing.base,
+        marginBottom: spacing.lg,
+        minHeight: 44,
+        justifyContent: 'center',
     },
     footerText: {
-        color: '#71717A',
-        fontSize: 14,
+        color: colors.textTertiary,
+        fontSize: rs(14),
         textAlign: 'center',
     },
     neonText: {
-        color: '#63ff15',
+        color: colors.primary,
         fontWeight: '700',
     },
 });

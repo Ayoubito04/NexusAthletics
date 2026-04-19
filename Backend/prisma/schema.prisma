@@ -63,6 +63,8 @@ model User {
   likes                     Like[]
   comments                  Comment[]
   savedPlans                SavedPlan[]
+  workoutSessions           WorkoutSession[]
+  muscleStrengths           MuscleStrength[]
   
   // Relaciones de Amistad
   sentFriendRequests        Friendship[] @relation("SentRequests")
@@ -155,10 +157,35 @@ model Post {
   ruta          Json?
   descripcion   String?
   imagen        String?
+  exerciseData  Json?    // For workout posts: [{name, muscle, weight, reps, oneRepMax}]
+  isPR          Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   likes         Like[]
   comments      Comment[]
+}
+
+model WorkoutSession {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercises     Json     // [{name, muscle, sets, reps, weight, oneRepMax, volume}]
+  totalVolume   Float    @default(0)
+  duration      Int?
+  date          DateTime @default(now())
+}
+
+model MuscleStrength {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  muscle        String   // Pecho, Espalda, Piernas, Hombros, Brazos, Core
+  bestOneRM     Float    @default(0)
+  totalVolume   Float    @default(0)
+  sessions      Int      @default(0)
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, muscle])
 }
 
 model Like {

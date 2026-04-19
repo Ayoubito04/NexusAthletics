@@ -138,7 +138,7 @@ try { activityRoutes = require('./src/routes/activityRoutes'); } catch (e) { con
 try { chatRoutes = require('./src/routes/chatRoutes'); } catch (e) { console.error('❌ chatRoutes FALLÓ:', e.message); }
 try { communityRoutes = require('./src/routes/communityRoutes'); } catch (e) { console.error('❌ communityRoutes FALLÓ:', e.message); }
 try { paymentRoutes = require('./src/routes/paymentRoutes'); } catch (e) { console.error('❌ paymentRoutes FALLÓ:', e.message); }
-try { planRoutes = require('./src/routes/planRoutes'); } catch (e) { console.error('❌ planRoutes FALLÓ:', e.message); }
+try { planRoutes = require('./src/routes/planRoutes'); console.log('✅ planRoutes cargado'); } catch (e) { console.error('❌ planRoutes FALLÓ:', e.message, e.stack); }
 try { adminRoutes = require('./src/routes/adminRoutes'); } catch (e) { console.error('❌ adminRoutes FALLÓ:', e.message); }
 try { socialRoutes = require('./src/routes/socialRoutes'); } catch (e) { console.error('❌ socialRoutes FALLÓ:', e.message); }
 try { voiceRoutes = require('./src/routes/voiceRoutes'); } catch (e) { console.error('❌ voiceRoutes FALLÓ:', e.message); }
@@ -161,7 +161,7 @@ if (rankingRoutes) app.use('/ranking', rankingRoutes);
 // --- CUALQUIER OTRA RUTA QUE QUEDE EN INDEX.JS ---
 // (Aquí irán pagos, admin y PDF por ahora hasta que los movamos)
 
-app.get('/', (req, res) => res.json({ status: "Nexus AI Server running", version: "2.0-supabase-sync" }));
+app.get('/', (req, res) => res.json({ status: "Nexus AI Server running", version: "2.1-ultimate-plan" }));
 
 // SECURITY: 404 handler
 app.use((req, res) => {

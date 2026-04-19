@@ -9,6 +9,9 @@ import { BlurView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Config from '../constants/Config';
+
+const BACKEND_URL = Config.BACKEND_URL;
 
 const { width, height } = Dimensions.get('window');
 
@@ -213,6 +216,26 @@ export default function TrainingCalendar({ navigation }) {
 
         const todayKey = new Date().toISOString().split('T')[0];
         await toggleDayCompletion(todayKey);
+
+        // Sync workout sets to backend for strength tracking & rankings
+        try {
+            const token = await AsyncStorage.getItem('token');
+            if (token && workoutExercises.length > 0) {
+                await fetch(`${BACKEND_URL}/strength/log`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        exercises: workoutExercises,
+                        duration: stats?.duration || null
+                    })
+                });
+            }
+        } catch (_) {
+            // Silently fail — local data is already saved
+        }
     };
 
     const handleReviewConfirm = () => {

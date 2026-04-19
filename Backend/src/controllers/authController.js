@@ -1,11 +1,14 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { prisma } = require('../config/prisma');
 const axios = require('axios');
 const { Resend } = require('resend');
 const oauthService = require('../services/oauthService');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secreto_por_defecto';
+// SECURITY: No fallback — si JWT_SECRET no está configurado, el proceso ya falló en validateEnv.js
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 const JWT_EXPIRES_IN = '30d';
 const JWT_REFRESH_EXPIRES_IN = '7d';
 
@@ -14,7 +17,8 @@ const resendApiKey = process.env.RESEND_API_KEY;
 const resend = (resendApiKey && resendApiKey !== 're_tu_api_key') ? new Resend(resendApiKey) : null;
 
 function generateVCode() {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    // SECURITY: crypto.randomInt es criptográficamente seguro, Math.random() no lo es
+    return crypto.randomInt(100000, 999999).toString();
 }
 
 
@@ -126,7 +130,8 @@ const login = async (req, res) => {
         const { password: _, ...userWithoutPassword } = user;
         res.json({ user: userWithoutPassword, token });
     } catch (error) {
-        res.status(500).json({ error: "Error en el servidor: " + error.message });
+        console.error('[login]', error);
+        res.status(500).json({ error: "Error en el servidor" });
     }
 };
 
@@ -185,15 +190,27 @@ const socialLogin = async (req, res) => {
         let userData = null;
 
         if (provider === 'google') {
-            // Si recibimos id_token, lo decodificamos directamente (más eficiente)
+            // Si recibimos id_token, lo VERIFICAMOS con Google (no solo decodificar)
             if (idToken) {
-                console.log("✅ Usando id_token de Google");
-                // Decodificar el id_token (JWT)
-                const jwtDecode = require('jsonwebtoken');
+                console.log("✅ Verificando id_token de Google con tokeninfo API");
                 try {
-                    // Decodificar sin verificar (Google ya lo firmó)
-                    const decoded = jwtDecode.decode(idToken);
-                    console.log("Decoded token:", decoded);
+                    // SECURITY: Verificamos la firma con los servidores de Google.
+                    // Nunca usar jwt.decode() sin verificar — cualquiera puede forjar el payload.
+                    const tokenInfoResponse = await axios.get(
+                        `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`
+                    );
+                    const decoded = tokenInfoResponse.data;
+
+                    // SECURITY: Verificar que el token sea para nuestra app (audience)
+                    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+                    if (GOOGLE_CLIENT_ID && decoded.aud !== GOOGLE_CLIENT_ID) {
+                        console.warn('[SECURITY] Google idToken audience mismatch');
+                        return res.status(401).json({ error: "Token inválido" });
+                    }
+
+                    if (!decoded.email_verified || decoded.email_verified === 'false') {
+                        return res.status(401).json({ error: "Email de Google no verificado" });
+                    }
 
                     userData = {
                         id: decoded.sub,
@@ -202,9 +219,9 @@ const socialLogin = async (req, res) => {
                         apellido: decoded.family_name || decoded.name?.split(' ').slice(1).join(' ') || '',
                         avatar: decoded.picture
                     };
-                } catch (decodeError) {
-                    console.error("Error al decodificar id_token:", decodeError);
-                    return res.status(400).json({ error: "Token inválido" });
+                } catch (verifyError) {
+                    console.error("Error al verificar id_token con Google:", verifyError.response?.data || verifyError.message);
+                    return res.status(401).json({ error: "Token de Google inválido o expirado" });
                 }
             }
             // Fallback: si recibimos access_token, lo usamos
@@ -446,10 +463,10 @@ const refreshToken = async (req, res) => {
             });
         }
 
-        // Verificar el refresh token
+        // SECURITY: El refresh token se verifica con su propio secreto, diferente al access token
         let decoded;
         try {
-            decoded = jwt.verify(oldRefreshToken, JWT_SECRET);
+            decoded = jwt.verify(oldRefreshToken, JWT_REFRESH_SECRET);
         } catch (err) {
             return res.status(401).json({
                 error: 'Refresh token invalido o expirado',
@@ -478,7 +495,7 @@ const refreshToken = async (req, res) => {
 
         const newRefreshToken = jwt.sign(
             { id: user.id, email: user.email, role: user.role },
-            JWT_SECRET,
+            JWT_REFRESH_SECRET,
             { expiresIn: JWT_REFRESH_EXPIRES_IN }
         );
 

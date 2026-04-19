@@ -64,6 +64,23 @@ export async function registerForPushNotificationsAsync() {
     }
 }
 
+export async function sendAchievementNotification(achievement) {
+    if (isExpoGo || !achievement) return;
+    try {
+        const Notifications = require('expo-notifications');
+        await Notifications.scheduleNotificationAsync({
+            content: {
+                title: '🏆 ¡Logro Desbloqueado!',
+                body: `${achievement.title} — ${achievement.description}`,
+                data: { type: 'achievement', id: achievement.id },
+                color: '#63ff15',
+                sound: true,
+            },
+            trigger: null,
+        });
+    } catch (_) {}
+}
+
 export async function saveTokenToBackend(token) {
     if (!token) return;
     try {

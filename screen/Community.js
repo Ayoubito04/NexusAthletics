@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Platform, RefreshControl, Image, Alert, Share } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import Config from '../constants/Config';
@@ -28,96 +29,175 @@ const UserSearchResult = React.memo(({ item, onAddFriend, onChat }) => (
     </View>
 ));
 
-const PostItem = React.memo(({ item, currentUserId, onLike, onComment, onShare, onChat, navigation, commentingPostId, setCommentingPostId, commentText, setCommentText, handleComment }) => (
-    <View style={styles.postCard}>
-        <View style={styles.postHeader}>
-            <TouchableOpacity style={styles.userInfo} onPress={() => onChat(item.user)}>
-                <View style={styles.avatarCircle}>
-                    {item.user.avatar ? (
-                        <Image source={{ uri: item.user.avatar }} style={styles.postAvatar} />
-                    ) : (
-                        <Ionicons name="person" size={22} color="#63ff15" />
-                    )}
+// Stats row for activity posts (running/cycling)
+const ActivityStats = ({ item }) => (
+    <View style={styles.activityStats}>
+        <View style={styles.activityStatItem}>
+            <MaterialCommunityIcons name={item.tipo === 'Correr' ? 'run-fast' : 'walk'} size={18} color="#63ff15" />
+            <Text style={styles.activityStatText}>{item.tipo}</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.activityStatItem}>
+            <Ionicons name="speedometer-outline" size={16} color="#63ff15" />
+            <Text style={styles.activityStatText}>{item.distancia} km</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.activityStatItem}>
+            <Ionicons name="time-outline" size={16} color="#63ff15" />
+            <Text style={styles.activityStatText}>{item.tiempo} min</Text>
+        </View>
+    </View>
+);
+
+// Exercise breakdown for workout/PR posts
+const WorkoutStats = ({ exerciseData, tiempo }) => (
+    <View style={styles.workoutStatsBlock}>
+        {(exerciseData || []).slice(0, 4).map((ex, i) => (
+            <View key={i} style={styles.workoutExerciseRow}>
+                <View style={styles.workoutExerciseDot} />
+                <Text style={styles.workoutExerciseName} numberOfLines={1}>{ex.exercise || ex.name}</Text>
+                <Text style={styles.workoutExerciseWeight}>{ex.weight}kg × {ex.reps} reps</Text>
+                <View style={styles.workoutOneRM}>
+                    <Text style={styles.workoutOneRMText}>1RM ~{ex.oneRepMax}kg</Text>
                 </View>
-                <View>
-                    <Text style={styles.userName}>{item.user.nombre} {item.user.apellido}</Text>
-                    <View style={styles.planBadge}><Text style={styles.planText}>{item.user.plan}</Text></View>
-                </View>
-            </TouchableOpacity>
-            <Text style={styles.timeAgo}>{new Date(item.createdAt).toLocaleDateString('es-ES')}</Text>
-        </View>
-
-        {item.descripcion && <Text style={styles.description}>{item.descripcion}</Text>}
-
-        {item.imagen && (
-            <View style={styles.postImageContainer}>
-                <Image source={{ uri: item.imagen }} style={styles.postImage} resizeMode="cover" />
             </View>
+        ))}
+        {exerciseData?.length > 4 && (
+            <Text style={styles.workoutMore}>+{exerciseData.length - 4} más</Text>
         )}
-
-        <View style={styles.activityStats}>
-            <View style={styles.activityStatItem}>
-                <MaterialCommunityIcons name={item.tipo === 'Correr' ? 'run-fast' : 'walk'} size={20} color="#63ff15" />
-                <Text style={styles.activityStatText}>{item.tipo}</Text>
-            </View>
-            <View style={styles.activityStatItem}>
-                <Ionicons name="speedometer-outline" size={18} color="#63ff15" />
-                <Text style={styles.activityStatText}>{item.distancia} km</Text>
-            </View>
-            <View style={styles.activityStatItem}>
-                <Ionicons name="time-outline" size={18} color="#63ff15" />
-                <Text style={styles.activityStatText}>{item.tiempo} min</Text>
-            </View>
-        </View>
-
-        {item.ruta && Array.isArray(item.ruta) && item.ruta.length > 0 && (
-            <View style={styles.routeBadge}>
-                <Ionicons name="map-outline" size={14} color="#63ff15" />
-                <Text style={styles.routeBadgeText}>Ruta GPS · {item.ruta.length} puntos</Text>
-            </View>
-        )}
-
-        <View style={styles.interactions}>
-            <View style={styles.interactionStats}>
-                <Text style={styles.statCount}>{item._count?.likes || 0} likes</Text>
-                <Text style={styles.statCount}>{item._count?.comments || 0} comentarios</Text>
-            </View>
-            <View style={styles.actionButtons}>
-                <TouchableOpacity style={styles.actionBtn} onPress={() => onLike(item.id)}>
-                    <Ionicons name={item.likes?.some(l => l.userId === currentUserId) ? "heart" : "heart-outline"} size={22} color={item.likes?.some(l => l.userId === currentUserId) ? "#ff4d4d" : "#666"} />
-                    <Text style={[styles.actionText, item.likes?.some(l => l.userId === currentUserId) && styles.likedText]}>Like</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actionBtn} onPress={() => setCommentingPostId(item.id === commentingPostId ? null : item.id)}>
-                    <Ionicons name="chatbubble-outline" size={20} color="#666" />
-                    <Text style={styles.actionText}>Comentar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actionBtn} onPress={() => onShare(item)}>
-                    <Ionicons name="share-social-outline" size={20} color="#666" />
-                    <Text style={styles.actionText}>Exportar</Text>
-                </TouchableOpacity>
-            </View>
-        </View>
-
-        {item.comments?.length > 0 && (
-            <View style={styles.commentsSection}>
-                {item.comments.slice(0, 2).map((comment) => (
-                    <View key={comment.id} style={styles.commentItem}>
-                        <Text style={styles.commentUser}>{comment.user.nombre}: <Text style={styles.commentText}>{comment.texto}</Text></Text>
-                    </View>
-                ))}
-            </View>
-        )}
-
-        {commentingPostId === item.id && (
-            <View style={styles.commentInputContainer}>
-                <TextInput style={styles.commentInput} placeholder="Escribe un comentario..." placeholderTextColor="#666" value={commentText} onChangeText={setCommentText} />
-                <TouchableOpacity style={styles.sendButton} onPress={() => handleComment(item.id)}>
-                    <Ionicons name="send" size={20} color="#000" />
-                </TouchableOpacity>
+        {tiempo > 0 && (
+            <View style={styles.workoutDuration}>
+                <Ionicons name="time-outline" size={13} color="#555" />
+                <Text style={styles.workoutDurationText}>{tiempo} min</Text>
             </View>
         )}
     </View>
-));
+);
+
+const PostItem = React.memo(({ item, currentUserId, onLike, onComment, onShare, onChat, navigation, commentingPostId, setCommentingPostId, commentText, setCommentText, handleComment }) => {
+    const isWorkout = item.tipo === 'Entrenamiento' || item.isPR;
+    const isLiked = item.likes?.some(l => l.userId === currentUserId);
+    const likeCount = item._count?.likes || 0;
+    const commentCount = item._count?.comments || 0;
+
+    return (
+        <View style={[styles.postCard, isWorkout && styles.postCardWorkout]}>
+            {isWorkout && item.isPR && (
+                <LinearGradient
+                    colors={['rgba(255,215,0,0.12)', 'transparent']}
+                    style={styles.prGlow}
+                />
+            )}
+
+            {/* Post header */}
+            <View style={styles.postHeader}>
+                <TouchableOpacity style={styles.userInfo} onPress={() => onChat(item.user)}>
+                    <View style={styles.avatarCircle}>
+                        {item.user.avatar ? (
+                            <Image source={{ uri: item.user.avatar }} style={styles.postAvatar} />
+                        ) : (
+                            <Text style={styles.avatarInitial}>{item.user.nombre?.charAt(0) || '?'}</Text>
+                        )}
+                    </View>
+                    <View>
+                        <Text style={styles.userName}>{item.user.nombre} {item.user.apellido}</Text>
+                        <View style={styles.postMeta}>
+                            <View style={[styles.planBadge,
+                                item.user.plan === 'Ultimate' && styles.planUltimateBadge,
+                                item.user.plan === 'Pro' && styles.planProBadge
+                            ]}>
+                                <Text style={[styles.planText, item.user.plan !== 'Gratis' && styles.planTextBright]}>
+                                    {item.user.plan}
+                                </Text>
+                            </View>
+                            {isWorkout && item.isPR && (
+                                <View style={styles.prBadge}>
+                                    <Text style={styles.prBadgeText}>🏆 RÉCORD PERSONAL</Text>
+                                </View>
+                            )}
+                            {isWorkout && !item.isPR && (
+                                <View style={styles.workoutBadge}>
+                                    <MaterialCommunityIcons name="dumbbell" size={10} color="#63ff15" />
+                                    <Text style={styles.workoutBadgeText}>ENTRENAMIENTO</Text>
+                                </View>
+                            )}
+                        </View>
+                    </View>
+                </TouchableOpacity>
+                <Text style={styles.timeAgo}>{new Date(item.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</Text>
+            </View>
+
+            {/* Description */}
+            {item.descripcion && <Text style={styles.description}>{item.descripcion}</Text>}
+
+            {/* Image */}
+            {item.imagen && (
+                <View style={styles.postImageContainer}>
+                    <Image source={{ uri: item.imagen }} style={styles.postImage} resizeMode="cover" />
+                </View>
+            )}
+
+            {/* Stats block */}
+            {isWorkout ? (
+                <WorkoutStats exerciseData={item.exerciseData} tiempo={item.tiempo} />
+            ) : (
+                item.distancia > 0 && <ActivityStats item={item} />
+            )}
+
+            {/* Interactions */}
+            <View style={styles.interactions}>
+                <View style={styles.interactionStats}>
+                    <Text style={styles.statCount}>{likeCount} {likeCount === 1 ? 'like' : 'likes'}</Text>
+                    <Text style={styles.statDotSep}>·</Text>
+                    <Text style={styles.statCount}>{commentCount} comentarios</Text>
+                </View>
+                <View style={styles.actionButtons}>
+                    <TouchableOpacity style={styles.actionBtn} onPress={() => onLike(item.id)}>
+                        <Ionicons name={isLiked ? "heart" : "heart-outline"} size={20} color={isLiked ? "#ff4d4d" : "#555"} />
+                        <Text style={[styles.actionText, isLiked && styles.likedText]}>Like</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.actionBtn} onPress={() => setCommentingPostId(item.id === commentingPostId ? null : item.id)}>
+                        <Ionicons name="chatbubble-outline" size={19} color="#555" />
+                        <Text style={styles.actionText}>Comentar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.actionBtn} onPress={() => onShare(item)}>
+                        <Ionicons name="share-social-outline" size={19} color="#555" />
+                        <Text style={styles.actionText}>Compartir</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            {/* Comments */}
+            {item.comments?.length > 0 && (
+                <View style={styles.commentsSection}>
+                    {item.comments.slice(0, 2).map((comment) => (
+                        <View key={comment.id} style={styles.commentItem}>
+                            <Text style={styles.commentUser}>{comment.user.nombre}{'  '}<Text style={styles.commentText}>{comment.texto}</Text></Text>
+                        </View>
+                    ))}
+                </View>
+            )}
+
+            {/* Comment input */}
+            {commentingPostId === item.id && (
+                <View style={styles.commentInputContainer}>
+                    <TextInput
+                        style={styles.commentInput}
+                        placeholder="Escribe un comentario..."
+                        placeholderTextColor="#444"
+                        value={commentText}
+                        onChangeText={setCommentText}
+                    />
+                    <TouchableOpacity style={styles.sendButton} onPress={() => handleComment(item.id)}>
+                        <LinearGradient colors={['#7bff35', '#4dd10e']} style={styles.sendBtnGradient}>
+                            <Ionicons name="arrow-up" size={18} color="#000" />
+                        </LinearGradient>
+                    </TouchableOpacity>
+                </View>
+            )}
+        </View>
+    );
+});
 
 export default function Community() {
     const navigation = useNavigation();
@@ -385,64 +465,125 @@ export default function Community() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#050505' },
-    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 25, paddingTop: 60, paddingBottom: 10 },
-    title: { fontSize: 32, fontWeight: '900', color: '#fff' },
+    container: { flex: 1, backgroundColor: '#060606' },
+
+    // Header
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 12 },
+    title: { fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
     titleHighlight: { color: '#63ff15' },
-    subtitle: { color: '#666', fontSize: 14, marginTop: -2 },
-    friendsBtn: { backgroundColor: '#111', padding: 12, borderRadius: 15, borderWidth: 1, borderColor: '#222' },
-    searchContainer: { paddingHorizontal: 20, marginTop: 15 },
-    searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', borderRadius: 15, height: 50, borderWidth: 1, borderColor: '#222' },
-    searchInput: { flex: 1, color: 'white', paddingHorizontal: 10, fontSize: 14 },
-    searchResultsBox: { backgroundColor: '#0a0a0a', borderBottomWidth: 1, borderBottomColor: '#222' },
-    userResultCard: { backgroundColor: '#161616', width: 220, padding: 15, borderRadius: 20, marginRight: 15, borderWidth: 1, borderColor: '#333' },
-    userInfoMini: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-    avatarMini: { width: 40, height: 40, borderRadius: 20 },
-    userResultName: { color: 'white', fontWeight: 'bold', fontSize: 13 },
-    userResultPlan: { color: '#63ff15', fontSize: 10, fontWeight: 'bold' },
-    userResultActions: { flexDirection: 'row', justifyContent: 'space-between' },
-    addBtn: { backgroundColor: '#63ff15', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, flex: 1, marginRight: 8, alignItems: 'center' },
-    chatBtn: { backgroundColor: '#111', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, flex: 0.5, borderWidth: 1, borderColor: '#333', alignItems: 'center' },
-    listContent: { padding: 20, paddingBottom: 100 },
-    postCard: { backgroundColor: '#111', borderRadius: 25, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: '#222' },
-    postHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
-    userInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    avatarCircle: { width: 45, height: 45, backgroundColor: '#000', borderRadius: 22.5, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#222' },
-    userName: { color: '#fff', fontSize: 16, fontWeight: '800' },
-    planBadge: { backgroundColor: 'rgba(99, 255, 21, 0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
-    planText: { color: '#63ff15', fontSize: 10, fontWeight: 'bold' },
-    timeAgo: { color: '#666', fontSize: 12 },
-    description: { color: '#ddd', fontSize: 14, lineHeight: 20, marginBottom: 15 },
-    activityStats: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#000', borderRadius: 15, padding: 12, marginBottom: 15 },
-    activityStatItem: { alignItems: 'center', gap: 4 },
-    activityStatText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-    commentUser: { color: '#63ff15', fontWeight: 'bold', fontSize: 12 },
-    commentText: { color: '#bbb', fontWeight: 'normal' },
-    commentInputContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 15, gap: 10 },
-    commentInput: { flex: 1, backgroundColor: '#1a1a1a', borderRadius: 12, padding: 10, color: '#fff', fontSize: 14 },
-    sendButton: { backgroundColor: '#63ff15', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-    postAvatar: { width: 45, height: 45, borderRadius: 22.5 },
-    postImageContainer: { width: '100%', height: 250, borderRadius: 20, overflow: 'hidden', marginBottom: 15, backgroundColor: '#000' },
+    subtitle: { color: '#555', fontSize: 13, marginTop: 1, fontWeight: '600' },
+    friendsBtn: { backgroundColor: 'rgba(99,255,21,0.08)', padding: 12, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(99,255,21,0.2)' },
+
+    // Search
+    searchContainer: { paddingHorizontal: 16, marginTop: 8, marginBottom: 4 },
+    searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', borderRadius: 18, height: 46, borderWidth: 1, borderColor: 'rgba(99,255,21,0.1)' },
+    searchInput: { flex: 1, color: 'white', paddingHorizontal: 12, fontSize: 14 },
+    searchResultsBox: { backgroundColor: '#0a0a0a', borderBottomWidth: 1, borderBottomColor: '#111' },
+    userResultCard: { backgroundColor: '#141414', width: 200, padding: 14, borderRadius: 20, marginRight: 12, borderWidth: 1, borderColor: 'rgba(99,255,21,0.1)' },
+    userInfoMini: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+    avatarMini: { width: 38, height: 38, borderRadius: 19 },
+    userResultName: { color: 'white', fontWeight: '700', fontSize: 13 },
+    userResultPlan: { color: '#63ff15', fontSize: 10, fontWeight: '700' },
+    userResultActions: { flexDirection: 'row', gap: 8 },
+    addBtn: { backgroundColor: '#63ff15', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, flex: 1, alignItems: 'center' },
+    chatBtn: { backgroundColor: '#111', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, flex: 0.5, borderWidth: 1, borderColor: '#222', alignItems: 'center' },
+
+    // Feed
+    listContent: { paddingHorizontal: 16, paddingBottom: 100, paddingTop: 6 },
+    postCard: {
+        backgroundColor: '#111',
+        borderRadius: 24,
+        padding: 18,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+        overflow: 'hidden',
+    },
+    postCardWorkout: {
+        borderColor: 'rgba(99,255,21,0.2)',
+    },
+    prGlow: {
+        position: 'absolute',
+        top: 0, left: 0, right: 0,
+        height: 120,
+    },
+
+    // Post header
+    postHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
+    userInfo: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+    avatarCircle: { width: 44, height: 44, backgroundColor: '#0a0a0a', borderRadius: 22, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(99,255,21,0.2)', overflow: 'hidden' },
+    postAvatar: { width: 44, height: 44, borderRadius: 22 },
+    avatarInitial: { color: '#63ff15', fontSize: 18, fontWeight: '900' },
+    userName: { color: '#fff', fontSize: 15, fontWeight: '800', marginBottom: 4 },
+    postMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+    planBadge: { backgroundColor: 'rgba(99,255,21,0.08)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 7 },
+    planUltimateBadge: { backgroundColor: 'rgba(255,51,102,0.12)' },
+    planProBadge: { backgroundColor: 'rgba(99,255,21,0.12)' },
+    planText: { color: '#555', fontSize: 9, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
+    planTextBright: { color: '#63ff15' },
+    prBadge: { backgroundColor: 'rgba(255,215,0,0.15)', borderRadius: 7, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: 'rgba(255,215,0,0.3)' },
+    prBadgeText: { color: '#FFD700', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+    workoutBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(99,255,21,0.08)', borderRadius: 7, paddingHorizontal: 7, paddingVertical: 2 },
+    workoutBadgeText: { color: '#63ff15', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+    timeAgo: { color: '#444', fontSize: 12, fontWeight: '600', marginTop: 2 },
+
+    // Description
+    description: { color: '#ccc', fontSize: 14, lineHeight: 21, marginBottom: 14 },
+
+    // Image
+    postImageContainer: { width: '100%', height: 240, borderRadius: 18, overflow: 'hidden', marginBottom: 14, backgroundColor: '#000' },
     postImage: { width: '100%', height: '100%' },
-    routeBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(99,255,21,0.08)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, marginBottom: 15, alignSelf: 'flex-start', borderWidth: 1, borderColor: 'rgba(99,255,21,0.2)' },
-    routeBadgeText: { color: '#63ff15', fontSize: 12, fontWeight: '600' },
-    interactions: { borderTopWidth: 1, borderTopColor: '#222', paddingTop: 12 },
-    interactionStats: { flexDirection: 'row', gap: 15, marginBottom: 12 },
-    statCount: { color: '#888', fontSize: 13 },
-    actionButtons: { flexDirection: 'row', justifyContent: 'space-between' },
-    actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    actionText: { color: '#666', fontSize: 13 },
+
+    // Activity stats
+    activityStats: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a0a0a', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(99,255,21,0.08)' },
+    activityStatItem: { flex: 1, alignItems: 'center', gap: 5 },
+    activityStatText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+    statDivider: { width: 1, height: 28, backgroundColor: 'rgba(99,255,21,0.1)' },
+
+    // Workout stats
+    workoutStatsBlock: { backgroundColor: '#0a0a0a', borderRadius: 16, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(99,255,21,0.1)' },
+    workoutExerciseRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+    workoutExerciseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#63ff15', shadowColor: '#63ff15', shadowOpacity: 0.8, shadowRadius: 3 },
+    workoutExerciseName: { flex: 1, color: '#ddd', fontSize: 13, fontWeight: '600' },
+    workoutExerciseWeight: { color: '#888', fontSize: 12, fontWeight: '600' },
+    workoutOneRM: { backgroundColor: 'rgba(99,255,21,0.08)', borderRadius: 7, paddingHorizontal: 7, paddingVertical: 2 },
+    workoutOneRMText: { color: '#63ff15', fontSize: 10, fontWeight: '700' },
+    workoutMore: { color: '#555', fontSize: 12, fontWeight: '600', marginTop: 2, textAlign: 'center' },
+    workoutDuration: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(99,255,21,0.08)', paddingTop: 8 },
+    workoutDurationText: { color: '#444', fontSize: 12, fontWeight: '600' },
+
+    // Interactions
+    interactions: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 12, marginTop: 4 },
+    interactionStats: { flexDirection: 'row', gap: 6, alignItems: 'center', marginBottom: 10 },
+    statCount: { color: '#555', fontSize: 12, fontWeight: '600' },
+    statDotSep: { color: '#333', fontSize: 12 },
+    actionButtons: { flexDirection: 'row', gap: 24 },
+    actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    actionText: { color: '#555', fontSize: 13, fontWeight: '600' },
     likedText: { color: '#ff4d4d' },
-    commentsSection: { marginTop: 15, gap: 5 },
-    suggestedSection: { paddingHorizontal: 20, marginBottom: 10 },
-    sectionTitle: { color: 'white', fontSize: 16, fontWeight: 'bold', marginBottom: 15 },
-    suggestedCard: { backgroundColor: '#111', width: 130, padding: 15, borderRadius: 20, marginRight: 12, alignItems: 'center', borderWidth: 1, borderColor: '#222' },
-    suggestedAvatar: { width: 50, height: 50, borderRadius: 25, marginBottom: 10 },
-    suggestedName: { color: 'white', fontWeight: 'bold', fontSize: 12, marginBottom: 2 },
-    suggestedGoal: { color: '#63ff15', fontSize: 10, marginBottom: 10 },
-    suggestedAddBtn: { backgroundColor: '#63ff15', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 5 },
-    suggestedAddText: { color: 'black', fontWeight: 'bold', fontSize: 10 },
+
+    // Comments
+    commentsSection: { marginTop: 12, gap: 6 },
+    commentItem: {},
+    commentUser: { color: '#fff', fontWeight: '700', fontSize: 13 },
+    commentText: { color: '#888', fontWeight: '400' },
+    commentInputContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 8, backgroundColor: '#0a0a0a', borderRadius: 18, borderWidth: 1, borderColor: 'rgba(99,255,21,0.12)', paddingLeft: 14, paddingRight: 6, paddingVertical: 6 },
+    commentInput: { flex: 1, color: '#fff', fontSize: 14, paddingVertical: 6 },
+    sendButton: { width: 36, height: 36, borderRadius: 18, overflow: 'hidden' },
+    sendBtnGradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
+    // Suggested
+    suggestedSection: { paddingHorizontal: 16, marginBottom: 8 },
+    sectionTitle: { color: 'white', fontSize: 15, fontWeight: '800', marginBottom: 14, letterSpacing: -0.3 },
+    suggestedCard: { backgroundColor: '#111', width: 120, padding: 14, borderRadius: 20, marginRight: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(99,255,21,0.1)' },
+    suggestedAvatar: { width: 48, height: 48, borderRadius: 24, marginBottom: 8, borderWidth: 1.5, borderColor: 'rgba(99,255,21,0.3)' },
+    suggestedName: { color: 'white', fontWeight: '700', fontSize: 12, marginBottom: 2, textAlign: 'center' },
+    suggestedGoal: { color: '#555', fontSize: 10, marginBottom: 10, textAlign: 'center' },
+    suggestedAddBtn: { backgroundColor: '#63ff15', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 4 },
+    suggestedAddText: { color: 'black', fontWeight: '800', fontSize: 10 },
+
+    // Empty
     emptyFeed: { alignItems: 'center', padding: 40, marginTop: 20 },
-    emptyFeedTitle: { color: 'white', fontSize: 18, fontWeight: 'bold', marginTop: 15 },
-    emptyFeedSub: { color: '#666', fontSize: 13, textAlign: 'center', marginTop: 8, lineHeight: 20 }
+    emptyFeedTitle: { color: '#333', fontSize: 18, fontWeight: '800', marginTop: 15 },
+    emptyFeedSub: { color: '#444', fontSize: 13, textAlign: 'center', marginTop: 8, lineHeight: 20 },
 });

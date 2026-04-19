@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     StyleSheet, Text, View, TouchableOpacity, ScrollView, Image,
-    Animated, Easing, Dimensions, RefreshControl, Platform, StatusBar
+    Animated, Easing, Dimensions, RefreshControl, Platform, StatusBar,
+    useWindowDimensions
 } from 'react-native';
+import { colors, typography, spacing, radius, shadows, rs, PAGE_PADDING, BOTTOM_PADDING } from '../theme';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,9 +16,8 @@ import AchievementUnlockedModal from '../components/AchievementUnlockedModal';
 import * as Haptics from 'expo-haptics';
 
 import Config from '../constants/Config';
-import { supabase } from '../lib/supabase';
 import Constants from 'expo-constants';
-import { registerForPushNotificationsAsync, saveTokenToBackend } from '../services/NotificationService';
+import { registerForPushNotificationsAsync, saveTokenToBackend, sendAchievementNotification } from '../services/NotificationService';
 
 const BACKEND_URL = Config.BACKEND_URL;
 const { width } = Dimensions.get('window');
@@ -30,9 +31,7 @@ export default function Home() {
     const [avatar, setAvatar] = useState(null);
     const [role, setRole] = useState('USER');
     const [refreshing, setRefreshing] = useState(false);
-    const [stats, setStats] = useState({ totalKm: 0, totalKcal: 0, count: 0 });
     const [greeting, setGreeting] = useState('');
-    const [promoVisible, setPromoVisible] = useState(false);
 
     // StatusBar dark
     useEffect(() => {
@@ -46,6 +45,8 @@ export default function Home() {
     const scaleAnim = useRef(new Animated.Value(0.95)).current;
     const cardAnims = useRef([...Array(8)].map(() => new Animated.Value(0))).current;
 
+    // Racha
+    const [streak, setStreak] = useState(0);
     const [motivation, setMotivation] = useState("");
 
     // Achievement System
@@ -121,25 +122,10 @@ export default function Home() {
     const loadAllData = async () => {
         const user = await loadUserData();
         await Promise.all([
+            loadStreak(),
             loadNotifications(),
-            loadStats(),
-            checkPromoVisible()
         ]);
         if (user) checkForNewAchievements(user);
-    };
-
-    const checkPromoVisible = async () => {
-        try {
-            const shown = await AsyncStorage.getItem('promo_banner_shown');
-            if (!shown) setPromoVisible(true);
-        } catch (e) {}
-    };
-
-    const dismissPromo = async () => {
-        setPromoVisible(false);
-        try {
-            await AsyncStorage.setItem('promo_banner_shown', '1');
-        } catch (e) {}
     };
 
 
@@ -149,17 +135,10 @@ export default function Home() {
         setRefreshing(false);
     };
 
-    const loadStats = async () => {
+    const loadStreak = async () => {
         try {
-            const token = await AsyncStorage.getItem('token');
-            if (!token) return;
-            const response = await fetch(`${BACKEND_URL}/activities/stats`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (response.ok) {
-                const data = await response.json();
-                setStats(data);
-            }
+            const val = await AsyncStorage.getItem('streak_count');
+            if (val) setStreak(parseInt(val) || 0);
         } catch (error) { }
     };
 
@@ -287,30 +266,30 @@ export default function Home() {
     const ACHIEVEMENTS = [
         {
             id: 'welcome',
-            title: 'Primer Rep',
-            icon: 'barbell',
-            iconType: 'Ionicons',
+            title: 'Recién Llegado',
+            icon: 'hand-wave',
+            iconType: 'MaterialCommunityIcons',
             color: '#63ff15',
             check: (user) => !!user.id,
-            description: 'Bienvenido a Nexus Athletics. ¡Empieza a entrenar!'
+            description: 'Te uniste a la comunidad de Nexus Athletics.'
         },
         {
-            id: 'ai_coach',
-            title: 'Coach IA',
+            id: 'ai_user',
+            title: 'IA Friend',
             icon: 'robot',
             iconType: 'MaterialCommunityIcons',
             color: '#A259FF',
             check: (user) => (user.mensajesHoy || 0) > 0,
-            description: 'Consultaste a Nexus AI para optimizar tu entrenamiento.'
+            description: 'Has consultado a Nexus AI para mejorar tu entrenamiento.'
         },
         {
-            id: 'elite_athlete',
-            title: 'Atleta de Élite',
+            id: 'premium',
+            title: 'Atleta Elite',
             icon: 'crown',
             iconType: 'MaterialCommunityIcons',
             color: '#FFD700',
             check: (user) => user.plan !== 'Gratis',
-            description: 'Suscrito a un plan de rendimiento premium.'
+            description: 'Suscrito a un plan de alto rendimiento.'
         }
     ];
 
@@ -327,7 +306,8 @@ export default function Home() {
                     unlocked.push(achievement.id);
                     await AsyncStorage.setItem('unlocked_achievements', JSON.stringify(unlocked));
 
-                    // Mostrar modal solo para el primer logro nuevo (evitar spam)
+                    // Notificación push + modal para el primer logro nuevo
+                    sendAchievementNotification(achievement);
                     setAchievementModal({ visible: true, achievement });
                     break;
                 }
@@ -400,6 +380,49 @@ export default function Home() {
                     </BlurView>
                 </Animated.View>
 
+                {/* BENTO DASHBOARD: STATS & FOCUS */}
+                <View style={styles.bentoGrid}>
+                    <View style={styles.bentoRow}>
+                        {/* AI Sessions Card */}
+                        <TouchableOpacity
+                            style={[styles.bentoCard, styles.cardHalf]}
+                            onPress={() => navigation.navigate('Nexus IA')}
+                            activeOpacity={0.8}
+                        >
+                            <BlurView intensity={10} tint="dark" style={StyleSheet.absoluteFill} />
+                            <LinearGradient colors={['rgba(162,89,255,0.12)', 'transparent']} style={StyleSheet.absoluteFill} />
+                            <View style={[styles.bentoIconBox, { borderColor: 'rgba(162,89,255,0.3)' }]}>
+                                <Ionicons name="sparkles" size={20} color="#A259FF" />
+                            </View>
+                            <Text style={[styles.bentoValue, { color: '#A259FF' }]}>{userData?.mensajesHoy || 0}</Text>
+                            <Text style={styles.bentoLabel}>CONSULTAS HOY</Text>
+                            <View style={styles.bentoMiniGraph}>
+                                <View style={[styles.graphBar, { width: `${Math.min((userData?.mensajesHoy || 0) * 10, 100)}%`, backgroundColor: '#A259FF' }]} />
+                            </View>
+                        </TouchableOpacity>
+
+                        {/* Training Streak Card */}
+                        <TouchableOpacity
+                            style={[styles.bentoCard, styles.cardHalf]}
+                            onPress={() => navigation.navigate('TrainingCalendar')}
+                            activeOpacity={0.8}
+                        >
+                            <BlurView intensity={10} tint="dark" style={StyleSheet.absoluteFill} />
+                            <LinearGradient colors={['rgba(99,255,21,0.1)', 'transparent']} style={StyleSheet.absoluteFill} />
+                            <View style={styles.bentoIconBox}>
+                                <MaterialCommunityIcons name="fire" size={20} color="#63ff15" />
+                            </View>
+                            <Text style={styles.bentoValue}>{streak}</Text>
+                            <Text style={styles.bentoLabel}>DÍAS DE RACHA</Text>
+                            <View style={styles.bentoMiniGraph}>
+                                <View style={[styles.graphBar, { width: `${Math.min(streak * 14, 100)}%`, backgroundColor: '#63ff15' }]} />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+
+
+                </View>
+
                 {/* QUICK NAV: HORIZONTAL SCROLL */}
                 <ScrollView
                     horizontal
@@ -409,6 +432,7 @@ export default function Home() {
                     <QuickAction icon="mic-outline" label="Voz Coach" color="#00D1FF" onPress={() => navigation.navigate('VoiceCoach')} delay={1} />
                     <QuickAction icon="diamond" label="Elite Vault" color="#FFD700" onPress={() => navigation.navigate('SavedElitePlans')} delay={2} />
                     <QuickAction icon="bar-chart" label="Ranking" color="#FF6B6B" onPress={() => navigation.navigate('Ranking')} delay={3} />
+                    <QuickAction icon="trophy-outline" label="Liga Nexus" color="#a855f7" onPress={() => navigation.navigate('UserRanking')} delay={4} />
                 </ScrollView>
 
                 {/* SECTIONS: BENTO STYLE LISTS */}
@@ -434,8 +458,8 @@ export default function Home() {
                     </View>
                 </View>
 
-                {/* PUBLICIDAD SUTIL - SOLO 1 VEZ */}
-                {promoVisible && plan === 'Gratis' && (
+                {/* PUBLICIDAD SUTIL PARA PLAN GRATIS */}
+                {plan === 'Gratis' && (
                     <NativeAd type="fitness" />
                 )}
 
@@ -466,49 +490,70 @@ export default function Home() {
                     </>
                 )}
 
-                {/* BANNER PUBLICITARIO - SOLO 1 VEZ */}
-                {promoVisible && plan === 'Gratis' && (
-                    <View style={styles.promoBanner}>
+                {/* BANNER PUBLICITARIO PARA USUARIOS GRATIS */}
+                {plan === 'Gratis' && (
+                    <TouchableOpacity
+                        style={styles.promoBanner}
+                        onPress={() => navigation.navigate('PlanesPago')}
+                        activeOpacity={0.9}
+                    >
                         <LinearGradient
                             colors={['#1a1a1a', '#000']}
                             style={styles.promoBannerGrad}
                         >
                             <View style={styles.promoBannerContent}>
-                                <TouchableOpacity
-                                    style={{ flex: 1 }}
-                                    onPress={() => navigation.navigate('PlanesPago')}
-                                    activeOpacity={0.9}
-                                >
-                                    <View style={styles.promoBannerText}>
-                                        <View style={styles.promoBadge}>
-                                            <Text style={styles.promoBadgeText}>OFERTA LIMITADA</Text>
-                                        </View>
-                                        <Text style={styles.promoBannerTitle}>Desbloquea Nexus Élite</Text>
-                                        <Text style={styles.promoBannerSub}>Rutinas Canvas IA Ilimitadas y Fisiología Master.</Text>
+                                <View style={styles.promoBannerText}>
+                                    <View style={styles.promoBadge}>
+                                        <Text style={styles.promoBadgeText}>OFERTA LIMITADA</Text>
                                     </View>
-                                </TouchableOpacity>
-                                <TouchableOpacity onPress={dismissPromo} style={styles.promoCloseBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                                    <Ionicons name="close" size={18} color="#666" />
-                                </TouchableOpacity>
+                                    <Text style={styles.promoBannerTitle}>Desbloquea Nexus Élite</Text>
+                                    <Text style={styles.promoBannerSub}>Rutinas Canvas IA Ilimitadas y Fisiología Master.</Text>
+                                </View>
+                                <View style={styles.promoBannerAction}>
+                                    <LinearGradient
+                                        colors={['#63ff15', '#00D1FF']}
+                                        style={styles.promoActionCircle}
+                                    >
+                                        <Ionicons name="star" size={20} color="#000" />
+                                    </LinearGradient>
+                                </View>
                             </View>
                         </LinearGradient>
-                    </View>
+                    </TouchableOpacity>
                 )}
 
-                {/* MOTIVACIÓN */}
-                <View style={styles.motivationCard}>
+                {/* MOTIVACIÓN - PREMIUM */}
+                <TouchableOpacity
+                    style={styles.motivationCard}
+                    onPress={() => setMotivation(motivations[Math.floor(Math.random() * motivations.length)])}
+                    activeOpacity={0.9}
+                >
                     <LinearGradient
-                        colors={['rgba(99,255,21,0.08)', 'rgba(0,209,255,0.05)', 'transparent']}
+                        colors={['#0d1117', '#070b0f']}
+                        style={StyleSheet.absoluteFill}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
-                        style={StyleSheet.absoluteFill}
                     />
-                    <View style={styles.motivationHeader}>
-                        <MaterialCommunityIcons name="lightning-bolt" size={16} color="#63ff15" />
-                        <Text style={styles.motivationLabel}>NEXUS MOTIVATION</Text>
+                    <LinearGradient
+                        colors={['rgba(99,255,21,0.04)', 'transparent', 'rgba(0,209,255,0.03)']}
+                        style={StyleSheet.absoluteFill}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                    />
+                    <Text style={styles.motivationQuoteMark}>"</Text>
+                    <View style={styles.motivationContent}>
+                        <Text style={styles.motivationText}>{motivation}</Text>
                     </View>
-                    <Text style={styles.motivationText}>"{motivation}"</Text>
-                </View>
+                    <View style={styles.motivationFooter}>
+                        <View style={styles.motivationTag}>
+                            <MaterialCommunityIcons name="lightning-bolt" size={11} color="#63ff15" />
+                            <Text style={styles.motivationTagText}>NEXUS MOTIVATION</Text>
+                        </View>
+                        <View style={styles.motivationRefresh}>
+                            <Ionicons name="refresh-outline" size={14} color="#444" />
+                        </View>
+                    </View>
+                </TouchableOpacity>
 
                 <View style={{ height: 100 }} />
             </ScrollView>
@@ -564,9 +609,8 @@ export default function Home() {
                         </TouchableOpacity>
                         <View style={styles.sidebarDivider} />
                         <TouchableOpacity style={styles.sidebarItem} onPress={async () => {
-                            try { await supabase.auth.signOut(); } catch (e) {}
-                            await AsyncStorage.multiRemove(['token', 'user', 'promo_banner_shown', 'location_step_done']);
-                            navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+                            await AsyncStorage.multiRemove(['token', 'user']);
+                            navigation.replace('Login');
                         }}>
                             <Ionicons name="log-out-outline" size={22} color="#ff4d4d" />
                             <Text style={[styles.sidebarItemText, { color: '#ff4d4d' }]}>Cerrar Sesión</Text>
@@ -590,49 +634,46 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#0A0A0A' },
-    scrollContent: { paddingHorizontal: 0, paddingBottom: 100 },
+    container: { flex: 1, backgroundColor: colors.background },
+    scrollContent: { paddingHorizontal: 0, paddingBottom: BOTTOM_PADDING },
 
-    // HEADER PREMIUM CON NEON
-    header: { paddingHorizontal: 16, paddingTop: 12, marginBottom: 24 },
+    // HEADER
+    header: { paddingHorizontal: PAGE_PADDING, paddingTop: spacing.md, marginBottom: spacing.xl },
     mainHeaderCard: {
-        borderRadius: 24,
-        padding: 20,
+        borderRadius: radius.xxxl,
+        padding: spacing.lg,
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.15)',
+        borderColor: colors.primaryBorder,
         overflow: 'hidden',
-        backgroundColor: '#121212',
-        shadowColor: '#63ff15',
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 3,
+        backgroundColor: colors.surface,
+        ...shadows.cardMd,
     },
-    headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-    headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    menuNavBtn: { borderRadius: 12, overflow: 'hidden' },
+    headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.base },
+    headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+    menuNavBtn: { borderRadius: radius.lg, overflow: 'hidden' },
     glassBtn: {
         width: 44,
         height: 44,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(99,255,21,0.08)',
+        backgroundColor: colors.primaryGlow,
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.15)',
+        borderColor: colors.primaryBorder,
     },
     welcomeTextContainer: { gap: 2 },
-    greetingText: { color: '#888', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.2 },
-    userName: { color: '#FFFFFF', fontSize: 24, fontWeight: '900', letterSpacing: -0.5 },
+    greetingText: { color: colors.textDim, fontSize: rs(11), fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.2 },
+    userName: { color: colors.textPrimary, fontSize: rs(24), fontWeight: '900', letterSpacing: -0.5 },
 
-    headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
     notifBtn: {
         width: 44,
         height: 44,
-        borderRadius: 12,
-        backgroundColor: 'rgba(99,255,21,0.08)',
+        borderRadius: radius.lg,
+        backgroundColor: colors.primaryGlow,
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.15)',
+        borderColor: colors.primaryBorder,
         justifyContent: 'center',
-        alignItems: 'center'
+        alignItems: 'center',
     },
     pulsatingDot: {
         position: 'absolute',
@@ -641,207 +682,231 @@ const styles = StyleSheet.create({
         width: 10,
         height: 10,
         borderRadius: 5,
-        backgroundColor: '#FF3366',
-        shadowColor: '#FF3366',
+        backgroundColor: colors.accentPink,
+        shadowColor: colors.accentPink,
         shadowOpacity: 0.6,
         shadowRadius: 4,
         elevation: 3,
     },
-
     avatarWrapper: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        width: rs(48),
+        height: rs(48),
+        borderRadius: rs(24),
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
-        borderColor: 'rgba(99,255,21,0.3)',
+        borderColor: colors.borderPrimaryBright,
     },
     avatarGlow: {
         ...StyleSheet.absoluteFillObject,
-        borderRadius: 24,
+        borderRadius: rs(24),
         opacity: 0.2,
     },
     avatarImg: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
+        width: rs(44),
+        height: rs(44),
+        borderRadius: rs(22),
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.2)'
+        borderColor: colors.primaryDim,
     },
-
     membershipStrip: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: 'rgba(99,255,21,0.05)',
+        backgroundColor: colors.primaryGlow,
         paddingHorizontal: 14,
-        paddingVertical: 10,
-        borderRadius: 12,
-        marginTop: 12,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.lg,
+        marginTop: spacing.md,
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.12)',
+        borderColor: colors.primaryBorder,
     },
-    membershipInfo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    membershipText: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: '#63ff15' },
+    membershipInfo: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+    membershipText: { fontSize: rs(11), fontWeight: '800', letterSpacing: 1, color: colors.primary },
 
-    // BENTO GRID PREMIUM
-    bentoGrid: { paddingHorizontal: 16, gap: 12, marginBottom: 24 },
-    bentoRow: { flexDirection: 'row', gap: 12 },
+    // BENTO GRID
+    bentoGrid: { paddingHorizontal: PAGE_PADDING, gap: spacing.md, marginBottom: spacing.xl },
+    bentoRow: { flexDirection: 'row', gap: spacing.md },
     bentoCard: {
-        borderRadius: 20,
+        borderRadius: radius.xxl,
         padding: 18,
-        backgroundColor: '#121212',
+        backgroundColor: colors.surface,
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.12)',
+        borderColor: colors.primaryBorder,
         overflow: 'hidden',
-        shadowColor: '#63ff15',
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-        elevation: 2,
+        ...shadows.card,
     },
-    cardHalf: { flex: 1, height: 160, justifyContent: 'space-between' },
-    cardFull: { flex: 1, height: 100, justifyContent: 'center' },
+    cardHalf: { flex: 1, height: rs(160), justifyContent: 'space-between' },
     bentoCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
     bentoIconBox: {
-        width: 40,
-        height: 40,
-        borderRadius: 12,
-        backgroundColor: 'rgba(99,255,21,0.1)',
+        width: rs(40),
+        height: rs(40),
+        borderRadius: radius.lg,
+        backgroundColor: colors.primaryGlow,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.15)',
+        borderColor: colors.primaryBorder,
     },
-    bentoValue: { color: '#63ff15', fontSize: 28, fontWeight: '900', letterSpacing: -0.8, marginTop: 8 },
-    unitText: { fontSize: 13, color: '#888', fontWeight: '600' },
-    bentoLabel: { color: '#666', fontSize: 10, fontWeight: '800', letterSpacing: 0.6, marginTop: 6 },
-    bentoMiniGraph: { height: 4, backgroundColor: 'rgba(99,255,21,0.08)', borderRadius: 2, marginTop: 12, overflow: 'hidden' },
+    bentoValue: { color: colors.primary, fontSize: rs(28), fontWeight: '900', letterSpacing: -0.8, marginTop: spacing.sm },
+    unitText: { fontSize: rs(13), color: colors.textDim, fontWeight: '600' },
+    bentoLabel: { color: '#666', fontSize: rs(10), fontWeight: '800', letterSpacing: 0.6, marginTop: spacing.xs },
+    bentoMiniGraph: { height: 4, backgroundColor: colors.primaryGlow, borderRadius: 2, marginTop: spacing.md, overflow: 'hidden' },
     graphBar: { height: '100%', borderRadius: 2 },
 
-    bentoFullContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    streakVisual: { flexDirection: 'row', gap: 5 },
-    streakDot: { width: 10, height: 5, borderRadius: 2.5, backgroundColor: 'rgba(99,255,21,0.15)' },
-    streakInfo: { flex: 1 },
-
     // QUICK ACTIONS & FEATURES
-    premiumHorizontalScroll: { paddingLeft: 16, paddingRight: 16, gap: 12, marginBottom: 28 },
+    premiumHorizontalScroll: { paddingLeft: PAGE_PADDING, paddingRight: PAGE_PADDING, gap: spacing.md, marginBottom: spacing.xxl },
     quickAction: {
-        width: 100,
-        height: 110,
-        borderRadius: 18,
-        backgroundColor: '#1a1a1a',
+        width: rs(100),
+        height: rs(110),
+        borderRadius: radius.card,
+        backgroundColor: colors.surfaceHighlight,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.12)',
+        borderColor: colors.primaryBorder,
     },
-    quickActionGradient: { ...StyleSheet.absoluteFill, borderRadius: 18 },
-    quickActionIconBox: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-    quickActionLabelText: { color: '#fff', fontSize: 11, fontWeight: '800', marginTop: 6, textAlign: 'center' },
+    quickActionGradient: { ...StyleSheet.absoluteFill, borderRadius: radius.card },
+    quickActionIconBox: { width: 44, height: 44, borderRadius: radius.lg, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', marginBottom: spacing.sm },
+    quickActionLabelText: { color: colors.textPrimary, fontSize: rs(11), fontWeight: '800', marginTop: spacing.xs, textAlign: 'center' },
 
     // SECTION SYSTEM
-    sectionGroup: { paddingHorizontal: 16, marginBottom: 32 },
-    premiumSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
-    accentLine: { width: 3, height: 16, backgroundColor: '#63ff15', borderRadius: 1.5 },
-    premiumSectionTitle: { color: '#888', fontSize: 11, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' },
-    bentoFeatureList: { gap: 10 },
+    sectionGroup: { paddingHorizontal: PAGE_PADDING, marginBottom: spacing.xxl },
+    premiumSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.base },
+    accentLine: { width: 3, height: 16, backgroundColor: colors.primary, borderRadius: 1.5 },
+    premiumSectionTitle: { color: colors.textDim, fontSize: rs(11), fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' },
+    bentoFeatureList: { gap: spacing.sm },
 
-    // FEATURE CARD PREMIUM
+    // FEATURE CARD
     featureCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
-        borderRadius: 18,
-        backgroundColor: '#121212',
+        padding: spacing.base,
+        borderRadius: radius.card,
+        backgroundColor: colors.surface,
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.12)',
-        marginBottom: 8,
-        shadowColor: '#63ff15',
-        shadowOpacity: 0.05,
-        shadowRadius: 6,
-        elevation: 1,
+        borderColor: colors.primaryBorder,
+        marginBottom: spacing.sm,
+        ...shadows.card,
     },
     featureCardContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
     featureIconWrap: {
         width: 44,
         height: 44,
-        borderRadius: 12,
+        borderRadius: radius.lg,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 12,
+        marginRight: spacing.md,
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.2)',
+        borderColor: colors.primaryDim,
     },
     featureTextWrap: { flex: 1 },
-    featureTitle: { color: '#fff', fontSize: 16, fontWeight: '800' },
-    featureDesc: { color: '#666', fontSize: 12, fontWeight: '600', marginTop: 2 },
-    featureBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, marginLeft: 8 },
-    featureBadgeText: { color: '#000', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
-    featureArrow: { marginLeft: 8 },
+    featureTitle: { color: colors.textPrimary, fontSize: rs(16), fontWeight: '800' },
+    featureDesc: { color: '#666', fontSize: rs(12), fontWeight: '600', marginTop: 2 },
+    featureBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.md, marginLeft: spacing.sm },
+    featureBadgeText: { color: '#000', fontSize: rs(9), fontWeight: '900', letterSpacing: 0.5 },
+    featureArrow: { marginLeft: spacing.sm },
 
-    // STEP COUNTER
-    premiumStepWrapper: { paddingHorizontal: 16, marginBottom: 28 },
-
-    // PROMO BANNER & MOTIVATION
+    // PROMO BANNER
     promoBanner: {
-        marginHorizontal: 16,
-        borderRadius: 20,
+        marginHorizontal: PAGE_PADDING,
+        borderRadius: radius.xxl,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.2)',
-        marginBottom: 20,
-        shadowColor: '#63ff15',
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 2,
+        borderColor: colors.primaryDim,
+        marginBottom: spacing.lg,
+        ...shadows.cardMd,
     },
-    promoBannerGrad: { padding: 20 },
+    promoBannerGrad: { padding: spacing.lg },
     promoBannerContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     promoBannerText: { flex: 1 },
     promoBadge: {
-        backgroundColor: '#63ff15',
+        backgroundColor: colors.primary,
         alignSelf: 'flex-start',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
-        marginBottom: 8
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xxs,
+        borderRadius: radius.lg,
+        marginBottom: spacing.sm,
     },
-    promoBadgeText: { color: '#000', fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
-    promoBannerTitle: { color: '#fff', fontSize: 20, fontWeight: '900', letterSpacing: -0.5 },
-    promoBannerSub: { color: '#888', fontSize: 13, marginTop: 4, lineHeight: 18, fontWeight: '600' },
-    promoBannerAction: { marginLeft: 16 },
-    promoCloseBtn: { padding: 8, justifyContent: 'center', alignItems: 'center' },
+    promoBadgeText: { color: '#000', fontSize: rs(10), fontWeight: '900', letterSpacing: 0.5 },
+    promoBannerTitle: { color: colors.textPrimary, fontSize: rs(20), fontWeight: '900', letterSpacing: -0.5 },
+    promoBannerSub: { color: colors.textDim, fontSize: rs(13), marginTop: spacing.xxs, lineHeight: rs(18), fontWeight: '600' },
+    promoBannerAction: { marginLeft: spacing.base },
     promoActionCircle: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
+        width: rs(56),
+        height: rs(56),
+        borderRadius: rs(28),
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#63ff15',
-        shadowOpacity: 0.4,
-        shadowRadius: 12,
-        elevation: 5,
+        ...shadows.primaryGlow,
     },
 
     motivationCard: {
-        marginHorizontal: 16,
-        padding: 22,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.15)',
+        marginHorizontal: PAGE_PADDING,
+        borderRadius: radius.xxl,
         overflow: 'hidden',
-        alignItems: 'center',
-        backgroundColor: 'rgba(99,255,21,0.04)',
-        marginBottom: 20,
-        shadowColor: '#63ff15',
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 2,
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.1)',
+        marginBottom: spacing.lg,
+        ...shadows.cardMd,
     },
-    motivationHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-    motivationLabel: { color: '#63ff15', fontSize: 10, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' },
-    motivationText: { color: '#CCC', fontSize: 15, fontStyle: 'italic', textAlign: 'center', lineHeight: 24, fontWeight: '500' },
+    motivationQuoteMark: {
+        position: 'absolute',
+        top: -rs(10),
+        left: rs(16),
+        fontSize: rs(110),
+        color: 'rgba(99,255,21,0.05)',
+        fontWeight: '900',
+        lineHeight: rs(110),
+    },
+    motivationContent: {
+        paddingHorizontal: spacing.xl,
+        paddingTop: rs(36),
+        paddingBottom: spacing.md,
+    },
+    motivationText: {
+        color: '#D4D4D8',
+        fontSize: rs(16),
+        fontStyle: 'italic',
+        lineHeight: rs(26),
+        fontWeight: '500',
+        letterSpacing: 0.2,
+    },
+    motivationFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: spacing.xl,
+        paddingBottom: spacing.lg,
+        paddingTop: spacing.sm,
+    },
+    motivationTag: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        backgroundColor: 'rgba(99,255,21,0.07)',
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 4,
+        borderRadius: radius.lg,
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.12)',
+    },
+    motivationTagText: {
+        color: '#63ff15',
+        fontSize: rs(9),
+        fontWeight: '900',
+        letterSpacing: 1,
+    },
+    motivationRefresh: {
+        width: rs(30),
+        height: rs(30),
+        borderRadius: radius.sm,
+        backgroundColor: 'rgba(255,255,255,0.03)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.06)',
+    },
 
     // SIDEBAR
     sidebar: {
@@ -850,51 +915,57 @@ const styles = StyleSheet.create({
         top: 0,
         bottom: 0,
         width: width * 0.75,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: colors.background,
         zIndex: 1000,
         borderRightWidth: 1,
-        borderRightColor: 'rgba(99,255,21,0.15)'
+        borderRightColor: colors.primaryBorder,
     },
-    sidebarOverlay: { backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 999 },
+    sidebarOverlay: { backgroundColor: colors.overlay, zIndex: 999 },
     sidebarHeader: {
-        padding: 20,
-        paddingBottom: 16,
+        padding: spacing.lg,
+        paddingBottom: spacing.base,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: spacing.md,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(99,255,21,0.1)',
+        borderBottomColor: colors.primaryGlow,
     },
-    sidebarLogo: { width: 40, height: 40, borderRadius: 10 },
-    sidebarTitle: { color: 'white', fontSize: 20, fontWeight: '900', letterSpacing: -0.5 },
-    sidebarUserSection: { paddingHorizontal: 16, paddingVertical: 20, marginBottom: 12 },
+    sidebarLogo: { width: rs(40), height: rs(40), borderRadius: radius.sm },
+    sidebarTitle: { color: colors.textPrimary, fontSize: rs(20), fontWeight: '900', letterSpacing: -0.5 },
+    sidebarUserSection: { paddingHorizontal: spacing.base, paddingVertical: spacing.lg, marginBottom: spacing.md },
     sidebarUserCard: {
-        padding: 16,
-        borderRadius: 16,
+        padding: spacing.base,
+        borderRadius: radius.xl,
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.12)',
-        backgroundColor: '#121212',
+        borderColor: colors.primaryBorder,
+        backgroundColor: colors.surface,
     },
-    sidebarUserTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    sidebarAvatar: { width: 50, height: 50, borderRadius: 25, borderWidth: 2, borderColor: 'rgba(99,255,21,0.3)' },
+    sidebarUserTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+    sidebarAvatar: { width: rs(50), height: rs(50), borderRadius: rs(25), borderWidth: 2, borderColor: colors.borderPrimaryBright },
     sidebarUserInfo: { flex: 1 },
-    sidebarUserNameText: { color: 'white', fontSize: 16, fontWeight: '800' },
-    sidebarPlanBadge: { alignSelf: 'flex-start', paddingHorizontal: 9, paddingVertical: 3, borderRadius: 10, marginTop: 4, backgroundColor: 'rgba(99,255,21,0.15)', borderWidth: 1, borderColor: 'rgba(99,255,21,0.3)' },
-    sidebarPlanText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.5, color: '#63ff15' },
-    sidebarMenu: { flex: 1, paddingHorizontal: 12 },
+    sidebarUserNameText: { color: colors.textPrimary, fontSize: rs(16), fontWeight: '800' },
+    sidebarPlanBadge: { alignSelf: 'flex-start', paddingHorizontal: 9, paddingVertical: 3, borderRadius: radius.md, marginTop: spacing.xxs, backgroundColor: colors.primaryGlow, borderWidth: 1, borderColor: colors.borderPrimaryBright },
+    sidebarPlanText: { fontSize: rs(9), fontWeight: '900', letterSpacing: 0.5, color: colors.primary },
+    sidebarMenu: { flex: 1, paddingHorizontal: spacing.md },
     sidebarItem: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 14,
         paddingHorizontal: 14,
-        borderRadius: 14,
-        gap: 12,
-        borderRadius: 12,
-        marginBottom: 6,
+        borderRadius: radius.lg,
+        gap: spacing.md,
+        marginBottom: spacing.xs,
         backgroundColor: 'rgba(255,255,255,0.02)',
+        minHeight: 44,
     },
-    sidebarItemText: { color: '#AAA', fontSize: 15, fontWeight: '700' },
-    sidebarDivider: { height: 1, backgroundColor: 'rgba(99,255,21,0.1)', marginVertical: 14, marginHorizontal: 16 },
-    sidebarFooter: { padding: 20, alignItems: 'center', borderTopWidth: 1, borderTopColor: 'rgba(99,255,21,0.1)' },
-    versionText: { color: '#444', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+    sidebarItemText: { color: '#AAA', fontSize: rs(15), fontWeight: '700' },
+    sidebarDivider: { height: 1, backgroundColor: colors.primaryGlow, marginVertical: 14, marginHorizontal: spacing.base },
+    sidebarFooter: { padding: spacing.lg, alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.primaryGlow },
+    versionText: { color: '#444', fontSize: rs(10), fontWeight: '800', letterSpacing: 1 },
+
+    // ADMIN (legacy styles kept for compatibility)
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: PAGE_PADDING, marginBottom: spacing.base },
+    sectionIconWrap: { width: 36, height: 36, borderRadius: radius.sm, justifyContent: 'center', alignItems: 'center', marginRight: spacing.sm },
+    sectionTitleAlt: { color: colors.textPrimary, fontSize: rs(16), fontWeight: '800' },
+    featuresGrid: { paddingHorizontal: PAGE_PADDING, gap: spacing.sm },
 });
