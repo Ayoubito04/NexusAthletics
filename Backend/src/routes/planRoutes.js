@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const planController = require('../controllers/planController');
+
 const { authenticateToken } = require('../middlewares/authMiddleware');
 
 // Generación de planes
@@ -15,7 +16,11 @@ router.get('/saved-plans/:id', authenticateToken, planController.getSavedPlanByI
 router.put('/saved-plans/:id', authenticateToken, planController.updateSavedPlan);
 router.delete('/saved-plans/:id', authenticateToken, planController.deleteSavedPlan);
 
+// Ultimate exclusive
+router.post('/generate-plan-ultimate', authenticateToken, planController.generateUltimatePlan);
+
 // Trial
 router.post('/plans/start-trial', authenticateToken, planController.startTrial);
+router.get('/plans/trial-status', authenticateToken, planController.getTrialStatus);
 
 module.exports = router;

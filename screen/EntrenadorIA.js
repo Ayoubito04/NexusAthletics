@@ -15,34 +15,106 @@ import NativeAd from '../components/NativeAd';
 
 const BACKEND_URL = Config.BACKEND_URL;
 
+const TypingIndicator = () => {
+    const dot1 = useRef(new Animated.Value(0)).current;
+    const dot2 = useRef(new Animated.Value(0)).current;
+    const dot3 = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+        const anim = (dot, delay) => Animated.loop(
+            Animated.sequence([
+                Animated.delay(delay),
+                Animated.timing(dot, { toValue: -6, duration: 300, useNativeDriver: true }),
+                Animated.timing(dot, { toValue: 0, duration: 300, useNativeDriver: true }),
+                Animated.delay(540),
+            ])
+        ).start();
+        anim(dot1, 0);
+        anim(dot2, 160);
+        anim(dot3, 320);
+    }, []);
+    return (
+        <View style={styles.typingRow}>
+            <View style={styles.iaAvatarContainer}>
+                <LinearGradient colors={['#63ff15', 'rgba(99,255,21,0.4)']} style={styles.iaAvatarRing} />
+                <View style={styles.iaAvatarCircle}>
+                    <Text style={styles.iaAvatarText}>N</Text>
+                </View>
+            </View>
+            <View style={styles.typingBubble}>
+                <View style={styles.iaBubbleAccent} />
+                <View style={styles.typingDots}>
+                    {[dot1, dot2, dot3].map((dot, i) => (
+                        <Animated.View key={i} style={[styles.typingDot, { transform: [{ translateY: dot }] }]} />
+                    ))}
+                </View>
+            </View>
+        </View>
+    );
+};
+
 const MessageBubble = React.memo(({ item: m }) => (
     <View style={[styles.messageRow, m.sender === 'usuario' ? styles.userMessageRow : styles.iaMessageRow]}>
         {m.sender === 'ia' && (
             <View style={styles.iaAvatarContainer}>
-                <LinearGradient
-                    colors={['rgba(99,255,21,0.3)', 'rgba(99,255,21,0.1)']}
-                    style={styles.iaAvatarGlow}
-                />
+                <LinearGradient colors={['#63ff15', 'rgba(99,255,21,0.4)']} style={styles.iaAvatarRing} />
                 <View style={styles.iaAvatarCircle}>
                     <Text style={styles.iaAvatarText}>N</Text>
                 </View>
             </View>
         )}
-        <View style={[styles.bubble, m.sender === 'usuario' ? styles.userBubble : styles.iaBubble]}>
-            {m.image && (
-                <Image source={{ uri: m.image }} style={styles.sentImage} />
-            )}
-            <Text style={[styles.msgText, m.sender === 'usuario' ? styles.userText : styles.iaText]}>
-                {m.text}
-            </Text>
-            {m.timestamp && (
-                <Text style={styles.messageTimestamp}>
-                    {new Date(m.timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                </Text>
-            )}
-        </View>
+        {m.sender === 'usuario' ? (
+            <LinearGradient
+                colors={['#7bff35', '#63ff15', '#4dd10e']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.bubble, styles.userBubble]}
+            >
+                {m.image && <Image source={{ uri: m.image }} style={styles.sentImage} />}
+                <Text style={[styles.msgText, styles.userText]}>{m.text}</Text>
+                {m.timestamp && (
+                    <Text style={[styles.messageTimestamp, styles.userTimestamp]}>
+                        {new Date(m.timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                )}
+            </LinearGradient>
+        ) : (
+            <View style={[styles.bubble, styles.iaBubble]}>
+                <View style={styles.iaBubbleAccent} />
+                {m.image && <Image source={{ uri: m.image }} style={styles.sentImage} />}
+                <Text style={[styles.msgText, styles.iaText]}>{m.text}</Text>
+                {m.timestamp && (
+                    <Text style={styles.messageTimestamp}>
+                        {new Date(m.timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                )}
+            </View>
+        )}
     </View>
 ));
+
+const WelcomeState = ({ onChipPress }) => (
+    <View style={styles.welcomeContainer}>
+        <LinearGradient
+            colors={['rgba(99,255,21,0.12)', 'rgba(99,255,21,0.03)', 'transparent']}
+            style={styles.welcomeGlow}
+        />
+        <View style={styles.welcomeAvatarWrapper}>
+            <LinearGradient colors={['#63ff15', 'rgba(99,255,21,0.4)']} style={styles.welcomeAvatarRing} />
+            <View style={styles.welcomeAvatarCircle}>
+                <Text style={styles.welcomeAvatarText}>N</Text>
+            </View>
+        </View>
+        <Text style={styles.welcomeTitle}>Nexus AI Elite</Text>
+        <Text style={styles.welcomeSubtitle}>Hola, soy tu entrenador personal con IA.{'\n'}¿En qué puedo ayudarte hoy?</Text>
+        <View style={styles.welcomeChips}>
+            {['Crea mi rutina semanal', 'Analiza mi progreso', 'Consejo de nutrición', 'Técnica de ejercicio'].map(chip => (
+                <TouchableOpacity key={chip} style={styles.welcomeChip} onPress={() => onChipPress(chip)}>
+                    <Text style={styles.welcomeChipText}>{chip}</Text>
+                </TouchableOpacity>
+            ))}
+        </View>
+    </View>
+);
 
 export default function EntrenadorIA() {
     const [mensajes, setMensajes] = useState([]);
@@ -59,7 +131,17 @@ export default function EntrenadorIA() {
     const [intensidad, setIntensidad] = useState('Alta');
     const [prioridad, setPrioridad] = useState('Equilibrado');
     const [duracion, setDuracion] = useState('90 min');
-    const [equipamiento, setEquipamiento] = useState('Gimnasio Completo');
+    const [equipamiento, setEquipamiento] = useState('Sin Restricción');
+    const [entorno, setEntorno] = useState('Sin Preferencia');
+    const [periodi, setPeriodi] = useState('Lineal (Clásica)');
+    const [tecnicas, setTecnicas] = useState([]);
+    // Ultimate exclusivo
+    const [lesiones, setLesiones] = useState('');
+    const [horasSueno, setHorasSueno] = useState('7-8h');
+    const [nivelEstres, setNivelEstres] = useState('Moderado');
+    const [semanasMeso, setSemanasMeso] = useState('4');
+    const [aiRecomendacion, setAiRecomendacion] = useState('');
+    const [cargandoRecom, setCargandoRecom] = useState(false);
 
     // Estados para la configuración del plan PDF
     const [objetivoPlan, setObjetivoPlan] = useState('Ganar Músculo');
@@ -169,6 +251,29 @@ export default function EntrenadorIA() {
         }
     };
 
+    const handlePedirRecomendacion = async () => {
+        if (!user || (user.plan !== 'Pro' && user.plan !== 'Ultimate')) return;
+        setCargandoRecom(true);
+        setAiRecomendacion('');
+        try {
+            const token = await AsyncStorage.getItem('token');
+            const res = await fetch(`${BACKEND_URL}/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({
+                    message: `Soy ${user.nombre}, nivel ${user.nivel || 'intermedio'}, objetivo: ${objetivoPlan}. Días disponibles: ${diasPlan} por semana. ¿Qué metodología o tipo de entrenamiento me recomiendas y por qué? Responde en 2-3 frases máximo, directo y sin preámbulos.`,
+                    sessionId: sesionActual
+                })
+            });
+            const data = await res.json();
+            if (data.text) setAiRecomendacion(data.text);
+        } catch (_) {
+            setAiRecomendacion('No pude conectar con Nexus AI. Elige tu metodología manualmente.');
+        } finally {
+            setCargandoRecom(false);
+        }
+    };
+
     const handleCrearNuevaSesion = async () => {
         if (!nuevoTitulo.trim()) {
             showAlert("Campo Requerido", "Por favor ingresa un título para el chat.", "warning");
@@ -191,7 +296,9 @@ export default function EntrenadorIA() {
                         metodologia: metodologia,
                         intensidad: intensidad,
                         prioridad: prioridad,
-                        duracion: duracion
+                        duracion: duracion,
+                        entorno: entorno,
+                        ...(user?.plan === 'Ultimate' && { periodi, tecnicas })
                     }
                 })
             });
@@ -283,20 +390,40 @@ export default function EntrenadorIA() {
         setCargando(true);
 
         try {
-            setMensajes(prev => [...prev, { text: `🚀 Creando tu Experiencia Élite: ${objetivoPlan}...`, sender: 'usuario' }]);
+            const esUltimate = user?.plan === 'Ultimate';
+            const endpoint = esUltimate ? '/generate-plan-ultimate' : '/generate-plan-interactive';
+            const body = esUltimate
+                ? {
+                    details: `OBJETIVO: ${objetivoPlan}. NIVEL: ${nivelPlan}. DÍAS/SEMANA: ${diasPlan}. DIETA: ${prefAlimenticia}. METODOLOGÍA: ${metodologia}. EQUIPAMIENTO: ${equipamiento}. PRIORIDAD: ${prioridad}. DURACIÓN: ${duracion}.`,
+                    lesiones, horasSueno, nivelEstres,
+                    semanas: parseInt(semanasMeso),
+                    periodi, tecnicas,
+                }
+                : {
+                    details: `OBJETIVO: ${objetivoPlan}. NIVEL: ${nivelPlan}. DÍAS/SEMANA: ${diasPlan}. DIETA: ${prefAlimenticia}. METODOLOGÍA: ${metodologia}. EQUIPAMIENTO: ${equipamiento}. PRIORIDAD: ${prioridad}. DURACIÓN: ${duracion}.`
+                };
 
-            const response = await fetch(`${BACKEND_URL}/generate-plan-interactive`, {
+            setMensajes(prev => [...prev, {
+                text: esUltimate
+                    ? `👑 Generando tu Mesociclo Ultimate ${semanasMeso} semanas: ${objetivoPlan}...`
+                    : `🚀 Creando tu Experiencia Élite: ${objetivoPlan}...`,
+                sender: 'usuario'
+            }]);
+
+            const response = await fetch(`${BACKEND_URL}${endpoint}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({
-                    details: `OBJETIVO: ${objetivoPlan}. NIVEL: ${nivelPlan}. DÍAS/SEMANA: ${diasPlan}. DIETA: ${prefAlimenticia}. METODOLOGÍA: ${metodologia}. EQUIPAMIENTO: ${equipamiento}. PRIORIDAD: ${prioridad}. DURACIÓN: ${duracion}.`
-                })
+                body: JSON.stringify(body)
             });
 
-            if (!response.ok) throw new Error('Error al conectar con Nexus AI');
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                console.error('[Ultimate] Server error:', response.status, errData);
+                throw new Error(errData.error || `Error del servidor (${response.status})`);
+            }
 
             const planData = await response.json();
 
@@ -307,7 +434,7 @@ export default function EntrenadorIA() {
 
         } catch (error) {
             console.error("[Visual Plan Error]:", error);
-            showAlert("Error", "No se pudo generar la presentación interactiva.", "error");
+            showAlert("Error", error.message || "No se pudo generar la presentación interactiva.", "error");
             setCargando(false);
         }
     };
@@ -529,35 +656,36 @@ export default function EntrenadorIA() {
                             </View>
                         )
                     }
-                    ListFooterComponent={
-                        cargando && (
-                            <View style={styles.loadingContainer}>
-                                <ActivityIndicator color="#63ff15" />
-                                <Text style={styles.loadingText}>Analizando con Nexus AI...</Text>
-                            </View>
-                        )
-                    }
-                    contentContainerStyle={{ paddingBottom: 20 }}
+                    ListFooterComponent={cargando ? <TypingIndicator /> : null}
+                    ListEmptyComponent={<WelcomeState onChipPress={(chip) => setInputUsuario(chip)} />}
+                    contentContainerStyle={{ paddingBottom: 20, flexGrow: 1 }}
                 />
 
                 <View style={styles.inputArea}>
-                    <TouchableOpacity style={styles.routineBtn} onPress={handleGenerarRutina}>
-                        <Ionicons name="barbell" size={24} color="#63ff15" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.cameraBtn} onPress={analizarFoto}>
-                        <Ionicons name="camera" size={24} color="#63ff15" />
-                    </TouchableOpacity>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Consulta a Nexus AI..."
-                        placeholderTextColor="#666"
-                        value={inputUsuario}
-                        onChangeText={setInputUsuario}
-                        multiline
-                    />
-                    <TouchableOpacity style={styles.sendBtn} onPress={() => enviarMensajes()}>
-                        <Ionicons name="send" size={20} color="black" />
-                    </TouchableOpacity>
+                    <View style={styles.inputRow}>
+                        <TouchableOpacity style={styles.routineBtn} onPress={handleGenerarRutina}>
+                            <Ionicons name="barbell-outline" size={22} color="#63ff15" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.cameraBtn} onPress={analizarFoto}>
+                            <Ionicons name="camera-outline" size={22} color="#63ff15" />
+                        </TouchableOpacity>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Consulta a Nexus AI..."
+                            placeholderTextColor="rgba(99,255,21,0.35)"
+                            value={inputUsuario}
+                            onChangeText={setInputUsuario}
+                            multiline
+                        />
+                        <TouchableOpacity style={styles.sendBtn} onPress={() => enviarMensajes()}>
+                            <LinearGradient
+                                colors={['#7bff35', '#4dd10e']}
+                                style={styles.sendBtnGradient}
+                            >
+                                <Ionicons name="arrow-up" size={20} color="#000" />
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </KeyboardAvoidingView>
 
@@ -632,7 +760,7 @@ export default function EntrenadorIA() {
 
                             <Text style={styles.labelPlan}>Metodología de Entrenamiento</Text>
                             <View style={styles.optionsGrid}>
-                                {['Arnold Split', 'Push Pull Legs', 'Full Body', 'Heavy Duty (Mentzer)', 'Upper Lower', 'Bro Split'].map(opt => (
+                                {['IA Decide por Mí', 'Push Pull Legs', 'Full Body', 'Arnold Split', 'Heavy Duty / Mentzer', 'Upper Lower', 'Bro Split', '5x5 StrongLifts', 'Calistenia', 'HIIT', 'Functional Training', 'Powerlifting', 'Hybrid Training'].map(opt => (
                                     <TouchableOpacity
                                         key={opt}
                                         style={[styles.optBtn, metodologia === opt && styles.optBtnSelected]}
@@ -645,7 +773,7 @@ export default function EntrenadorIA() {
 
                             <Text style={styles.labelPlan}>Equipamiento Disponible</Text>
                             <View style={styles.optionsGrid}>
-                                {['Gimnasio Completo', 'Mancuernas/Barras', 'Solo Peso Corporal', 'Bandas Elásticas'].map(opt => (
+                                {['Sin Restricción', 'Gimnasio Completo', 'Mancuernas en Casa', 'Solo Peso Corporal', 'Bandas Elásticas', 'Barras / Dominadas', 'Exterior / Parque'].map(opt => (
                                     <TouchableOpacity
                                         key={opt}
                                         style={[styles.optBtn, equipamiento === opt && styles.optBtnSelected]}
@@ -820,18 +948,61 @@ export default function EntrenadorIA() {
                         </View>
 
                         <ScrollView showsVerticalScrollIndicator={false}>
-                            <Text style={styles.labelPlan}>Título del Asesoramiento</Text>
+                            <Text style={styles.labelPlan}>Título del Chat</Text>
                             <TextInput
                                 style={styles.modalInput}
-                                placeholder="Ej: Mi Rutina Arnold 2025"
+                                placeholder="Ej: Mi entrenamiento 2025"
                                 placeholderTextColor="#666"
                                 value={nuevoTitulo}
                                 onChangeText={setNuevoTitulo}
                             />
 
-                            <Text style={styles.labelPlan}>Metodología del Coach</Text>
+                            {/* IA RECOMIENDA — solo Pro/Ultimate */}
+                            {user && (user.plan === 'Pro' || user.plan === 'Ultimate') && (
+                                <View style={styles.aiRecomBox}>
+                                    <View style={styles.aiRecomHeader}>
+                                        <MaterialCommunityIcons name="brain" size={18} color="#A259FF" />
+                                        <Text style={styles.aiRecomTitle}>NEXUS AI RECOMIENDA</Text>
+                                        <TouchableOpacity
+                                            style={styles.aiRecomBtn}
+                                            onPress={handlePedirRecomendacion}
+                                            disabled={cargandoRecom}
+                                        >
+                                            {cargandoRecom
+                                                ? <ActivityIndicator size="small" color="#A259FF" />
+                                                : <Text style={styles.aiRecomBtnText}>Analizar</Text>
+                                            }
+                                        </TouchableOpacity>
+                                    </View>
+                                    {aiRecomendacion
+                                        ? <Text style={styles.aiRecomText}>{aiRecomendacion}</Text>
+                                        : <Text style={styles.aiRecomPlaceholder}>Toca "Analizar" para que Nexus AI recomiende la rutina ideal para ti según tu objetivo y días disponibles.</Text>
+                                    }
+                                </View>
+                            )}
+
+                            <Text style={styles.labelPlan}>Tipo de Entrenamiento</Text>
                             <View style={styles.optionsGrid}>
-                                {['Arnold Split', 'Heavy Duty / Mentzer', 'Push Pull Legs', 'Full Body', 'High Volume', 'HIT Training'].map(opt => (
+                                {[
+                                    'IA Decide por Mí',
+                                    'Push Pull Legs',
+                                    'Full Body',
+                                    'Arnold Split (6 días)',
+                                    'Heavy Duty / Mentzer',
+                                    'Upper Lower',
+                                    'Bro Split',
+                                    '5x5 StrongLifts',
+                                    'GZCLP (Principiante)',
+                                    'Calistenia / Street WO',
+                                    'HIIT',
+                                    'Yoga / Movilidad',
+                                    'Running / Cardio',
+                                    'Crossfit / WODs',
+                                    'Functional Training',
+                                    'Powerlifting',
+                                    'Hybrid (Fuerza + Cardio)',
+                                    'Deload / Recuperación',
+                                ].map(opt => (
                                     <TouchableOpacity
                                         key={opt}
                                         style={[styles.optBtn, metodologia === opt && styles.optBtnSelected]}
@@ -842,9 +1013,9 @@ export default function EntrenadorIA() {
                                 ))}
                             </View>
 
-                            <Text style={styles.labelPlan}>Intensidad del Programa</Text>
+                            <Text style={styles.labelPlan}>Intensidad</Text>
                             <View style={styles.optionsGrid}>
-                                {['Moderada', 'Alta', 'Extrema (Fallo)', 'Atleta de Élite'].map(opt => (
+                                {['Suave / Recuperación', 'Moderada', 'Alta', 'Máxima (Fallo Muscular)'].map(opt => (
                                     <TouchableOpacity
                                         key={opt}
                                         style={[styles.optBtn, intensidad === opt && styles.optBtnSelected]}
@@ -857,7 +1028,7 @@ export default function EntrenadorIA() {
 
                             <Text style={styles.labelPlan}>Prioridad Muscular</Text>
                             <View style={styles.optionsGrid}>
-                                {['Equilibrado', 'Pecho/Hombro', 'Piernas/Glúteo', 'V-Taper (Espalda)', 'Brazos/Core'].map(opt => (
+                                {['Cuerpo Completo', 'Pecho / Hombro', 'Piernas / Glúteo', 'V-Taper (Espalda)', 'Brazos / Core', 'Cardio / Resistencia'].map(opt => (
                                     <TouchableOpacity
                                         key={opt}
                                         style={[styles.optBtn, prioridad === opt && styles.optBtnSelected]}
@@ -868,9 +1039,22 @@ export default function EntrenadorIA() {
                                 ))}
                             </View>
 
+                            <Text style={styles.labelPlan}>Entorno <Text style={{ color: '#555', fontSize: 11 }}>(opcional)</Text></Text>
+                            <View style={styles.optionsGrid}>
+                                {['Sin Preferencia', 'Gimnasio', 'Casa / Hotel', 'Exterior / Parque', 'Piscina / Natación', 'Mixto'].map(opt => (
+                                    <TouchableOpacity
+                                        key={opt}
+                                        style={[styles.optBtn, entorno === opt && styles.optBtnSelected]}
+                                        onPress={() => setEntorno(opt)}
+                                    >
+                                        <Text style={[styles.optText, entorno === opt && styles.optTextSelected]}>{opt}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
                             <Text style={styles.labelPlan}>Disponibilidad por Sesión</Text>
                             <View style={styles.optionsGrid}>
-                                {['45 min', '60 min', '90 min', 'Sin Límite'].map(opt => (
+                                {['20-30 min', '45 min', '60 min', '90 min', 'Sin Límite'].map(opt => (
                                     <TouchableOpacity
                                         key={opt}
                                         style={[styles.optBtn, duracion === opt && styles.optBtnSelected]}
@@ -880,6 +1064,91 @@ export default function EntrenadorIA() {
                                     </TouchableOpacity>
                                 ))}
                             </View>
+
+                            {/* ULTIMATE: opciones avanzadas exclusivas */}
+                            {user && user.plan === 'Ultimate' && (
+                                <>
+                                    <View style={styles.ultimateDivider}>
+                                        <LinearGradient colors={['transparent', 'rgba(255,215,0,0.4)', 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ultimateLine} />
+                                        <Text style={styles.ultimateLabel}>⚡ ULTIMATE EXCLUSIVO</Text>
+                                        <LinearGradient colors={['transparent', 'rgba(255,215,0,0.4)', 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ultimateLine} />
+                                    </View>
+
+                                    <Text style={styles.labelPlan}>Periodización</Text>
+                                    <View style={styles.optionsGrid}>
+                                        {['Lineal (Clásica)', 'Ondulada Diaria (DUP)', 'Ondulada Semanal', 'Por Bloques (Conjugado)', 'Acumulación → Intensificación'].map(opt => (
+                                            <TouchableOpacity
+                                                key={opt}
+                                                style={[styles.optBtn, periodi === opt && styles.optBtnSelected]}
+                                                onPress={() => setPeriodi(opt)}
+                                            >
+                                                <Text style={[styles.optText, periodi === opt && styles.optTextSelected]}>{opt}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+
+                                    <Text style={styles.labelPlan}>Técnicas Avanzadas <Text style={{ color: '#555', fontSize: 11 }}>(múltiple)</Text></Text>
+                                    <View style={styles.optionsGrid}>
+                                        {['Drop Sets', 'Rest-Pause', 'Superseries', 'Series Gigantes', 'Preagotamiento', 'Cluster Sets', 'Myo-Reps', 'Pausa Isométrica'].map(opt => (
+                                            <TouchableOpacity
+                                                key={opt}
+                                                style={[styles.optBtn, tecnicas.includes(opt) && styles.optBtnSelected]}
+                                                onPress={() => setTecnicas(prev => prev.includes(opt) ? prev.filter(t => t !== opt) : [...prev, opt])}
+                                            >
+                                                <Text style={[styles.optText, tecnicas.includes(opt) && styles.optTextSelected]}>{opt}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+
+                                    <Text style={styles.labelPlan}>Duración del Mesociclo</Text>
+                                    <View style={styles.optionsGrid}>
+                                        {['4', '6', '8', '12'].map(opt => (
+                                            <TouchableOpacity
+                                                key={opt}
+                                                style={[styles.optBtn, semanasMeso === opt && styles.optBtnSelected]}
+                                                onPress={() => setSemanasMeso(opt)}
+                                            >
+                                                <Text style={[styles.optText, semanasMeso === opt && styles.optTextSelected]}>{opt} semanas</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+
+                                    <Text style={styles.labelPlan}>Horas de Sueño / Noche</Text>
+                                    <View style={styles.optionsGrid}>
+                                        {['5-6h', '7-8h', '8-9h', '+9h'].map(opt => (
+                                            <TouchableOpacity
+                                                key={opt}
+                                                style={[styles.optBtn, horasSueno === opt && styles.optBtnSelected]}
+                                                onPress={() => setHorasSueno(opt)}
+                                            >
+                                                <Text style={[styles.optText, horasSueno === opt && styles.optTextSelected]}>{opt}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+
+                                    <Text style={styles.labelPlan}>Nivel de Estrés Actual</Text>
+                                    <View style={styles.optionsGrid}>
+                                        {['Bajo', 'Moderado', 'Alto', 'Muy Alto'].map(opt => (
+                                            <TouchableOpacity
+                                                key={opt}
+                                                style={[styles.optBtn, nivelEstres === opt && styles.optBtnSelected]}
+                                                onPress={() => setNivelEstres(opt)}
+                                            >
+                                                <Text style={[styles.optText, nivelEstres === opt && styles.optTextSelected]}>{opt}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+
+                                    <Text style={styles.labelPlan}>Lesiones o Restricciones <Text style={{ color: '#555', fontSize: 11 }}>(opcional)</Text></Text>
+                                    <TextInput
+                                        style={[styles.input, { marginBottom: 8 }]}
+                                        placeholder="Ej: rodilla derecha, lumbar..."
+                                        placeholderTextColor="#444"
+                                        value={lesiones}
+                                        onChangeText={setLesiones}
+                                    />
+                                </>
+                            )}
 
                             <TouchableOpacity
                                 style={styles.generateFinalBtn}
@@ -1001,8 +1270,9 @@ const styles = StyleSheet.create({
     // MESSAGE BUBBLES PREMIUM
     messageRow: {
         flexDirection: 'row',
-        marginBottom: 16,
+        marginBottom: 18,
         alignItems: 'flex-end',
+        paddingHorizontal: 4,
     },
     userMessageRow: {
         justifyContent: 'flex-end',
@@ -1011,51 +1281,67 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-start',
     },
     bubble: {
-        maxWidth: '80%',
+        maxWidth: '78%',
         paddingHorizontal: 16,
         paddingVertical: 12,
-        borderRadius: 18,
+        borderRadius: 20,
+        overflow: 'hidden',
     },
     userBubble: {
-        backgroundColor: '#63ff15',
-        borderBottomRightRadius: 4,
+        borderBottomRightRadius: 5,
         shadowColor: '#63ff15',
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
+        shadowOpacity: 0.45,
+        shadowRadius: 12,
         shadowOffset: { width: 0, height: 4 },
-        elevation: 3,
+        elevation: 6,
     },
     iaBubble: {
-        backgroundColor: '#1a1a1a',
-        borderBottomLeftRadius: 4,
+        backgroundColor: '#141414',
+        borderBottomLeftRadius: 5,
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.15)',
+        borderColor: 'rgba(99,255,21,0.18)',
         shadowColor: '#000',
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+        elevation: 2,
+        paddingLeft: 20,
+    },
+    iaBubbleAccent: {
+        position: 'absolute',
+        left: 0,
+        top: 10,
+        bottom: 10,
+        width: 3,
+        borderRadius: 2,
+        backgroundColor: '#63ff15',
+        shadowColor: '#63ff15',
+        shadowOpacity: 0.9,
         shadowRadius: 4,
-        elevation: 1,
+        elevation: 2,
     },
     iaAvatarContainer: {
         marginRight: 10,
         marginBottom: 4,
         position: 'relative',
+        width: 40,
+        height: 40,
     },
-    iaAvatarGlow: {
+    iaAvatarRing: {
         position: 'absolute',
-        width: 44,
-        height: 44,
-        borderRadius: 12,
-        top: -2,
-        left: -2,
+        width: 46,
+        height: 46,
+        borderRadius: 23,
+        top: -3,
+        left: -3,
         zIndex: 0,
     },
     iaAvatarCircle: {
         width: 40,
         height: 40,
-        borderRadius: 10,
-        backgroundColor: 'rgba(99,255,21,0.12)',
-        borderWidth: 1.5,
-        borderColor: 'rgba(99,255,21,0.3)',
+        borderRadius: 20,
+        backgroundColor: '#0c0c0c',
+        borderWidth: 2,
+        borderColor: '#63ff15',
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 1,
@@ -1063,7 +1349,7 @@ const styles = StyleSheet.create({
     iaAvatarText: {
         color: '#63ff15',
         fontWeight: '900',
-        fontSize: 18,
+        fontSize: 17,
         letterSpacing: -0.5,
     },
     userText: {
@@ -1073,21 +1359,25 @@ const styles = StyleSheet.create({
         lineHeight: 21,
     },
     iaText: {
-        color: '#E0E0E0',
-        fontWeight: '500',
+        color: '#DEDEDE',
+        fontWeight: '400',
         fontSize: 15,
-        lineHeight: 21,
+        lineHeight: 23,
     },
     msgText: {
         fontSize: 15,
         lineHeight: 22,
     },
     messageTimestamp: {
-        color: '#555',
+        color: 'rgba(99,255,21,0.45)',
         fontSize: 11,
         fontWeight: '600',
         marginTop: 6,
-        letterSpacing: 0.5,
+        letterSpacing: 0.4,
+    },
+    userTimestamp: {
+        color: 'rgba(0,0,0,0.4)',
+        textAlign: 'right',
     },
     sentImage: {
         width: 200,
@@ -1097,6 +1387,38 @@ const styles = StyleSheet.create({
         resizeMode: 'cover',
         borderWidth: 1,
         borderColor: 'rgba(99,255,21,0.2)',
+    },
+    // TYPING INDICATOR
+    typingRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        marginBottom: 20,
+        paddingHorizontal: 4,
+    },
+    typingBubble: {
+        backgroundColor: '#141414',
+        borderRadius: 20,
+        borderBottomLeftRadius: 5,
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.18)',
+        paddingHorizontal: 18,
+        paddingVertical: 16,
+        overflow: 'hidden',
+    },
+    typingDots: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 7,
+    },
+    typingDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#63ff15',
+        shadowColor: '#63ff15',
+        shadowOpacity: 0.8,
+        shadowRadius: 4,
+        elevation: 2,
     },
     loadingContainer: {
         flexDirection: 'row',
@@ -1117,62 +1439,162 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         letterSpacing: 0.5,
     },
-    inputArea: {
-        flexDirection: 'row',
+    // WELCOME STATE
+    welcomeContainer: {
+        flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
-        padding: 15,
+        paddingTop: 40,
+        paddingHorizontal: 28,
+        overflow: 'hidden',
+    },
+    welcomeGlow: {
+        position: 'absolute',
+        width: 280,
+        height: 280,
+        borderRadius: 140,
+        top: -20,
+        alignSelf: 'center',
+    },
+    welcomeAvatarWrapper: {
+        position: 'relative',
+        width: 80,
+        height: 80,
+        marginBottom: 22,
+    },
+    welcomeAvatarRing: {
+        position: 'absolute',
+        width: 86,
+        height: 86,
+        borderRadius: 43,
+        top: -3,
+        left: -3,
+        zIndex: 0,
+    },
+    welcomeAvatarCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: '#0c0c0c',
+        borderWidth: 2.5,
+        borderColor: '#63ff15',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1,
+        shadowColor: '#63ff15',
+        shadowOpacity: 0.5,
+        shadowRadius: 16,
+        elevation: 8,
+    },
+    welcomeAvatarText: {
+        color: '#63ff15',
+        fontSize: 34,
+        fontWeight: '900',
+        letterSpacing: -1,
+    },
+    welcomeTitle: {
+        color: '#FFFFFF',
+        fontSize: 26,
+        fontWeight: '900',
+        letterSpacing: -0.8,
+        marginBottom: 10,
+    },
+    welcomeSubtitle: {
+        color: '#888',
+        fontSize: 15,
+        textAlign: 'center',
+        lineHeight: 22,
+        marginBottom: 30,
+    },
+    welcomeChips: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        gap: 10,
+    },
+    welcomeChip: {
+        backgroundColor: 'rgba(99,255,21,0.07)',
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.22)',
+        borderRadius: 20,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+    },
+    welcomeChipText: {
+        color: '#63ff15',
+        fontSize: 13,
+        fontWeight: '600',
+        letterSpacing: 0.2,
+    },
+    inputArea: {
         backgroundColor: '#0a0a0a',
         borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.05)',
-        paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+        borderTopColor: 'rgba(99,255,21,0.1)',
+        paddingHorizontal: 14,
+        paddingTop: 12,
+        paddingBottom: Platform.OS === 'ios' ? 36 : 16,
+    },
+    inputRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#141414',
+        borderRadius: 28,
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.18)',
+        paddingHorizontal: 8,
+        paddingVertical: 6,
+        shadowColor: '#63ff15',
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+        elevation: 2,
     },
     input: {
         flex: 1,
-        backgroundColor: '#151515',
-        borderRadius: 20,
-        paddingHorizontal: 18,
-        paddingVertical: 12,
-        color: 'white',
-        marginRight: 10,
+        backgroundColor: 'transparent',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        color: '#fff',
         maxHeight: 100,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
         fontSize: 15,
+        lineHeight: 21,
     },
     sendBtn: {
-        backgroundColor: '#63ff15',
-        width: 48,
-        height: 48,
-        borderRadius: 15,
+        width: 42,
+        height: 42,
+        borderRadius: 21,
+        overflow: 'hidden',
+        shadowColor: '#63ff15',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.5,
+        shadowRadius: 8,
+        elevation: 6,
+    },
+    sendBtnGradient: {
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#63ff15',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 10,
-        elevation: 8,
     },
     routineBtn: {
-        marginRight: 8,
-        width: 48,
-        height: 48,
-        borderRadius: 15,
-        backgroundColor: '#1a1a1a',
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(99,255,21,0.07)',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: 'rgba(99,255,21,0.18)',
+        marginRight: 4,
     },
     cameraBtn: {
-        marginRight: 10,
-        width: 48,
-        height: 48,
-        borderRadius: 15,
-        backgroundColor: '#1a1a1a',
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(99,255,21,0.07)',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: 'rgba(99,255,21,0.18)',
+        marginRight: 4,
     },
     // --- ESTILOS SIDEBAR ---
     sidebarOverlay: {
@@ -1406,6 +1828,16 @@ const styles = StyleSheet.create({
     optTextSelected: {
         color: '#63ff15',
     },
+    input: {
+        backgroundColor: '#0d0d0d',
+        borderWidth: 1,
+        borderColor: '#2a2a2a',
+        borderRadius: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        color: '#fff',
+        fontSize: 14,
+    },
     generateFinalBtn: {
         marginTop: 35,
         borderRadius: 15,
@@ -1421,5 +1853,71 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 18,
-    }
+    },
+    // AI Recommendation box
+    aiRecomBox: {
+        backgroundColor: 'rgba(162,89,255,0.08)',
+        borderRadius: 20,
+        padding: 16,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(162,89,255,0.2)',
+    },
+    aiRecomHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 10,
+    },
+    aiRecomTitle: {
+        color: '#A259FF',
+        fontSize: 11,
+        fontWeight: '900',
+        letterSpacing: 1,
+        flex: 1,
+    },
+    aiRecomBtn: {
+        backgroundColor: 'rgba(162,89,255,0.2)',
+        paddingHorizontal: 14,
+        paddingVertical: 6,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(162,89,255,0.3)',
+        minWidth: 72,
+        alignItems: 'center',
+    },
+    aiRecomBtnText: {
+        color: '#A259FF',
+        fontSize: 11,
+        fontWeight: '800',
+    },
+    aiRecomText: {
+        color: '#CCC',
+        fontSize: 13,
+        lineHeight: 20,
+        fontStyle: 'italic',
+    },
+    aiRecomPlaceholder: {
+        color: '#555',
+        fontSize: 12,
+        lineHeight: 18,
+        fontStyle: 'italic',
+    },
+    // Ultimate exclusive section divider
+    ultimateDivider: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginVertical: 20,
+    },
+    ultimateLine: {
+        flex: 1,
+        height: 1,
+    },
+    ultimateLabel: {
+        color: '#FFD700',
+        fontSize: 11,
+        fontWeight: '900',
+        letterSpacing: 1,
+    },
 });
