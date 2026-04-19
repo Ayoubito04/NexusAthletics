@@ -162,15 +162,16 @@ Duración: ${semanas} semanas | Periodización: ${periodi || 'DUP'} | Técnicas:
 }
 
 REGLAS: semana ${semanas} = Deload (vol -40%, intensidad -50%). Usa 70-85% del 1RM según fase.
-imgKey debe ser UNO de estos (usa el más específico para cada ejercicio):
-press_banca, press_inclinado, press_declinado, aperturas, fondos, push_up, press_mancuernas,
-peso_muerto, dominadas, remo, jalon, remo_sentado, face_pull, buenos_dias, remo_mancuerna,
-press_hombros, press_militar, elevaciones_laterales, elevaciones_frontales, vuelo_posterior,
-curls, curl_martillo, curl_concentrado, curl_barra, extension_triceps, triceps_frances, patada_triceps,
-sentadilla, sentadilla_goblet, zancadas, prensa, extension_cuadriceps, curl_femoral, hip_thrust, gemelos, peso_muerto_rumano, sentadilla_bulgara,
-pilates_core, abdominales, russian_twist, leg_raise, superman, mountain_climber,
-muscle_up, fondos_paralelas, australian_row, pike_push, pistol_squat, burpees, salto_caja,
-cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor`;
+imgKey debe ser el MÁS ESPECÍFICO para cada ejercicio. Lista completa:
+PECHO: press_banca, press_inclinado, press_declinado, press_mancuernas, press_inclinado_mdb, aperturas, aperturas_inclinadas, aperturas_cable, fondos, push_up, push_up_diamante, push_up_ancho, pullover
+ESPALDA: peso_muerto, peso_muerto_rumano, peso_muerto_sumo, dominadas, dominadas_supinas, remo, remo_mancuerna, remo_sentado, remo_polea, remo_tbar, jalon, jalon_neutro, face_pull, buenos_dias, encogimientos, encogimientos_mdb, australian_row
+HOMBROS: press_hombros, press_militar, press_arnold, press_sentado, elevaciones_laterales, elevaciones_frontales, vuelo_posterior, elevacion_cable
+BICEPS: curls, curl_barra, curl_martillo, curl_concentrado, curl_predicador, curl_cable, curl_inclinado, curl_martillo_cable
+TRICEPS: extension_triceps, triceps_frances, patada_triceps, fondos_triceps, extension_polea, press_cerrado, extension_mancuerna
+PIERNAS: sentadilla, sentadilla_goblet, sentadilla_bulgara, sentadilla_hack, sentadilla_front, zancadas, zancadas_caminando, zancadas_inversas, prensa, extension_cuadriceps, curl_femoral, curl_sentado, hip_thrust, hip_thrust_mdb, gemelos, gemelos_sentado, step_up, pistol_squat, good_morning
+CORE: pilates_core, plank_lateral, abdominales, crunch_cable, russian_twist, leg_raise, leg_raise_colgado, superman, mountain_climber, dead_bug, rueda_abdominal, pallof_press, bird_dog
+CALISTENIA: muscle_up, fondos_paralelas, pike_push, archer_push, l_sit, dragon_flag, burpees, salto_caja, salto_cuerda, sprint
+CARDIO/FLEX: cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor, foam_roller, estiramiento_isquios, estiramiento_cuadriceps, estiramiento_pecho`;
 
         } else {
             // ── Pro: plan semanal estándar ──

@@ -11,71 +11,122 @@ const BACKEND_URL = Config.BACKEND_URL;
 
 const { width, height } = Dimensions.get('window');
 
+const F = 'https://fitnessprogramer.com/wp-content/uploads';
 const EXERCISE_IMAGES = {
-    // Pecho
-    "press_banca":          "https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Bench-Press.gif",
-    "press_inclinado":      "https://fitnessprogramer.com/wp-content/uploads/2021/02/Incline-Barbell-Bench-Press.gif",
-    "press_declinado":      "https://fitnessprogramer.com/wp-content/uploads/2021/02/Decline-Barbell-Bench-Press.gif",
-    "aperturas":            "https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Flyes.gif",
-    "fondos":               "https://fitnessprogramer.com/wp-content/uploads/2021/02/Chest-Dips.gif",
-    "push_up":              "https://fitnessprogramer.com/wp-content/uploads/2021/02/Push-Up.gif",
-    "press_mancuernas":     "https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Bench-Press.gif",
-    // Espalda
-    "peso_muerto":          "https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Deadlift.gif",
-    "dominadas":            "https://fitnessprogramer.com/wp-content/uploads/2021/02/Pull-Up.gif",
-    "remo":                 "https://fitnessprogramer.com/wp-content/uploads/2021/02/Bent-Over-Barbell-Row.gif",
-    "jalon":                "https://fitnessprogramer.com/wp-content/uploads/2021/02/Lat-Pulldown.gif",
-    "remo_sentado":         "https://fitnessprogramer.com/wp-content/uploads/2021/02/Seated-Cable-Rows.gif",
-    "face_pull":            "https://fitnessprogramer.com/wp-content/uploads/2021/06/Face-Pull.gif",
-    "buenos_dias":          "https://fitnessprogramer.com/wp-content/uploads/2021/02/Good-Morning.gif",
-    "remo_mancuerna":       "https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Row.gif",
-    // Hombros
-    "press_hombros":        "https://fitnessprogramer.com/wp-content/uploads/2021/06/Dumbbell-Shoulder-Press.gif",
-    "press_militar":        "https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Overhead-Press.gif",
-    "elevaciones_laterales":"https://fitnessprogramer.com/wp-content/uploads/2021/02/Lateral-Raise.gif",
-    "elevaciones_frontales":"https://fitnessprogramer.com/wp-content/uploads/2021/02/Front-Raise.gif",
-    "vuelo_posterior":      "https://fitnessprogramer.com/wp-content/uploads/2021/06/Bent-Over-Dumbbell-Lateral-Raise.gif",
-    // Brazos
-    "curls":                "https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Curl.gif",
-    "curl_martillo":        "https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Hammer-Curl.gif",
-    "curl_concentrado":     "https://fitnessprogramer.com/wp-content/uploads/2021/02/Concentration-Curl.gif",
-    "curl_barra":           "https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Curl.gif",
-    "extension_triceps":    "https://fitnessprogramer.com/wp-content/uploads/2021/06/Triceps-Pushdown.gif",
-    "triceps_frances":      "https://fitnessprogramer.com/wp-content/uploads/2021/02/EZ-Bar-Skull-Crusher.gif",
-    "patada_triceps":       "https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Kickback.gif",
-    // Piernas
-    "sentadilla":           "https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Full-Squat.gif",
-    "sentadilla_goblet":    "https://fitnessprogramer.com/wp-content/uploads/2021/02/Goblet-Squat.gif",
-    "zancadas":             "https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Lunges.gif",
-    "prensa":               "https://fitnessprogramer.com/wp-content/uploads/2021/02/Leg-Press.gif",
-    "extension_cuadriceps": "https://fitnessprogramer.com/wp-content/uploads/2021/02/Leg-Extension.gif",
-    "curl_femoral":         "https://fitnessprogramer.com/wp-content/uploads/2021/02/Lying-Leg-Curl.gif",
-    "hip_thrust":           "https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Hip-Thrust.gif",
-    "gemelos":              "https://fitnessprogramer.com/wp-content/uploads/2021/02/Standing-Calf-Raises.gif",
-    "peso_muerto_rumano":   "https://fitnessprogramer.com/wp-content/uploads/2021/02/Romanian-Deadlift.gif",
-    "sentadilla_bulgara":   "https://fitnessprogramer.com/wp-content/uploads/2021/06/Bulgarian-Split-Squat.gif",
-    // Core
-    "pilates_core":         "https://fitnessprogramer.com/wp-content/uploads/2021/02/Plank.gif",
-    "abdominales":          "https://fitnessprogramer.com/wp-content/uploads/2021/02/Crunch.gif",
-    "russian_twist":        "https://fitnessprogramer.com/wp-content/uploads/2021/06/Russian-Twist.gif",
-    "leg_raise":            "https://fitnessprogramer.com/wp-content/uploads/2021/02/Lying-Leg-Raise.gif",
-    "superman":             "https://fitnessprogramer.com/wp-content/uploads/2021/06/Superman.gif",
-    "mountain_climber":     "https://fitnessprogramer.com/wp-content/uploads/2021/06/Mountain-Climber.gif",
-    // Calistenia
-    "muscle_up":            "https://fitnessprogramer.com/wp-content/uploads/2021/06/Muscle-Up.gif",
-    "fondos_paralelas":     "https://fitnessprogramer.com/wp-content/uploads/2021/02/Parallel-Bar-Dip.gif",
-    "australian_row":       "https://fitnessprogramer.com/wp-content/uploads/2021/06/Australian-Pull-Up.gif",
-    "pike_push":            "https://fitnessprogramer.com/wp-content/uploads/2021/06/Pike-Push-Up.gif",
-    "pistol_squat":         "https://fitnessprogramer.com/wp-content/uploads/2021/06/Pistol-Squat.gif",
-    "burpees":              "https://fitnessprogramer.com/wp-content/uploads/2021/06/Burpee.gif",
-    "salto_caja":           "https://fitnessprogramer.com/wp-content/uploads/2021/06/Box-Jump.gif",
-    // Cardio / Flexibilidad / Yoga
-    "cardio_burn":          "https://fitnessprogramer.com/wp-content/uploads/2021/06/Jumping-Jacks.gif",
-    "yoga_stretch":         "https://fitnessprogramer.com/wp-content/uploads/2021/06/Cat-Stretch.gif",
-    "flex_stretch":         "https://fitnessprogramer.com/wp-content/uploads/2021/06/Single-Leg-Stretch.gif",
-    "yoga_warrior":         "https://fitnessprogramer.com/wp-content/uploads/2021/06/Warrior-Pose.gif",
-    "hip_flexor":           "https://fitnessprogramer.com/wp-content/uploads/2021/06/Hip-Flexor-Stretch.gif",
-    "default":              "https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Bench-Press.gif",
+    // ── PECHO ──
+    "press_banca":             `${F}/2021/02/Barbell-Bench-Press.gif`,
+    "press_inclinado":         `${F}/2021/02/Incline-Barbell-Bench-Press.gif`,
+    "press_declinado":         `${F}/2021/02/Decline-Barbell-Bench-Press.gif`,
+    "press_mancuernas":        `${F}/2021/02/Dumbbell-Bench-Press.gif`,
+    "press_inclinado_mdb":     `${F}/2021/02/Incline-Dumbbell-Press.gif`,
+    "aperturas":               `${F}/2021/02/Dumbbell-Flyes.gif`,
+    "aperturas_inclinadas":    `${F}/2021/02/Incline-Dumbbell-Flyes.gif`,
+    "aperturas_cable":         `${F}/2021/02/Cable-Crossover.gif`,
+    "fondos":                  `${F}/2021/02/Chest-Dips.gif`,
+    "push_up":                 `${F}/2021/02/Push-Up.gif`,
+    "push_up_diamante":        `${F}/2021/06/Diamond-Push-Up.gif`,
+    "push_up_ancho":           `${F}/2021/06/Wide-Push-Up.gif`,
+    "pullover":                `${F}/2021/02/Dumbbell-Pullover.gif`,
+    // ── ESPALDA ──
+    "peso_muerto":             `${F}/2021/02/Barbell-Deadlift.gif`,
+    "peso_muerto_rumano":      `${F}/2021/02/Romanian-Deadlift.gif`,
+    "peso_muerto_sumo":        `${F}/2021/02/Sumo-Deadlift.gif`,
+    "dominadas":               `${F}/2021/02/Pull-Up.gif`,
+    "dominadas_supinas":       `${F}/2021/02/Chin-Up.gif`,
+    "remo":                    `${F}/2021/02/Bent-Over-Barbell-Row.gif`,
+    "remo_mancuerna":          `${F}/2021/02/Dumbbell-Row.gif`,
+    "remo_sentado":            `${F}/2021/02/Seated-Cable-Rows.gif`,
+    "remo_polea":              `${F}/2021/02/Cable-Row.gif`,
+    "remo_tbar":               `${F}/2021/02/T-Bar-Row.gif`,
+    "jalon":                   `${F}/2021/02/Lat-Pulldown.gif`,
+    "jalon_neutro":            `${F}/2021/06/Neutral-Grip-Lat-Pulldown.gif`,
+    "face_pull":               `${F}/2021/06/Face-Pull.gif`,
+    "buenos_dias":             `${F}/2021/02/Good-Morning.gif`,
+    "encogimientos":           `${F}/2021/02/Barbell-Shrug.gif`,
+    "encogimientos_mdb":       `${F}/2021/02/Dumbbell-Shrug.gif`,
+    "australian_row":          `${F}/2021/06/Australian-Pull-Up.gif`,
+    // ── HOMBROS ──
+    "press_hombros":           `${F}/2021/06/Dumbbell-Shoulder-Press.gif`,
+    "press_militar":           `${F}/2021/02/Barbell-Overhead-Press.gif`,
+    "press_arnold":            `${F}/2021/02/Arnold-Press.gif`,
+    "elevaciones_laterales":   `${F}/2021/02/Lateral-Raise.gif`,
+    "elevaciones_frontales":   `${F}/2021/02/Front-Raise.gif`,
+    "vuelo_posterior":         `${F}/2021/06/Bent-Over-Dumbbell-Lateral-Raise.gif`,
+    "press_sentado":           `${F}/2021/02/Seated-Dumbbell-Press.gif`,
+    "elevacion_cable":         `${F}/2021/06/Cable-Lateral-Raise.gif`,
+    // ── BÍCEPS ──
+    "curls":                   `${F}/2021/02/Dumbbell-Curl.gif`,
+    "curl_barra":              `${F}/2021/02/Barbell-Curl.gif`,
+    "curl_martillo":           `${F}/2021/02/Dumbbell-Hammer-Curl.gif`,
+    "curl_concentrado":        `${F}/2021/02/Concentration-Curl.gif`,
+    "curl_predicador":         `${F}/2021/02/Preacher-Curl.gif`,
+    "curl_cable":              `${F}/2021/06/Cable-Curl.gif`,
+    "curl_inclinado":          `${F}/2021/02/Incline-Dumbbell-Curl.gif`,
+    "curl_martillo_cable":     `${F}/2021/06/Cable-Hammer-Curl.gif`,
+    // ── TRÍCEPS ──
+    "extension_triceps":       `${F}/2021/06/Triceps-Pushdown.gif`,
+    "triceps_frances":         `${F}/2021/02/EZ-Bar-Skull-Crusher.gif`,
+    "patada_triceps":          `${F}/2021/02/Dumbbell-Kickback.gif`,
+    "fondos_triceps":          `${F}/2021/02/Triceps-Dips.gif`,
+    "extension_polea":         `${F}/2021/06/Overhead-Cable-Tricep-Extension.gif`,
+    "press_cerrado":           `${F}/2021/02/Close-Grip-Barbell-Bench-Press.gif`,
+    "extension_mancuerna":     `${F}/2021/02/Overhead-Dumbbell-Extension.gif`,
+    // ── PIERNAS ──
+    "sentadilla":              `${F}/2021/02/Barbell-Full-Squat.gif`,
+    "sentadilla_goblet":       `${F}/2021/02/Goblet-Squat.gif`,
+    "sentadilla_bulgara":      `${F}/2021/06/Bulgarian-Split-Squat.gif`,
+    "sentadilla_hack":         `${F}/2021/02/Hack-Squat.gif`,
+    "sentadilla_front":        `${F}/2021/02/Front-Squat.gif`,
+    "zancadas":                `${F}/2021/02/Dumbbell-Lunges.gif`,
+    "zancadas_caminando":      `${F}/2021/02/Walking-Lunges.gif`,
+    "zancadas_inversas":       `${F}/2021/06/Reverse-Lunge.gif`,
+    "prensa":                  `${F}/2021/02/Leg-Press.gif`,
+    "extension_cuadriceps":    `${F}/2021/02/Leg-Extension.gif`,
+    "curl_femoral":            `${F}/2021/02/Lying-Leg-Curl.gif`,
+    "curl_sentado":            `${F}/2021/06/Seated-Leg-Curl.gif`,
+    "hip_thrust":              `${F}/2021/02/Barbell-Hip-Thrust.gif`,
+    "hip_thrust_mdb":          `${F}/2021/06/Dumbbell-Hip-Thrust.gif`,
+    "gemelos":                 `${F}/2021/02/Standing-Calf-Raises.gif`,
+    "gemelos_sentado":         `${F}/2021/02/Seated-Calf-Raise.gif`,
+    "step_up":                 `${F}/2021/06/Step-Up.gif`,
+    "pistol_squat":            `${F}/2021/06/Pistol-Squat.gif`,
+    "good_morning":            `${F}/2021/02/Good-Morning.gif`,
+    // ── CORE ──
+    "pilates_core":            `${F}/2021/02/Plank.gif`,
+    "plank_lateral":           `${F}/2021/02/Side-Plank.gif`,
+    "abdominales":             `${F}/2021/02/Crunch.gif`,
+    "crunch_cable":            `${F}/2021/06/Cable-Crunch.gif`,
+    "russian_twist":           `${F}/2021/06/Russian-Twist.gif`,
+    "leg_raise":               `${F}/2021/02/Lying-Leg-Raise.gif`,
+    "leg_raise_colgado":       `${F}/2021/02/Hanging-Leg-Raise.gif`,
+    "superman":                `${F}/2021/06/Superman.gif`,
+    "mountain_climber":        `${F}/2021/06/Mountain-Climber.gif`,
+    "dead_bug":                `${F}/2021/06/Dead-Bug.gif`,
+    "rueda_abdominal":         `${F}/2021/02/Ab-Wheel-Rollout.gif`,
+    "pallof_press":            `${F}/2021/06/Pallof-Press.gif`,
+    "bird_dog":                `${F}/2021/06/Bird-Dog.gif`,
+    // ── CALISTENIA ──
+    "muscle_up":               `${F}/2021/06/Muscle-Up.gif`,
+    "fondos_paralelas":        `${F}/2021/02/Parallel-Bar-Dip.gif`,
+    "pike_push":               `${F}/2021/06/Pike-Push-Up.gif`,
+    "archer_push":             `${F}/2021/06/Archer-Push-Up.gif`,
+    "l_sit":                   `${F}/2021/06/L-Sit.gif`,
+    "dragon_flag":             `${F}/2021/06/Dragon-Flag.gif`,
+    "burpees":                 `${F}/2021/06/Burpee.gif`,
+    "salto_caja":              `${F}/2021/06/Box-Jump.gif`,
+    "salto_cuerda":            `${F}/2021/06/Jump-Rope.gif`,
+    "sprint":                  `${F}/2021/06/High-Knees.gif`,
+    // ── CARDIO / YOGA / FLEX ──
+    "cardio_burn":             `${F}/2021/06/Jumping-Jacks.gif`,
+    "yoga_stretch":            `${F}/2021/06/Cat-Stretch.gif`,
+    "flex_stretch":            `${F}/2021/06/Single-Leg-Stretch.gif`,
+    "yoga_warrior":            `${F}/2021/06/Warrior-Pose.gif`,
+    "hip_flexor":              `${F}/2021/06/Hip-Flexor-Stretch.gif`,
+    "foam_roller":             `${F}/2021/06/Foam-Rolling.gif`,
+    "estiramiento_isquios":    `${F}/2021/06/Standing-Hamstring-Stretch.gif`,
+    "estiramiento_cuadriceps": `${F}/2021/06/Standing-Quad-Stretch.gif`,
+    "estiramiento_pecho":      `${F}/2021/06/Chest-Stretch.gif`,
+    "default":                 `${F}/2021/02/Barbell-Bench-Press.gif`,
 };
 
 export default function ElitePlanScreen({ route, navigation }) {
@@ -244,36 +295,35 @@ export default function ElitePlanScreen({ route, navigation }) {
                                 </View>
                             )}
 
-                            {/* Ejercicios */}
-                            {(dia.ejercicios || []).map((ex, ei) => (
-                                <View key={ei} style={[styles.exerciseCard, { marginBottom: 12 }]}>
-                                    <Image
-                                        source={{ uri: EXERCISE_IMAGES[ex.imgKey] || EXERCISE_IMAGES.default }}
-                                        style={styles.exImageBanner}
-                                        resizeMode="cover"
-                                    />
-                                    <LinearGradient colors={['transparent', 'rgba(0,0,0,0.95)']} style={styles.exOverlay}>
-                                        <Text style={styles.exName}>{ex.nombre}</Text>
-                                        <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
-                                            <View style={styles.exBadgeGreen}>
-                                                <Text style={styles.exBadgeGreenText}>{ex.series}×{ex.reps}</Text>
+                            {/* Ejercicios — grid 2 columnas */}
+                            <View style={styles.exGrid}>
+                                {(dia.ejercicios || []).map((ex, ei) => (
+                                    <View key={ei} style={styles.exGridCard}>
+                                        <Image
+                                            source={{ uri: EXERCISE_IMAGES[ex.imgKey] || EXERCISE_IMAGES.default }}
+                                            style={styles.exGridImage}
+                                            resizeMode="cover"
+                                        />
+                                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.97)']} style={styles.exGridOverlay}>
+                                            <Text style={styles.exGridName} numberOfLines={2}>{ex.nombre}</Text>
+                                            <View style={styles.exBadgeRow}>
+                                                <View style={styles.exBadgeGreen}>
+                                                    <Text style={styles.exBadgeGreenText}>{ex.series}×{ex.reps}</Text>
+                                                </View>
+                                                {ex.rir && (
+                                                    <View style={styles.exBadgeGold}>
+                                                        <Text style={styles.exBadgeGoldText}>RIR {ex.rir}</Text>
+                                                    </View>
+                                                )}
                                             </View>
-                                            {ex.rir && (
-                                                <View style={styles.exBadgeGold}>
-                                                    <Text style={styles.exBadgeGoldText}>RIR {ex.rir}</Text>
-                                                </View>
-                                            )}
                                             {ex.pesoSugerido && (
-                                                <View style={styles.exBadgePurple}>
-                                                    <Text style={styles.exBadgePurpleText}>{ex.pesoSugerido}</Text>
-                                                </View>
+                                                <Text style={{ color: '#a855f7', fontSize: 10, fontWeight: '800', marginTop: 3 }}>{ex.pesoSugerido}</Text>
                                             )}
-                                        </View>
-                                        {ex.tecnica && <Text style={{ color: '#f59e0b', fontSize: 11, marginTop: 5 }}>⚡ {ex.tecnica}</Text>}
-                                        {ex.nota && <Text style={styles.exNota}>{ex.nota}</Text>}
-                                    </LinearGradient>
-                                </View>
-                            ))}
+                                            {ex.tecnica && <Text style={{ color: '#f59e0b', fontSize: 10, marginTop: 3 }}>⚡ {ex.tecnica}</Text>}
+                                        </LinearGradient>
+                                    </View>
+                                ))}
+                            </View>
 
                             {/* Vuelta a la calma */}
                             {dia.vueltaCalma?.length > 0 && (
@@ -432,37 +482,36 @@ export default function ElitePlanScreen({ route, navigation }) {
                     </View>
 
                     <ScrollView style={styles.exerciseScroll} showsVerticalScrollIndicator={false}>
-                        {item.ejercicios.map((ex, idx) => (
-                            <View key={idx} style={styles.exerciseCard}>
-                                <Image
-                                    source={{ uri: EXERCISE_IMAGES[ex.imgKey] || EXERCISE_IMAGES.default }}
-                                    style={styles.exImageBanner}
-                                    resizeMode="cover"
-                                />
-                                <LinearGradient
-                                    colors={['transparent', 'rgba(0,0,0,0.92)']}
-                                    style={styles.exOverlay}
-                                >
-                                    <Text style={styles.exName}>{ex.nombre}</Text>
-                                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
-                                        <View style={styles.exBadgeGreen}>
-                                            <Text style={styles.exBadgeGreenText}>{ex.series} × {ex.reps}</Text>
+                        <View style={styles.exGrid}>
+                            {item.ejercicios.map((ex, idx) => (
+                                <View key={idx} style={styles.exGridCard}>
+                                    <Image
+                                        source={{ uri: EXERCISE_IMAGES[ex.imgKey] || EXERCISE_IMAGES.default }}
+                                        style={styles.exGridImage}
+                                        resizeMode="cover"
+                                    />
+                                    <LinearGradient
+                                        colors={['transparent', 'rgba(0,0,0,0.97)']}
+                                        style={styles.exGridOverlay}
+                                    >
+                                        <Text style={styles.exGridName} numberOfLines={2}>{ex.nombre}</Text>
+                                        <View style={styles.exBadgeRow}>
+                                            <View style={styles.exBadgeGreen}>
+                                                <Text style={styles.exBadgeGreenText}>{ex.series}×{ex.reps}</Text>
+                                            </View>
+                                            {ex.rir && (
+                                                <View style={styles.exBadgeGold}>
+                                                    <Text style={styles.exBadgeGoldText}>RIR {ex.rir}</Text>
+                                                </View>
+                                            )}
                                         </View>
-                                        {ex.rir && (
-                                            <View style={styles.exBadgeGold}>
-                                                <Text style={styles.exBadgeGoldText}>RIR {ex.rir}</Text>
-                                            </View>
-                                        )}
                                         {ex.pesoSugerido && (
-                                            <View style={styles.exBadgePurple}>
-                                                <Text style={styles.exBadgePurpleText}>{ex.pesoSugerido}</Text>
-                                            </View>
+                                            <Text style={{ color: '#a855f7', fontSize: 10, fontWeight: '800', marginTop: 3 }}>{ex.pesoSugerido}</Text>
                                         )}
-                                    </View>
-                                    {ex.nota && <Text style={styles.exNota}>{ex.nota}</Text>}
-                                </LinearGradient>
-                            </View>
-                        ))}
+                                    </LinearGradient>
+                                </View>
+                            ))}
+                        </View>
                         <View style={{ height: 100 }} />
                     </ScrollView>
                 </View>
@@ -561,6 +610,12 @@ const styles = StyleSheet.create({
     dayNumber: { color: '#63ff15', fontSize: 12, fontWeight: '900' },
     dayTitle: { color: 'white', fontSize: 22, fontWeight: '800', marginTop: 5 },
     exerciseScroll: { flex: 1 },
+    exGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    exGridCard: { width: '48%', borderRadius: 16, overflow: 'hidden', backgroundColor: '#161616' },
+    exGridImage: { width: '100%', height: 130, backgroundColor: '#111' },
+    exGridOverlay: { padding: 10, paddingTop: 6 },
+    exGridName: { color: '#fff', fontSize: 12, fontWeight: '900', lineHeight: 16, marginBottom: 5 },
+    exBadgeRow: { flexDirection: 'row', gap: 5, flexWrap: 'wrap' },
     exerciseCard: { borderRadius: 20, marginBottom: 14, overflow: 'hidden', backgroundColor: '#161616' },
     exImageBanner: { width: '100%', height: 110, backgroundColor: '#111' },
     exOverlay: { padding: 14, paddingTop: 10 },
