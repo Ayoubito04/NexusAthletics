@@ -58,27 +58,28 @@ Objetivo: ${user.objetivo || 'Mejorar'}, Nivel: ${user.nivelActividad || 'Normal
 };
 
 const generatePlanInteractive = async (req, res) => {
-    const { details } = req.body;
+    const { details, lesiones, horasSueno, nivelEstres, semanas = 4, periodi, tecnicas = [] } = req.body;
     try {
         let user = await prisma.user.findUnique({
-            where: { id: req.user.id }
+            where: { id: req.user.id },
+            include: {
+                muscleStrengths: true,
+                workoutSessions: { orderBy: { date: 'desc' }, take: 10 },
+            },
         });
 
-        // Sistema de reset diario para rutinas (igual que mensajes)
+        // Reset diario de rutinas
         const today = new Date();
         const lastUpdate = new Date(user.ultimaActualizacionRutinas);
-
         if (today.toDateString() !== lastUpdate.toDateString()) {
             user = await prisma.user.update({
                 where: { id: user.id },
-                data: {
-                    rutinasGeneradasHoy: 0,
-                    ultimaActualizacionRutinas: today
-                }
+                data: { rutinasGeneradasHoy: 0, ultimaActualizacionRutinas: today },
+                include: { muscleStrengths: true, workoutSessions: { orderBy: { date: 'desc' }, take: 10 } },
             });
         }
 
-        // Verificar límite para plan Gratis
+        // Límite plan Gratis
         const LIMITE_RUTINAS_GRATIS = 3;
         if (user.plan === 'Gratis' && user.rutinasGeneradasHoy >= LIMITE_RUTINAS_GRATIS) {
             return res.status(429).json({
@@ -89,9 +90,84 @@ const generatePlanInteractive = async (req, res) => {
             });
         }
 
-        const systemPrompt = `Eres un motor de generación de planes de entrenamiento Élite. 
-        DEBES RESPONDER ÚNICAMENTE CON UN OBJETO JSON VÁLIDO. SIN TEXTO ADICIONAL, SIN TILDES EN LAS LLAVES.
-        
+        let systemPrompt;
+
+        if (user.plan === 'Ultimate') {
+            // ── Ultimate: mesociclo completo con datos reales ──
+            const fuerzaCtx = user.muscleStrengths.length > 0
+                ? user.muscleStrengths.map(m =>
+                    `${m.muscle}: 1RM=${m.bestOneRM}kg, Volumen=${Math.round(m.totalVolume)}kg, Sesiones=${m.sessions}`
+                  ).join(' | ')
+                : 'Sin datos de fuerza registrados todavía';
+
+            const volReciente = user.workoutSessions.slice(0, 5)
+                .map(s => `${new Date(s.date).toLocaleDateString('es-ES')}: ${Math.round(s.totalVolume)}kg, ${s.duration || '?'}min`)
+                .join(' | ') || 'Sin sesiones recientes';
+
+            const sorted = [...user.muscleStrengths].sort((a, b) => b.bestOneRM - a.bestOneRM);
+            const masFlojo = sorted.at(-1)?.muscle || 'desconocido';
+            const masFuerte = sorted[0]?.muscle || 'desconocido';
+
+            systemPrompt = `Eres el sistema de generación de planes más avanzado del mundo. RESPONDE SOLO CON JSON VÁLIDO. SIN TEXTO ADICIONAL.
+
+=== PERFIL DEL ATLETA ===
+Nombre: ${user.nombre} | Edad: ${user.edad || '?'} | Peso: ${user.peso || '?'}kg | Altura: ${user.altura || '?'}cm
+Objetivo: ${user.objetivo || '?'} | Nivel: ${user.nivelActividad || '?'}
+Sueño: ${horasSueno || '7-8h'} | Estrés: ${nivelEstres || 'Moderado'} | Lesiones: ${lesiones || 'Ninguna'}
+
+=== DATOS REALES DE FUERZA ===
+${fuerzaCtx}
+Músculo más fuerte: ${masFuerte} | Más débil: ${masFlojo}
+
+=== HISTORIAL RECIENTE ===
+${volReciente}
+
+=== CONFIGURACIÓN ===
+Solicitud: ${details}
+Duración: ${semanas} semanas | Periodización: ${periodi || 'DUP'} | Técnicas: ${tecnicas.length > 0 ? tecnicas.join(', ') : 'las más apropiadas'}
+
+=== JSON REQUERIDO ===
+{
+  "esUltimate": true,
+  "resumen": {
+    "objetivo": "título",
+    "estrategia": "enfoque científico 2-3 frases",
+    "duracion": "${semanas} semanas",
+    "frecuencia": "X días/semana",
+    "volumenSemanal": { "Pecho": "X series", "Espalda": "X series", "Piernas": "X series", "Hombros": "X series", "Brazos": "X series", "Core": "X series" },
+    "macros": { "Proteina": "Xg", "Carbos": "Xg", "Grasas": "Xg", "Calorias": "Xkcal" },
+    "nutricionTiming": { "preWorkout": "...", "postWorkout": "...", "antesDormir": "..." }
+  },
+  "analisis": {
+    "puntosFuertes": ["basado en datos reales"],
+    "puntosMejora": ["basado en datos reales"],
+    "ajustes": "cómo el plan corrige desequilibrios"
+  },
+  "semanas": [
+    {
+      "semana": 1, "tipo": "Acumulación", "descripcion": "...", "rpe": "7", "rir": "3",
+      "dias": [
+        {
+          "dia": 1, "titulo": "nombre",
+          "calentamiento": ["ejercicio 1", "ejercicio 2"],
+          "ejercicios": [
+            { "nombre": "...", "series": "4", "reps": "10-12", "rir": "2-3", "pesoSugerido": "Xkg", "tecnica": "...", "nota": "...", "imgKey": "press_banca" }
+          ],
+          "vueltaCalma": ["estiramiento 1"]
+        }
+      ]
+    }
+  ],
+  "suplementacion": [{ "nombre": "...", "dosis": "Xg", "timing": "...", "motivo": "..." }]
+}
+
+REGLAS: semana ${semanas} = Deload (vol -40%, intensidad -50%). imgKey solo: press_banca, sentadilla, peso_muerto, curls, yoga_stretch, cardio_burn, pilates_core, flex_stretch, dominadas, remo, press_hombros, extension_triceps, zancadas. Usa 70-85% del 1RM según fase.`;
+
+        } else {
+            // ── Pro: plan semanal estándar ──
+            systemPrompt = `Eres un motor de generación de planes de entrenamiento Élite.
+        DEBES RESPONDER ÚNICAMENTE CON UN OBJETO JSON VÁLIDO. SIN TEXTO ADICIONAL.
+
         Estructura requerida:
         {
           "resumen": {
@@ -110,18 +186,19 @@ const generatePlanInteractive = async (req, res) => {
           ]
         }
 
-        Instrucciones: 
+        Instrucciones:
         1. Usa los datos del usuario: Peso ${user.peso}kg, Objetivo ${user.objetivo}.
         2. Solicitud específica: "${details}".
-        3. Se un experto en múltiples disciplinas: Gimnasio, Pilates, Yoga, Crossfit, Calistenia y Entrenamiento de Flexibilidad.
-        4. Si el usuario busca "Perder grasa", prioriza entrenamiento de fuerza con intervalos o circuitos.
-        5. Si busca "Flexibilidad/Pilates", genera secuencias de movimientos fluidos y controlados.
-        6. Genera 3 días de entrenamiento si no se especifica lo contrario.
+        3. Experto en Gimnasio, Pilates, Yoga, Crossfit, Calistenia y Flexibilidad.
+        4. Si busca "Perder grasa", prioriza fuerza con intervalos o circuitos.
+        5. Si busca "Flexibilidad/Pilates", genera secuencias fluidas y controladas.
+        6. Genera 3 días si no se especifica lo contrario.
         7. imgKey permitidas: press_banca, sentadilla, peso_muerto, curls, yoga_stretch, cardio_burn, pilates_core, flex_stretch.`;
+        }
 
         const contents = [{ parts: [{ text: systemPrompt }] }];
-
         const response = await tryGeminiWithFallback(contents);
+
         let planJson;
         try {
             let cleanText = response.data.candidates[0].content.parts[0].text;
@@ -132,15 +209,11 @@ const generatePlanInteractive = async (req, res) => {
             throw new Error("La IA no generó un formato compatible. Reintenta.");
         }
 
-        // Incrementar contador de rutinas generadas
         await prisma.user.update({
             where: { id: user.id },
-            data: {
-                rutinasGeneradasHoy: { increment: 1 }
-            }
+            data: { rutinasGeneradasHoy: { increment: 1 } }
         });
 
-        // Enviar respuesta con info del límite
         res.json({
             ...planJson,
             _meta: {
@@ -150,6 +223,7 @@ const generatePlanInteractive = async (req, res) => {
             }
         });
     } catch (error) {
+        console.error('[generatePlanInteractive]', error);
         res.status(500).json({ error: error.message });
     }
 };

@@ -391,7 +391,7 @@ export default function EntrenadorIA() {
 
         try {
             const esUltimate = user?.plan === 'Ultimate';
-            const endpoint = esUltimate ? '/generate-plan-ultimate' : '/generate-plan-interactive';
+            const endpoint = '/generate-plan-interactive';
             const body = esUltimate
                 ? {
                     details: `OBJETIVO: ${objetivoPlan}. NIVEL: ${nivelPlan}. DÍAS/SEMANA: ${diasPlan}. DIETA: ${prefAlimenticia}. METODOLOGÍA: ${metodologia}. EQUIPAMIENTO: ${equipamiento}. PRIORIDAD: ${prioridad}. DURACIÓN: ${duracion}.`,
