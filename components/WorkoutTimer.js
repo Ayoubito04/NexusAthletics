@@ -22,7 +22,6 @@ export default function WorkoutTimer({ visible, exercises = [], onClose, onCompl
     const [sessionResults, setSessionResults] = useState([]);
 
     const pulseAnim = useRef(new Animated.Value(1)).current;
-    const progressAnim = useRef(new Animated.Value(0)).current;
 
     const currentExercise = exercises[currentExerciseIndex];
     const restDuration = currentExercise?.restTime || 60; // Segundos de descanso por defecto
@@ -172,16 +171,6 @@ export default function WorkoutTimer({ visible, exercises = [], onClose, onCompl
         return `${mins.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     };
 
-    // Controles
-    const handleStartPause = () => {
-        if (!isActive) {
-            setIsActive(true);
-            setIsPaused(false);
-        } else {
-            setIsPaused(!isPaused);
-        }
-    };
-
     const handleReset = () => {
         setIsActive(false);
         setIsPaused(false);
@@ -238,147 +227,116 @@ export default function WorkoutTimer({ visible, exercises = [], onClose, onCompl
                             </LinearGradient>
                         </View>
 
-                        {/* Set Indicator */}
+                        {/* ── CONTADOR DE SERIES ── */}
                         <View style={styles.setsContainer}>
-                            <Text style={styles.setsLabel}>SERIE ACTUAL</Text>
+                            <Text style={styles.setsLabel}>
+                                {isResting ? '⏸ DESCANSANDO' : `SERIE ${currentSet} DE ${sets}`}
+                            </Text>
                             <View style={styles.setsDots}>
                                 {[...Array(sets)].map((_, index) => (
                                     <View
                                         key={index}
                                         style={[
                                             styles.setDot,
-                                            index < currentSet && styles.setDotCompleted,
-                                            index === currentSet - 1 && styles.setDotActive
+                                            index < currentSet - 1 && styles.setDotCompleted,
+                                            index === currentSet - 1 && !isResting && styles.setDotActive,
                                         ]}
                                     >
-                                        <Text style={[
-                                            styles.setDotText,
-                                            index < currentSet && styles.setDotTextCompleted
-                                        ]}>
-                                            {index + 1}
-                                        </Text>
+                                        {index < currentSet - 1
+                                            ? <Ionicons name="checkmark" size={22} color="#000" />
+                                            : <Text style={[styles.setDotText, index === currentSet - 1 && styles.setDotTextActive]}>{index + 1}</Text>
+                                        }
                                     </View>
                                 ))}
                             </View>
                         </View>
 
-                        {/* Timer Display */}
-                        <Animated.View style={[
-                            styles.timerCircle,
-                            { transform: [{ scale: pulseAnim }] }
-                        ]}>
-                            <LinearGradient
-                                colors={isResting ? ['#ff6b35', '#ff4500'] : ['#63ff15', '#4ad912']}
-                                style={styles.timerGradient}
-                            >
-                                <View style={styles.timerInner}>
-                                    <Text style={styles.timerLabel}>
-                                        {isResting ? '⏸ DESCANSO' : '⏱ EJERCICIO'}
-                                    </Text>
-                                    <Text style={styles.timerValue}>
-                                        {formatTime(seconds)}
-                                    </Text>
-                                    {isResting && (
-                                        <Text style={styles.restInfo}>
-                                            Prepárate para la siguiente serie
-                                        </Text>
-                                    )}
-                                </View>
-                            </LinearGradient>
-                        </Animated.View>
-
-                        {/* DATA LOGGING SECTION (Solo si no está descansando o si es la serie actual) */}
-                        {!isResting && isActive && (
+                        {/* ── REGISTRO PESO / REPS (siempre visible) ── */}
+                        {!isResting && (
                             <View style={styles.loggingCard}>
-                                <Text style={styles.loggingLabel}>REGISTRO DE SERIE {currentSet}</Text>
+                                <Text style={styles.loggingLabel}>SERIE {currentSet} — REGISTRA TU MARCAJE</Text>
                                 <View style={styles.loggingRow}>
                                     <View style={styles.logInputGroup}>
                                         <Text style={styles.logInputLabel}>PESO (KG)</Text>
-                                        <TextInput
-                                            style={styles.logInput}
-                                            value={currentWeight}
-                                            onChangeText={setCurrentWeight}
-                                            placeholder="0"
-                                            placeholderTextColor="#444"
-                                            keyboardType="numeric"
-                                        />
+                                        <View style={styles.logInputRow}>
+                                            <TouchableOpacity onPress={() => setCurrentWeight(w => String(Math.max(0, (parseFloat(w)||0) - 2.5)))} style={styles.logStepBtn}>
+                                                <Text style={styles.logStepText}>−</Text>
+                                            </TouchableOpacity>
+                                            <TextInput
+                                                style={styles.logInput}
+                                                value={currentWeight}
+                                                onChangeText={setCurrentWeight}
+                                                placeholder="0"
+                                                placeholderTextColor="#444"
+                                                keyboardType="numeric"
+                                                textAlign="center"
+                                            />
+                                            <TouchableOpacity onPress={() => setCurrentWeight(w => String((parseFloat(w)||0) + 2.5))} style={styles.logStepBtn}>
+                                                <Text style={styles.logStepText}>+</Text>
+                                            </TouchableOpacity>
+                                        </View>
                                     </View>
                                     <View style={styles.logInputGroup}>
                                         <Text style={styles.logInputLabel}>REPS</Text>
-                                        <TextInput
-                                            style={styles.logInput}
-                                            value={currentReps}
-                                            onChangeText={setCurrentReps}
-                                            placeholder="0"
-                                            placeholderTextColor="#444"
-                                            keyboardType="numeric"
-                                        />
+                                        <View style={styles.logInputRow}>
+                                            <TouchableOpacity onPress={() => setCurrentReps(r => String(Math.max(1, (parseInt(r)||0) - 1)))} style={styles.logStepBtn}>
+                                                <Text style={styles.logStepText}>−</Text>
+                                            </TouchableOpacity>
+                                            <TextInput
+                                                style={styles.logInput}
+                                                value={currentReps}
+                                                onChangeText={setCurrentReps}
+                                                placeholder="0"
+                                                placeholderTextColor="#444"
+                                                keyboardType="numeric"
+                                                textAlign="center"
+                                            />
+                                            <TouchableOpacity onPress={() => setCurrentReps(r => String((parseInt(r)||0) + 1))} style={styles.logStepBtn}>
+                                                <Text style={styles.logStepText}>+</Text>
+                                            </TouchableOpacity>
+                                        </View>
                                     </View>
                                 </View>
                             </View>
                         )}
 
-                        {/* Exercise Details */}
-                        <View style={styles.detailsCard}>
-                            <View style={styles.detailRow}>
-                                <Ionicons name="repeat" size={20} color="#63ff15" />
-                                <Text style={styles.detailLabel}>Objetivo Reps</Text>
-                                <Text style={styles.detailValue}>{currentExercise.reps || '12-15'}</Text>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <Ionicons name="pause-circle" size={20} color="#ff6b35" />
-                                <Text style={styles.detailLabel}>Descanso</Text>
-                                <Text style={styles.detailValue}>{restDuration}s</Text>
-                            </View>
-                        </View>
+                        {/* ── TIMER (solo durante descanso) ── */}
+                        {isResting && (
+                            <Animated.View style={[styles.timerCircle, { transform: [{ scale: pulseAnim }] }]}>
+                                <LinearGradient colors={['#ff6b35', '#ff4500']} style={styles.timerGradient}>
+                                    <View style={styles.timerInner}>
+                                        <Text style={styles.timerLabel}>⏸ DESCANSA</Text>
+                                        <Text style={styles.timerValue}>{formatTime(seconds)}</Text>
+                                        <TouchableOpacity onPress={handleRestComplete} style={styles.skipRestBtn}>
+                                            <Text style={styles.skipRestText}>SALTAR</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </LinearGradient>
+                            </Animated.View>
+                        )}
 
-                        {/* Controls */}
-                        <View style={styles.controls}>
-                            <TouchableOpacity
-                                style={styles.mainButton}
-                                onPress={handleStartPause}
-                            >
-                                <LinearGradient
-                                    colors={['#63ff15', '#4ad912']}
-                                    style={styles.mainButtonGradient}
-                                >
-                                    <Ionicons
-                                        name={!isActive ? "play" : isPaused ? "play" : "pause"}
-                                        size={32}
-                                        color="#000"
-                                    />
+                        {/* ── BOTÓN PRINCIPAL: SERIE COMPLETADA ── */}
+                        {!isResting && (
+                            <TouchableOpacity style={styles.mainButton} onPress={completeSet}>
+                                <LinearGradient colors={['#63ff15', '#4ad912']} style={styles.mainButtonGradient}>
+                                    <Ionicons name="checkmark-circle" size={32} color="#000" />
                                     <Text style={styles.mainButtonText}>
-                                        {!isActive ? 'EMPEZAR' : isPaused ? 'REANUDAR' : 'PAUSAR'}
+                                        {currentSet < sets ? `SERIE ${currentSet} COMPLETADA` : 'ÚLTIMO SET — TERMINAR'}
                                     </Text>
                                 </LinearGradient>
                             </TouchableOpacity>
+                        )}
 
-                            <View style={styles.secondaryControls}>
-                                <TouchableOpacity
-                                    style={styles.secondaryButton}
-                                    onPress={handleReset}
-                                >
-                                    <Ionicons name="refresh" size={24} color="#888" />
-                                    <Text style={styles.secondaryButtonText}>Reiniciar</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={styles.secondaryButton}
-                                    onPress={completeSet}
-                                    disabled={!isActive || isResting}
-                                >
-                                    <Ionicons name="checkmark-circle" size={24} color="#63ff15" />
-                                    <Text style={styles.secondaryButtonText}>Serie Completa</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={styles.secondaryButton}
-                                    onPress={nextExercise}
-                                >
-                                    <Ionicons name="play-skip-forward" size={24} color="#888" />
-                                    <Text style={styles.secondaryButtonText}>Siguiente</Text>
-                                </TouchableOpacity>
-                            </View>
+                        {/* ── Controles secundarios ── */}
+                        <View style={styles.secondaryControls}>
+                            <TouchableOpacity style={styles.secondaryButton} onPress={handleReset}>
+                                <Ionicons name="refresh" size={22} color="#888" />
+                                <Text style={styles.secondaryButtonText}>Reiniciar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.secondaryButton} onPress={nextExercise}>
+                                <Ionicons name="play-skip-forward" size={22} color="#888" />
+                                <Text style={styles.secondaryButtonText}>Siguiente</Text>
+                            </TouchableOpacity>
                         </View>
                     </ScrollView>
                 </KeyboardAvoidingView>
@@ -457,12 +415,14 @@ const styles = StyleSheet.create({
     },
     setsDots: {
         flexDirection: 'row',
-        gap: 12,
+        gap: 14,
+        flexWrap: 'wrap',
+        justifyContent: 'center',
     },
     setDot: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
         backgroundColor: '#1a1a1a',
         borderWidth: 2,
         borderColor: '#333',
@@ -471,19 +431,22 @@ const styles = StyleSheet.create({
     },
     setDotActive: {
         borderColor: '#63ff15',
-        backgroundColor: '#1a1a1a',
+        borderWidth: 3,
+        backgroundColor: '#0d1f0d',
     },
     setDotCompleted: {
         backgroundColor: '#63ff15',
         borderColor: '#63ff15',
     },
     setDotText: {
-        color: '#666',
-        fontSize: 18,
+        color: '#555',
+        fontSize: 20,
         fontWeight: '900',
     },
-    setDotTextCompleted: {
-        color: '#000',
+    setDotTextActive: {
+        color: '#63ff15',
+        fontSize: 20,
+        fontWeight: '900',
     },
     timerCircle: {
         width: 280,
@@ -543,7 +506,6 @@ const styles = StyleSheet.create({
     },
     loggingRow: {
         flexDirection: 'row',
-        justifyContent: 'space-around',
         gap: 15,
     },
     logInputGroup: {
@@ -551,14 +513,50 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     logInputLabel: {
-        color: '#444',
-        fontSize: 10,
-        fontWeight: '700',
-        marginBottom: 8,
+        color: '#888',
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 1,
+        marginBottom: 10,
+    },
+    logInputRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        width: '100%',
+    },
+    logStepBtn: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        backgroundColor: '#222',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#333',
+    },
+    logStepText: {
+        color: '#63ff15',
+        fontSize: 22,
+        fontWeight: '900',
+        lineHeight: 24,
+    },
+    skipRestBtn: {
+        marginTop: 12,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        paddingHorizontal: 20,
+        paddingVertical: 8,
+        borderRadius: 20,
+    },
+    skipRestText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '900',
+        letterSpacing: 1,
     },
     logInput: {
         backgroundColor: '#111',
-        width: '100%',
+        flex: 1,
         paddingVertical: 12,
         paddingHorizontal: 15,
         borderRadius: 12,

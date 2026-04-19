@@ -12,11 +12,20 @@ const BACKEND_URL = Config.BACKEND_URL;
 const { width, height } = Dimensions.get('window');
 
 const EXERCISE_IMAGES = {
-    "press_banca": "https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Bench-Press.gif",
-    "sentadilla": "https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Full-Squat.gif",
-    "peso_muerto": "https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Deadlift.gif",
-    "curls": "https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Curl.gif",
-    "default": "https://i.ibb.co/vzG7ZkL/ai-logo-a.png"
+    "press_banca":       "https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Bench-Press.gif",
+    "sentadilla":        "https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Full-Squat.gif",
+    "peso_muerto":       "https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Deadlift.gif",
+    "curls":             "https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Curl.gif",
+    "dominadas":         "https://fitnessprogramer.com/wp-content/uploads/2021/02/Pull-Up.gif",
+    "remo":              "https://fitnessprogramer.com/wp-content/uploads/2021/02/Bent-Over-Barbell-Row.gif",
+    "press_hombros":     "https://fitnessprogramer.com/wp-content/uploads/2021/06/Dumbbell-Shoulder-Press.gif",
+    "extension_triceps": "https://fitnessprogramer.com/wp-content/uploads/2021/06/Triceps-Pushdown.gif",
+    "zancadas":          "https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Lunges.gif",
+    "yoga_stretch":      "https://fitnessprogramer.com/wp-content/uploads/2021/06/Cat-Stretch.gif",
+    "cardio_burn":       "https://fitnessprogramer.com/wp-content/uploads/2021/06/Jumping-Jacks.gif",
+    "pilates_core":      "https://fitnessprogramer.com/wp-content/uploads/2021/02/Plank.gif",
+    "flex_stretch":      "https://fitnessprogramer.com/wp-content/uploads/2021/06/Single-Leg-Stretch.gif",
+    "default":           "https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Bench-Press.gif",
 };
 
 export default function ElitePlanScreen({ route, navigation }) {
@@ -187,28 +196,32 @@ export default function ElitePlanScreen({ route, navigation }) {
 
                             {/* Ejercicios */}
                             {(dia.ejercicios || []).map((ex, ei) => (
-                                <View key={ei} style={[styles.exerciseCard, { marginBottom: 10 }]}>
-                                    <Image source={{ uri: EXERCISE_IMAGES[ex.imgKey] || EXERCISE_IMAGES.default }} style={styles.exImage} />
-                                    <View style={styles.exInfo}>
+                                <View key={ei} style={[styles.exerciseCard, { marginBottom: 12 }]}>
+                                    <Image
+                                        source={{ uri: EXERCISE_IMAGES[ex.imgKey] || EXERCISE_IMAGES.default }}
+                                        style={styles.exImageBanner}
+                                        resizeMode="cover"
+                                    />
+                                    <LinearGradient colors={['transparent', 'rgba(0,0,0,0.95)']} style={styles.exOverlay}>
                                         <Text style={styles.exName}>{ex.nombre}</Text>
-                                        <View style={{ flexDirection: 'row', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
-                                            <View style={{ backgroundColor: '#1a1a1a', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
-                                                <Text style={{ color: '#63ff15', fontSize: 11, fontWeight: '800' }}>{ex.series}×{ex.reps}</Text>
+                                        <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+                                            <View style={styles.exBadgeGreen}>
+                                                <Text style={styles.exBadgeGreenText}>{ex.series}×{ex.reps}</Text>
                                             </View>
                                             {ex.rir && (
-                                                <View style={{ backgroundColor: '#1a1a1a', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
-                                                    <Text style={{ color: '#FFD700', fontSize: 11, fontWeight: '700' }}>RIR {ex.rir}</Text>
+                                                <View style={styles.exBadgeGold}>
+                                                    <Text style={styles.exBadgeGoldText}>RIR {ex.rir}</Text>
                                                 </View>
                                             )}
                                             {ex.pesoSugerido && (
-                                                <View style={{ backgroundColor: '#1a1a1a', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
-                                                    <Text style={{ color: '#a855f7', fontSize: 11, fontWeight: '700' }}>{ex.pesoSugerido}</Text>
+                                                <View style={styles.exBadgePurple}>
+                                                    <Text style={styles.exBadgePurpleText}>{ex.pesoSugerido}</Text>
                                                 </View>
                                             )}
                                         </View>
-                                        {ex.tecnica && <Text style={{ color: '#f59e0b', fontSize: 11, marginTop: 4 }}>⚡ {ex.tecnica}</Text>}
-                                        {ex.nota && <Text style={{ color: '#555', fontSize: 11, marginTop: 2, fontStyle: 'italic' }}>{ex.nota}</Text>}
-                                    </View>
+                                        {ex.tecnica && <Text style={{ color: '#f59e0b', fontSize: 11, marginTop: 5 }}>⚡ {ex.tecnica}</Text>}
+                                        {ex.nota && <Text style={styles.exNota}>{ex.nota}</Text>}
+                                    </LinearGradient>
                                 </View>
                             ))}
 
@@ -371,11 +384,33 @@ export default function ElitePlanScreen({ route, navigation }) {
                     <ScrollView style={styles.exerciseScroll} showsVerticalScrollIndicator={false}>
                         {item.ejercicios.map((ex, idx) => (
                             <View key={idx} style={styles.exerciseCard}>
-                                <Image source={{ uri: EXERCISE_IMAGES[ex.imgKey] || EXERCISE_IMAGES.default }} style={styles.exImage} />
-                                <View style={styles.exInfo}>
+                                <Image
+                                    source={{ uri: EXERCISE_IMAGES[ex.imgKey] || EXERCISE_IMAGES.default }}
+                                    style={styles.exImageBanner}
+                                    resizeMode="cover"
+                                />
+                                <LinearGradient
+                                    colors={['transparent', 'rgba(0,0,0,0.92)']}
+                                    style={styles.exOverlay}
+                                >
                                     <Text style={styles.exName}>{ex.nombre}</Text>
-                                    <View style={styles.exStats}><Text style={styles.exStatText}>{ex.series} x {ex.reps}</Text></View>
-                                </View>
+                                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+                                        <View style={styles.exBadgeGreen}>
+                                            <Text style={styles.exBadgeGreenText}>{ex.series} × {ex.reps}</Text>
+                                        </View>
+                                        {ex.rir && (
+                                            <View style={styles.exBadgeGold}>
+                                                <Text style={styles.exBadgeGoldText}>RIR {ex.rir}</Text>
+                                            </View>
+                                        )}
+                                        {ex.pesoSugerido && (
+                                            <View style={styles.exBadgePurple}>
+                                                <Text style={styles.exBadgePurpleText}>{ex.pesoSugerido}</Text>
+                                            </View>
+                                        )}
+                                    </View>
+                                    {ex.nota && <Text style={styles.exNota}>{ex.nota}</Text>}
+                                </LinearGradient>
                             </View>
                         ))}
                         <View style={{ height: 100 }} />
@@ -476,12 +511,21 @@ const styles = StyleSheet.create({
     dayNumber: { color: '#63ff15', fontSize: 12, fontWeight: '900' },
     dayTitle: { color: 'white', fontSize: 22, fontWeight: '800', marginTop: 5 },
     exerciseScroll: { flex: 1 },
-    exerciseCard: { backgroundColor: '#161616', borderRadius: 20, marginBottom: 12, flexDirection: 'row', padding: 12, alignItems: 'center' },
+    exerciseCard: { borderRadius: 20, marginBottom: 14, overflow: 'hidden', backgroundColor: '#161616' },
+    exImageBanner: { width: '100%', height: 160, backgroundColor: '#111' },
+    exOverlay: { padding: 14, paddingTop: 10 },
     exImage: { width: 60, height: 60, borderRadius: 12, backgroundColor: '#000' },
     exInfo: { flex: 1, marginLeft: 15 },
-    exName: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+    exName: { color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 0.3 },
     exStats: { marginTop: 4 },
     exStatText: { color: '#63ff15', fontSize: 11, fontWeight: '800' },
+    exBadgeGreen: { backgroundColor: 'rgba(99,255,21,0.15)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(99,255,21,0.4)' },
+    exBadgeGreenText: { color: '#63ff15', fontSize: 12, fontWeight: '900' },
+    exBadgeGold: { backgroundColor: 'rgba(255,215,0,0.12)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(255,215,0,0.35)' },
+    exBadgeGoldText: { color: '#FFD700', fontSize: 12, fontWeight: '800' },
+    exBadgePurple: { backgroundColor: 'rgba(168,85,247,0.12)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(168,85,247,0.35)' },
+    exBadgePurpleText: { color: '#a855f7', fontSize: 12, fontWeight: '800' },
+    exNota: { color: '#666', fontSize: 11, fontStyle: 'italic', marginTop: 5 },
     syncBtnMain: { borderRadius: 25, overflow: 'hidden' },
     syncBtnGrad: { padding: 25, flexDirection: 'row', alignItems: 'center', gap: 20 },
     syncBtnT: { color: 'black', fontWeight: '900', fontSize: 16 },
