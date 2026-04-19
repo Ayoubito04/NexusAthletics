@@ -40,12 +40,10 @@ yarn-error.*
 /ios
 /android
 .env
-# Backend (Moved to independent repo)
-Backend/
+# Backend — solo excluir secrets y dependencias
 Backend/node_modules/
 Backend/.env
--e 
-# Environment files
-*.env
-*.env.*
+Backend/.env.*
 Backend/firebase-service-account.json
+# Environment files
+*.env.local
