@@ -4,8 +4,7 @@
  * Ejecutar una sola vez:  node scripts/fetchExerciseGifs.js
  * Requiere: RAPIDAPI_KEY en Backend/.env
  *
- * Consulta ExerciseDB (RapidAPI) para cada ejercicio de la app,
- * guarda el mapa imgKey → gifUrl (CloudFront CDN, sin auth) en data/exercise_gifs.json
+ * Busca cada ejercicio en ExerciseDB, guarda imgKey → exerciseId en data/exercise_gifs.json
  */
 
 require('dotenv').config();
@@ -19,13 +18,12 @@ if (!API_KEY) {
     process.exit(1);
 }
 
-const BASE_URL = 'https://exercisedb.p.rapidapi.com/exercises/name';
 const HEADERS = {
     'X-RapidAPI-Key': API_KEY,
     'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com',
 };
 const OUT_PATH = path.join(__dirname, '../data/exercise_gifs.json');
-const DELAY_MS = 600; // respetar rate limit del tier gratuito
+const DELAY_MS = 800;
 
 // imgKey → nombre a buscar en ExerciseDB
 const SEARCH_MAP = {
@@ -81,12 +79,12 @@ const SEARCH_MAP = {
     curl_martillo_cable:     'cable hammer curl',
     // TRÍCEPS
     extension_triceps:       'triceps pushdown',
-    triceps_frances:         'skullcrusher',
-    patada_triceps:          'triceps kickback',
+    triceps_frances:         'ez barbell skullcrusher',
+    patada_triceps:          'dumbbell kickback',
     fondos_triceps:          'triceps dips',
     extension_polea:         'cable triceps pushdown',
     press_cerrado:           'close grip bench press',
-    extension_mancuerna:     'dumbbell triceps extension',
+    extension_mancuerna:     'dumbbell triceps extension overhead',
     // PIERNAS
     sentadilla:              'barbell squat',
     sentadilla_goblet:       'goblet squat',
@@ -101,7 +99,7 @@ const SEARCH_MAP = {
     curl_femoral:            'lying leg curl',
     curl_sentado:            'seated leg curl',
     hip_thrust:              'barbell hip thrust',
-    hip_thrust_mdb:          'hip thrust',
+    hip_thrust_mdb:          'dumbbell hip thrust',
     gemelos:                 'standing calf raise',
     gemelos_sentado:         'seated calf raise',
     step_up:                 'step up',
@@ -138,7 +136,7 @@ const SEARCH_MAP = {
     flex_stretch:            'hamstring stretch',
     yoga_warrior:            'warrior stretch',
     hip_flexor:              'hip flexor stretch',
-    foam_roller:             'foam rolling',
+    foam_roller:             'foam roller',
     estiramiento_isquios:    'hamstring stretch',
     estiramiento_cuadriceps: 'quadriceps stretch',
     estiramiento_pecho:      'chest stretch',
@@ -148,25 +146,15 @@ function sleep(ms) {
     return new Promise(r => setTimeout(r, ms));
 }
 
-async function fetchGif(searchName) {
-    try {
-        const url = `${BASE_URL}/${encodeURIComponent(searchName)}?limit=1&offset=0`;
-        const res = await axios.get(url, { headers: HEADERS, timeout: 10000 });
-        const exercises = res.data;
-        if (Array.isArray(exercises) && exercises.length > 0) {
-            return exercises[0].gifUrl || null;
-        }
-        return null;
-    } catch (e) {
-        const status = e.response?.status;
-        if (status === 429) throw new Error('RATE_LIMIT');
-        console.warn(`  ⚠️  Error fetching "${searchName}": ${e.message}`);
-        return null;
-    }
+async function searchExercise(name) {
+    const url = `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(name)}?limit=1&offset=0`;
+    const res = await axios.get(url, { headers: HEADERS, timeout: 10000 });
+    const list = res.data;
+    if (Array.isArray(list) && list.length > 0) return list[0].id;
+    return null;
 }
 
 async function main() {
-    // Cargar resultados previos para no volver a buscar los ya completados
     let existing = {};
     if (fs.existsSync(OUT_PATH)) {
         try { existing = JSON.parse(fs.readFileSync(OUT_PATH, 'utf8')); } catch {}
@@ -176,44 +164,38 @@ async function main() {
     const keys = Object.keys(SEARCH_MAP);
     const pending = keys.filter(k => !result[k]);
 
-    console.log(`\n🏋️  fetchExerciseGifs — ${keys.length} ejercicios totales, ${pending.length} pendientes\n`);
+    console.log(`\n🏋️  fetchExerciseGifs — ${keys.length} totales, ${pending.length} pendientes\n`);
 
     for (let i = 0; i < pending.length; i++) {
         const imgKey = pending[i];
         const searchName = SEARCH_MAP[imgKey];
         process.stdout.write(`[${i + 1}/${pending.length}] ${imgKey} → "${searchName}" ... `);
 
-        let gifUrl = null;
-        let retries = 0;
-
-        while (retries < 3) {
-            try {
-                gifUrl = await fetchGif(searchName);
-                break;
-            } catch (e) {
-                if (e.message === 'RATE_LIMIT') {
-                    console.log('⏳ Rate limit — esperando 5s...');
-                    await sleep(5000);
-                    retries++;
-                } else break;
+        try {
+            const id = await searchExercise(searchName);
+            if (id) {
+                result[imgKey] = id;
+                console.log(`✅ id:${id}`);
+            } else {
+                console.log('❌ no encontrado');
             }
+        } catch (e) {
+            const status = e.response?.status;
+            if (status === 429) {
+                console.log('⏳ Rate limit — esperando 10s...');
+                await sleep(10000);
+                i--; // reintentar este ejercicio
+                continue;
+            }
+            console.log(`❌ error ${status || e.message}`);
         }
 
-        if (gifUrl) {
-            result[imgKey] = gifUrl;
-            console.log(`✅ ${gifUrl.slice(0, 60)}...`);
-        } else {
-            console.log('❌ no encontrado');
-        }
-
-        // Guardar progreso incremental
         fs.writeFileSync(OUT_PATH, JSON.stringify(result, null, 2));
-
         if (i < pending.length - 1) await sleep(DELAY_MS);
     }
 
     const found = Object.keys(result).length;
-    console.log(`\n✅ Completado: ${found}/${keys.length} ejercicios con GIF`);
+    console.log(`\n✅ Completado: ${found}/${keys.length} ejercicios con ID`);
     console.log(`📄 Guardado en: ${OUT_PATH}\n`);
 }
 

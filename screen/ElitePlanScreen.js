@@ -324,7 +324,7 @@ export default function ElitePlanScreen({ route, navigation }) {
                                 {(dia.ejercicios || []).map((ex, ei) => (
                                     <View key={ei} style={styles.exGridCard}>
                                         <Image
-                                            source={{ uri: apiGifs[ex.imgKey] || EXERCISE_IMAGES[ex.imgKey] || EXERCISE_IMAGES.default }}
+                                            source={{ uri: apiGifs[ex.imgKey] ? `${BACKEND_URL}/exercises/gif/${apiGifs[ex.imgKey]}` : (EXERCISE_IMAGES[ex.imgKey] || EXERCISE_IMAGES.default) }}
                                             style={styles.exGridImage}
                                             resizeMode="cover"
                                         />
@@ -510,7 +510,7 @@ export default function ElitePlanScreen({ route, navigation }) {
                             {item.ejercicios.map((ex, idx) => (
                                 <View key={idx} style={styles.exGridCard}>
                                     <Image
-                                        source={{ uri: apiGifs[ex.imgKey] || EXERCISE_IMAGES[ex.imgKey] || EXERCISE_IMAGES.default }}
+                                        source={{ uri: apiGifs[ex.imgKey] ? `${BACKEND_URL}/exercises/gif/${apiGifs[ex.imgKey]}` : (EXERCISE_IMAGES[ex.imgKey] || EXERCISE_IMAGES.default) }}
                                         style={styles.exGridImage}
                                         resizeMode="cover"
                                     />
