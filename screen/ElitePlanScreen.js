@@ -328,7 +328,7 @@ export default function ElitePlanScreen({ route, navigation }) {
                                             style={styles.exGridImage}
                                             resizeMode="cover"
                                         />
-                                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.97)']} style={styles.exGridOverlay}>
+                                        <View style={styles.exGridOverlay}>
                                             <Text style={styles.exGridName} numberOfLines={2}>{ex.nombre}</Text>
                                             <View style={styles.exBadgeRow}>
                                                 <View style={styles.exBadgeGreen}>
@@ -344,7 +344,7 @@ export default function ElitePlanScreen({ route, navigation }) {
                                                 <Text style={{ color: '#a855f7', fontSize: 10, fontWeight: '800', marginTop: 3 }}>{ex.pesoSugerido}</Text>
                                             )}
                                             {ex.tecnica && <Text style={{ color: '#f59e0b', fontSize: 10, marginTop: 3 }}>⚡ {ex.tecnica}</Text>}
-                                        </LinearGradient>
+                                        </View>
                                     </View>
                                 ))}
                             </View>
@@ -514,10 +514,7 @@ export default function ElitePlanScreen({ route, navigation }) {
                                         style={styles.exGridImage}
                                         resizeMode="cover"
                                     />
-                                    <LinearGradient
-                                        colors={['transparent', 'rgba(0,0,0,0.97)']}
-                                        style={styles.exGridOverlay}
-                                    >
+                                    <View style={styles.exGridOverlay}>
                                         <Text style={styles.exGridName} numberOfLines={2}>{ex.nombre}</Text>
                                         <View style={styles.exBadgeRow}>
                                             <View style={styles.exBadgeGreen}>
@@ -532,7 +529,7 @@ export default function ElitePlanScreen({ route, navigation }) {
                                         {ex.pesoSugerido && (
                                             <Text style={{ color: '#a855f7', fontSize: 10, fontWeight: '800', marginTop: 3 }}>{ex.pesoSugerido}</Text>
                                         )}
-                                    </LinearGradient>
+                                    </View>
                                 </View>
                             ))}
                         </View>
@@ -634,11 +631,11 @@ const styles = StyleSheet.create({
     dayNumber: { color: '#63ff15', fontSize: 12, fontWeight: '900' },
     dayTitle: { color: 'white', fontSize: 22, fontWeight: '800', marginTop: 5 },
     exerciseScroll: { flex: 1 },
-    exGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-    exGridCard: { width: '48%', borderRadius: 16, overflow: 'hidden', backgroundColor: '#161616' },
-    exGridImage: { width: '100%', height: 130, backgroundColor: '#111' },
-    exGridOverlay: { padding: 10, paddingTop: 6 },
-    exGridName: { color: '#fff', fontSize: 12, fontWeight: '900', lineHeight: 16, marginBottom: 5 },
+    exGrid: { flexDirection: 'column', gap: 8 },
+    exGridCard: { width: '100%', borderRadius: 14, overflow: 'hidden', backgroundColor: '#161616', flexDirection: 'row', alignItems: 'center' },
+    exGridImage: { width: 72, height: 72, backgroundColor: '#111' },
+    exGridOverlay: { flex: 1, padding: 10 },
+    exGridName: { color: '#fff', fontSize: 13, fontWeight: '900', lineHeight: 17, marginBottom: 5 },
     exBadgeRow: { flexDirection: 'row', gap: 5, flexWrap: 'wrap' },
     exerciseCard: { borderRadius: 20, marginBottom: 14, overflow: 'hidden', backgroundColor: '#161616' },
     exImageBanner: { width: '100%', height: 110, backgroundColor: '#111' },
