@@ -128,7 +128,8 @@ startServer();
 
 // --- ROUTES MODULARES ---
 let authRoutes, userRoutes, activityRoutes, chatRoutes, communityRoutes,
-    paymentRoutes, planRoutes, adminRoutes, socialRoutes, voiceRoutes, strengthRoutes, rankingRoutes;
+    paymentRoutes, planRoutes, adminRoutes, socialRoutes, voiceRoutes, strengthRoutes, rankingRoutes,
+    exerciseRoutes;
 
 try { authRoutes = require('./src/routes/authRoutes'); console.log('✅ authRoutes cargado'); }
 catch (e) { console.error('❌ authRoutes FALLÓ:', e.message); }
@@ -144,6 +145,7 @@ try { socialRoutes = require('./src/routes/socialRoutes'); } catch (e) { console
 try { voiceRoutes = require('./src/routes/voiceRoutes'); } catch (e) { console.error('❌ voiceRoutes FALLÓ:', e.message); }
 try { strengthRoutes = require('./src/routes/strengthRoutes'); } catch (e) { console.error('❌ strengthRoutes FALLÓ:', e.message); }
 try { rankingRoutes = require('./src/routes/rankingRoutes'); } catch (e) { console.error('❌ rankingRoutes FALLÓ:', e.message); }
+try { exerciseRoutes = require('./src/routes/exerciseRoutes'); } catch (e) { console.error('❌ exerciseRoutes FALLÓ:', e.message); }
 
 if (authRoutes) app.use('/auth', authRoutes);
 if (userRoutes) app.use('/user', userRoutes);
@@ -157,6 +159,7 @@ if (socialRoutes) app.use('/', socialRoutes);
 if (voiceRoutes) app.use('/voice', voiceRoutes);
 if (strengthRoutes) app.use('/strength', strengthRoutes);
 if (rankingRoutes) app.use('/ranking', rankingRoutes);
+if (exerciseRoutes) app.use('/', exerciseRoutes);
 
 // --- CUALQUIER OTRA RUTA QUE QUEDE EN INDEX.JS ---
 // (Aquí irán pagos, admin y PDF por ahora hasta que los movamos)

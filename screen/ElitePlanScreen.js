@@ -130,12 +130,35 @@ const EXERCISE_IMAGES = {
     "default":                 `${F}/2021/02/Barbell-Bench-Press.gif`,
 };
 
+const GIF_CACHE_KEY = 'nexus_exercise_gifs_v1';
+
 export default function ElitePlanScreen({ route, navigation }) {
     const { plan } = route.params;
     const [activeIndex, setActiveIndex] = useState(0);
     const [guardado, setGuardado] = useState(false);
     const [agendado, setAgendado] = useState(false);
-    const [semanaActiva, setSemanaActiva] = useState(0); // para plan Ultimate
+    const [semanaActiva, setSemanaActiva] = useState(0);
+    const [apiGifs, setApiGifs] = useState({});
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const cached = await AsyncStorage.getItem(GIF_CACHE_KEY);
+                if (cached) {
+                    setApiGifs(JSON.parse(cached));
+                }
+                // Siempre intenta refrescar en background
+                const res = await fetch(`${BACKEND_URL}/exercises/gifs`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Object.keys(data).length > 0) {
+                        setApiGifs(data);
+                        await AsyncStorage.setItem(GIF_CACHE_KEY, JSON.stringify(data));
+                    }
+                }
+            } catch {}
+        })();
+    }, []);
 
     // NexusAlert State
     const [alert, setAlert] = useState({ visible: false, title: '', message: '', type: 'info', onConfirm: null });
@@ -301,7 +324,7 @@ export default function ElitePlanScreen({ route, navigation }) {
                                 {(dia.ejercicios || []).map((ex, ei) => (
                                     <View key={ei} style={styles.exGridCard}>
                                         <Image
-                                            source={{ uri: EXERCISE_IMAGES[ex.imgKey] || EXERCISE_IMAGES.default }}
+                                            source={{ uri: apiGifs[ex.imgKey] || EXERCISE_IMAGES[ex.imgKey] || EXERCISE_IMAGES.default }}
                                             style={styles.exGridImage}
                                             resizeMode="cover"
                                         />
@@ -487,7 +510,7 @@ export default function ElitePlanScreen({ route, navigation }) {
                             {item.ejercicios.map((ex, idx) => (
                                 <View key={idx} style={styles.exGridCard}>
                                     <Image
-                                        source={{ uri: EXERCISE_IMAGES[ex.imgKey] || EXERCISE_IMAGES.default }}
+                                        source={{ uri: apiGifs[ex.imgKey] || EXERCISE_IMAGES[ex.imgKey] || EXERCISE_IMAGES.default }}
                                         style={styles.exGridImage}
                                         resizeMode="cover"
                                     />
