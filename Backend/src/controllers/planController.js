@@ -215,16 +215,20 @@ CARDIO/FLEX: cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor, 
         }
 
         const contents = [{ parts: [{ text: systemPrompt }] }];
-        const response = await tryGeminiWithFallback(contents);
+        const response = await tryGeminiWithFallback(contents, { maxOutputTokens: 8192 });
 
         let planJson;
         try {
-            let cleanText = response.data.candidates[0].content.parts[0].text;
-            cleanText = cleanText.replace(/```json/g, '').replace(/```/g, '').trim();
+            let cleanText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            cleanText = cleanText.replace(/```json/gi, '').replace(/```/g, '').trim();
+            // Arreglar JSON truncado: cerrar llaves/corchetes si faltan
+            const openBraces = (cleanText.match(/\{/g) || []).length;
+            const closeBraces = (cleanText.match(/\}/g) || []).length;
+            if (openBraces > closeBraces) cleanText += '}'.repeat(openBraces - closeBraces);
             planJson = JSON.parse(cleanText);
         } catch (e) {
-            console.error("Error parsing AI JSON:", e);
-            throw new Error("La IA no generó un formato compatible. Reintenta.");
+            console.error("Error parsing AI JSON:", e.message);
+            throw new Error("La IA no devolvió un formato válido. Inténtalo de nuevo.");
         }
 
         await prisma.user.update({
