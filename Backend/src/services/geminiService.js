@@ -1,89 +1,47 @@
 const axios = require('axios');
 
-async function callGeminiWithRetry(url, payload, maxRetries = 5) {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            const response = await axios.post(url, payload);
-            return response;
-        } catch (error) {
-            const errorMessage = error.response?.data?.error?.message || error.message || "";
-            const isQuotaExceeded = errorMessage.includes('Quota exceeded');
-            const isRateLimit = error.response?.status === 429 || errorMessage.includes('rate limit') || error.response?.status === 503;
-
-            // Log detallado del error
-            console.error(`[Gemini Error] Status: ${error.response?.status}, Message: ${errorMessage}`);
-
-            if (isQuotaExceeded) {
-                console.log(`[Gemini] Cuota diaria agotada para este modelo.`);
-                const err = new Error("DAILY_QUOTA_EXHAUSTED");
-                err.status = 429;
-                throw err;
-            }
-
-            if (isRateLimit) {
-                const retryAfterMatch = errorMessage.match(/([\d.]+)s/);
-                let waitTime = retryAfterMatch ? Math.ceil(parseFloat(retryAfterMatch[1])) : Math.pow(2, attempt) * 2;
-
-                if (attempt < maxRetries) {
-                    console.log(`[Gemini] Servidor saturado (${error.response?.status}). Reintentando en ${waitTime}s... (Intento ${attempt}/${maxRetries})`);
-                    await new Promise(resolve => setTimeout(resolve, waitTime * 1000));
-                } else {
-                    throw error;
-                }
-            } else {
-                throw error;
-            }
-        }
-    }
-}
+const GEMINI_TIMEOUT_MS = 55000; // 55s — justo por debajo del timeout de Render (60s)
 
 async function tryGeminiWithFallback(contents, generationConfig = {}) {
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY no configurada");
 
-    if (!GEMINI_API_KEY) {
-        throw new Error("GEMINI_API_KEY no encontrada en variables de entorno");
-    }
-
-    const preferredModel = process.env.GEMINI_MODEL || "gemini-2.0-flash";
-    const models = [
+    const preferredModel = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+    const models = [...new Set([
         preferredModel,
-        "gemini-2.5-pro",
-        "gemini-2.0-flash",
-        "gemini-pro-latest",
-        "gemini-2.0-flash-lite"
-    ];
+        'gemini-2.0-flash',
+        'gemini-2.0-flash-lite',
+        'gemini-1.5-flash',
+        'gemini-1.5-pro',
+    ])];
 
-    const uniqueModels = [...new Set(models)];
-    let lastError = null;
-
-    for (const model of uniqueModels) {
+    for (const model of models) {
+        console.log(`[Nexus AI] Intentando: ${model}`);
         try {
-            const cleanModelName = model.startsWith('models/') ? model.split('/')[1] : model;
-            console.log(`[Nexus AI] Intentando: ${cleanModelName}`);
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModelName}:generateContent?key=${GEMINI_API_KEY}`;
-
-            const response = await callGeminiWithRetry(url, { contents, generationConfig }, 2);
-            console.log(`[Nexus AI] ✓ Éxito con ${cleanModelName}`);
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+            const response = await axios.post(url, { contents, generationConfig }, { timeout: GEMINI_TIMEOUT_MS });
+            console.log(`[Nexus AI] ✓ Éxito con ${model}`);
             return response;
         } catch (error) {
             lastError = error;
-            const errorMsg = error.response?.data?.error?.message || error.message;
-            console.log(`[Nexus AI] ✗ Falló ${model}: ${errorMsg}`);
-
-            // Si es cuota, rate limit o servidor saturado → probar siguiente modelo
             const status = error.response?.status;
-            if (error.message === "DAILY_QUOTA_EXHAUSTED" || status === 429 || status === 503 || status === 500) {
-                console.log(`[Nexus AI] Probando siguiente modelo...`);
+            const msg = error.response?.data?.error?.message || error.message || '';
+            console.log(`[Nexus AI] ✗ ${model} → ${status || 'timeout'}: ${msg.slice(0, 80)}`);
+
+            const isQuotaExhausted = msg.includes('Quota exceeded') || msg.includes('quota');
+            const isUnavailable = status === 503 || status === 500 || status === 429;
+            const isTimeout = error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT';
+
+            if (isQuotaExhausted || isUnavailable || isTimeout) {
+                if (status === 429) await new Promise(r => setTimeout(r, 2000));
                 continue;
-            } else {
-                throw error;
             }
+
+            throw error;
         }
     }
 
-    // Si todos los modelos fallan
-    console.error(`[Nexus AI] FALLO TOTAL. Último error:`, lastError?.message);
-    throw new Error(`Todos los modelos de Gemini fallaron. Último error: ${lastError?.message || 'Desconocido'}`);
+    throw new Error('Servicio de IA temporalmente no disponible. Inténtalo de nuevo en unos minutos.');
 }
 
 module.exports = { tryGeminiWithFallback };
