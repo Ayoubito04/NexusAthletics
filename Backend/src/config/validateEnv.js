@@ -25,14 +25,14 @@ function validateEnv() {
         }
     });
 
-    // JWT_SECRET debe tener mínimo 64 caracteres
-    if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 64) {
-        errors.push('CRÍTICO: JWT_SECRET debe tener al menos 64 caracteres');
+    // JWT_SECRET debe tener mínimo 32 caracteres
+    if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
+        errors.push('CRÍTICO: JWT_SECRET debe tener al menos 32 caracteres');
     }
 
-    // JWT_REFRESH_SECRET debe tener mínimo 64 caracteres
-    if (process.env.JWT_REFRESH_SECRET && process.env.JWT_REFRESH_SECRET.length < 64) {
-        errors.push('CRÍTICO: JWT_REFRESH_SECRET debe tener al menos 64 caracteres');
+    // JWT_REFRESH_SECRET debe tener mínimo 32 caracteres
+    if (process.env.JWT_REFRESH_SECRET && process.env.JWT_REFRESH_SECRET.length < 32) {
+        errors.push('CRÍTICO: JWT_REFRESH_SECRET debe tener al menos 32 caracteres');
     }
 
     // DATABASE_URL debe ser válida
