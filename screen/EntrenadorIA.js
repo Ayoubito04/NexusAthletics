@@ -52,6 +52,58 @@ const TypingIndicator = () => {
     );
 };
 
+const PLAN_STEPS = [
+    'Analizando tu perfil atlético...',
+    'Diseñando periodización inteligente...',
+    'Calculando volumen y cargas...',
+    'Seleccionando ejercicios óptimos...',
+    'Ajustando macros y nutrición...',
+    'Preparando tu plan maestro...',
+];
+
+const PlanGeneratingBanner = ({ isUltimate }) => {
+    const [stepIdx, setStepIdx] = useState(0);
+    const fadeAnim = useRef(new Animated.Value(1)).current;
+    const barAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.timing(barAnim, { toValue: 1, duration: PLAN_STEPS.length * 4000, useNativeDriver: false })
+        ).start();
+
+        const interval = setInterval(() => {
+            Animated.sequence([
+                Animated.timing(fadeAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+                Animated.timing(fadeAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+            ]).start();
+            setStepIdx(i => (i + 1) % PLAN_STEPS.length);
+        }, 3500);
+        return () => clearInterval(interval);
+    }, []);
+
+    const color = isUltimate ? '#FFD700' : '#63ff15';
+    const barWidth = barAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
+
+    return (
+        <View style={{ marginHorizontal: 16, marginBottom: 20, borderRadius: 16, backgroundColor: '#111', borderWidth: 1, borderColor: isUltimate ? 'rgba(255,215,0,0.25)' : 'rgba(99,255,21,0.2)', overflow: 'hidden' }}>
+            <View style={{ padding: 14 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                    <ActivityIndicator size="small" color={color} />
+                    <Text style={{ color, fontWeight: '900', fontSize: 12, letterSpacing: 1 }}>
+                        {isUltimate ? '👑 GENERANDO MESOCICLO ULTIMATE' : '⚡ GENERANDO PLAN ÉLITE'}
+                    </Text>
+                </View>
+                <Animated.Text style={{ color: '#ccc', fontSize: 13, opacity: fadeAnim }}>
+                    {PLAN_STEPS[stepIdx]}
+                </Animated.Text>
+            </View>
+            <View style={{ height: 3, backgroundColor: '#1a1a1a' }}>
+                <Animated.View style={{ height: 3, backgroundColor: color, width: barWidth, borderRadius: 2 }} />
+            </View>
+        </View>
+    );
+};
+
 const MessageBubble = React.memo(({ item: m }) => (
     <View style={[styles.messageRow, m.sender === 'usuario' ? styles.userMessageRow : styles.iaMessageRow]}>
         {m.sender === 'ia' && (
@@ -132,6 +184,7 @@ export default function EntrenadorIA() {
     const [prioridad, setPrioridad] = useState('Equilibrado');
     const [duracion, setDuracion] = useState('90 min');
     const [equipamiento, setEquipamiento] = useState('Sin Restricción');
+    const [generandoPlan, setGenerandoPlan] = useState(false);
     const [entorno, setEntorno] = useState('Sin Preferencia');
     const [periodi, setPeriodi] = useState('Lineal (Clásica)');
     const [tecnicas, setTecnicas] = useState([]);
@@ -394,6 +447,7 @@ export default function EntrenadorIA() {
         const token = await AsyncStorage.getItem('token');
         setModalConfigPlan(false);
         setCargando(true);
+        setGenerandoPlan(true);
 
         try {
             const esUltimate = user?.plan === 'Ultimate';
@@ -434,6 +488,7 @@ export default function EntrenadorIA() {
             const planData = await response.json();
 
             setCargando(false);
+            setGenerandoPlan(false);
             setMensajes(prev => [...prev, { text: "✨ ¡Tu Plan Maestro está listo! Pulsa el botón para verlo.", sender: 'ia' }]);
 
             navigation.navigate('ElitePlanScreen', { plan: planData });
@@ -442,6 +497,7 @@ export default function EntrenadorIA() {
             console.error("[Visual Plan Error]:", error);
             showAlert("Error", error.message || "No se pudo generar la presentación interactiva.", "error");
             setCargando(false);
+            setGenerandoPlan(false);
         }
     };
 
@@ -692,7 +748,11 @@ export default function EntrenadorIA() {
                             </View>
                         )
                     }
-                    ListFooterComponent={cargando ? <TypingIndicator /> : null}
+                    ListFooterComponent={
+                        generandoPlan
+                            ? <PlanGeneratingBanner isUltimate={user?.plan === 'Ultimate'} />
+                            : cargando ? <TypingIndicator /> : null
+                    }
                     ListEmptyComponent={<WelcomeState onChipPress={(chip) => setInputUsuario(chip)} />}
                     contentContainerStyle={{ paddingBottom: 20, flexGrow: 1 }}
                 />
