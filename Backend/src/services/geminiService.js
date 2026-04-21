@@ -70,12 +70,12 @@ async function tryGeminiWithFallback(contents, generationConfig = {}) {
             const errorMsg = error.response?.data?.error?.message || error.message;
             console.log(`[Nexus AI] ✗ Falló ${model}: ${errorMsg}`);
 
-            // Si es cuota agotada, intentar con el siguiente modelo inmediatamente
-            if (error.message === "DAILY_QUOTA_EXHAUSTED" || error.response?.status === 429) {
+            // Si es cuota, rate limit o servidor saturado → probar siguiente modelo
+            const status = error.response?.status;
+            if (error.message === "DAILY_QUOTA_EXHAUSTED" || status === 429 || status === 503 || status === 500) {
                 console.log(`[Nexus AI] Probando siguiente modelo...`);
                 continue;
             } else {
-                // Para otros errores, lanzar inmediatamente
                 throw error;
             }
         }
