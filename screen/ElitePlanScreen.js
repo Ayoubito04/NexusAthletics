@@ -240,6 +240,10 @@ export default function ElitePlanScreen({ route, navigation }) {
                         currentRoutines[dateKey] = {
                             title: diaPlan.titulo,
                             isElite: true,
+                            isUltimate: true,
+                            fase: semana.tipo,
+                            rpe: semana.rpe,
+                            semanaNum: semana.semana,
                             planId: plan.resumen?.objetivo || 'ai-ultimate',
                             exercises: (diaPlan.ejercicios || []).map((ex, i) => mapEx(ex, dateKey, i)),
                         };
