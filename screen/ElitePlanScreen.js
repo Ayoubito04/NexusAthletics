@@ -190,234 +190,24 @@ export default function ElitePlanScreen({ route, navigation }) {
         );
     }
 
-    // ─── Render ULTIMATE ────────────────────────────────────────────────────
-    if (plan.esUltimate && plan.semanas) {
-        const semana = plan.semanas[semanaActiva] || plan.semanas[0];
-        const FASE_COLORS = {
-            'Acumulación': ['#3b82f6','#1d4ed8'],
-            'Intensificación': ['#f59e0b','#b45309'],
-            'Peak': ['#ef4444','#991b1b'],
-            'Deload': ['#22c55e','#15803d'],
-        };
-        const faseColors = FASE_COLORS[semana?.tipo] || ['#63ff15','#38c000'];
-
-        return (
-            <SafeAreaView style={styles.container}>
-                <View style={styles.topNav}>
-                    <TouchableOpacity onPress={() => navigation.goBack()}><Ionicons name="close" size={30} color="white" /></TouchableOpacity>
-                    <Text style={styles.navTitle}>NEXUS <Text style={{ color: '#FFD700' }}>ULTIMATE</Text></Text>
-                    <View style={{ width: 30 }} />
-                </View>
-
-                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-                    {/* Resumen + análisis */}
-                    <LinearGradient colors={['#FFD70015','transparent']} style={{ padding: 20 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                            <Text style={{ fontSize: 18 }}>👑</Text>
-                            <Text style={[styles.slideLabel, { color: '#FFD700' }]}>MESOCICLO ULTIMATE • {plan.resumen?.duracion}</Text>
-                        </View>
-                        <Text style={[styles.slideTitle, { fontSize: 24, marginBottom: 12 }]}>{plan.resumen?.objetivo?.toUpperCase()}</Text>
-                        <View style={[styles.summaryCard, { borderLeftColor: '#FFD700' }]}>
-                            <Text style={styles.summaryText}>{plan.resumen?.estrategia}</Text>
-                        </View>
-
-                        {/* Macros */}
-                        <View style={styles.macroGrid}>
-                            {Object.entries(plan.resumen?.macros || {}).map(([k, v]) => (
-                                <View key={k} style={styles.macroItem}>
-                                    <Text style={[styles.macroVal, { color: '#FFD700' }]}>{v}</Text>
-                                    <Text style={styles.macroKey}>{k.toUpperCase()}</Text>
-                                </View>
-                            ))}
-                        </View>
-
-                        {/* Nutrición timing */}
-                        {plan.resumen?.nutricionTiming && (
-                            <View style={[styles.summaryCard, { marginTop: 14, borderLeftColor: '#63ff15' }]}>
-                                <Text style={{ color: '#63ff15', fontWeight: '800', fontSize: 11, letterSpacing: 1, marginBottom: 10 }}>⏱ NUTRICIÓN TIMING</Text>
-                                {[['🕐 Pre-Entreno', plan.resumen.nutricionTiming.preWorkout],
-                                  ['🏋️ Post-Entreno', plan.resumen.nutricionTiming.postWorkout],
-                                  ['🌙 Antes de Dormir', plan.resumen.nutricionTiming.antesDormir]
-                                ].map(([label, val]) => val ? (
-                                    <View key={label} style={{ marginBottom: 6 }}>
-                                        <Text style={{ color: '#888', fontSize: 11, fontWeight: '700' }}>{label}</Text>
-                                        <Text style={{ color: '#ccc', fontSize: 13, lineHeight: 18 }}>{val}</Text>
-                                    </View>
-                                ) : null)}
-                            </View>
-                        )}
-
-                        {/* Análisis de fuerza */}
-                        {plan.analisis && (
-                            <View style={[styles.summaryCard, { marginTop: 14, borderLeftColor: '#a855f7' }]}>
-                                <Text style={{ color: '#a855f7', fontWeight: '800', fontSize: 11, letterSpacing: 1, marginBottom: 10 }}>🔬 ANÁLISIS PERSONALIZADO</Text>
-                                <Text style={{ color: '#888', fontSize: 11, fontWeight: '700', marginBottom: 4 }}>✅ PUNTOS FUERTES</Text>
-                                {(plan.analisis.puntosFuertes || []).map((p, i) => (
-                                    <Text key={i} style={{ color: '#ccc', fontSize: 13, marginBottom: 3 }}>• {p}</Text>
-                                ))}
-                                <Text style={{ color: '#888', fontSize: 11, fontWeight: '700', marginTop: 8, marginBottom: 4 }}>⚠️ A MEJORAR</Text>
-                                {(plan.analisis.puntosMejora || []).map((p, i) => (
-                                    <Text key={i} style={{ color: '#ccc', fontSize: 13, marginBottom: 3 }}>• {p}</Text>
-                                ))}
-                                <Text style={{ color: '#888', fontSize: 11, fontWeight: '700', marginTop: 8, marginBottom: 4 }}>🎯 AJUSTES APLICADOS</Text>
-                                <Text style={{ color: '#ccc', fontSize: 13, lineHeight: 18 }}>{plan.analisis.ajustes}</Text>
-                            </View>
-                        )}
-                    </LinearGradient>
-
-                    {/* Selector de semanas */}
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 12 }}>
-                        {plan.semanas.map((s, i) => {
-                            const colors = FASE_COLORS[s.tipo] || ['#63ff15','#38c000'];
-                            const active = semanaActiva === i;
-                            return (
-                                <TouchableOpacity key={i} onPress={() => setSemanaActiva(i)}>
-                                    {active
-                                        ? <LinearGradient colors={colors} style={{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20 }}>
-                                            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>SEM {s.semana}</Text>
-                                            <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 10, fontWeight: '700' }}>{s.tipo}</Text>
-                                          </LinearGradient>
-                                        : <View style={{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, borderWidth: 1, borderColor: '#2a2a2a' }}>
-                                            <Text style={{ color: '#555', fontWeight: '700', fontSize: 12 }}>SEM {s.semana}</Text>
-                                            <Text style={{ color: '#444', fontSize: 10 }}>{s.tipo}</Text>
-                                          </View>
-                                    }
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </ScrollView>
-
-                    {/* Badge de fase */}
-                    <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
-                        <LinearGradient colors={faseColors} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 16 }}>
-                            <View>
-                                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>Semana {semana?.semana} — {semana?.tipo}</Text>
-                                <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, marginTop: 2 }}>{semana?.descripcion}</Text>
-                            </View>
-                            <View style={{ marginLeft: 'auto', alignItems: 'center' }}>
-                                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 18 }}>{semana?.rpe}</Text>
-                                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 9, fontWeight: '800' }}>RPE</Text>
-                            </View>
-                        </LinearGradient>
-                    </View>
-
-                    {/* Días de la semana activa */}
-                    {(semana?.dias || []).map((dia, di) => (
-                        <View key={di} style={{ marginHorizontal: 20, marginBottom: 20 }}>
-                            <View style={styles.dayBanner}>
-                                <Text style={styles.dayNumber}>DÍA {dia.dia}</Text>
-                                <Text style={styles.dayTitle}>{dia.titulo}</Text>
-                            </View>
-
-                            {/* Calentamiento */}
-                            {dia.calentamiento?.length > 0 && (
-                                <View style={{ backgroundColor: '#0d1f0d', borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(99,255,21,0.15)' }}>
-                                    <Text style={{ color: '#63ff15', fontSize: 11, fontWeight: '800', letterSpacing: 1, marginBottom: 8 }}>🔥 CALENTAMIENTO</Text>
-                                    {dia.calentamiento.map((c, ci) => (
-                                        <Text key={ci} style={{ color: '#888', fontSize: 13, marginBottom: 4 }}>• {c}</Text>
-                                    ))}
-                                </View>
-                            )}
-
-                            {/* Ejercicios — grid 2 columnas */}
-                            <View style={styles.exGrid}>
-                                {(dia.ejercicios || []).map((ex, ei) => (
-                                    <View key={ei} style={styles.exGridCard}>
-                                        <Image
-                                            source={{ uri: apiGifs[ex.imgKey] ? `${BACKEND_URL}/exercises/gif/${apiGifs[ex.imgKey]}` : (EXERCISE_IMAGES[ex.imgKey] || EXERCISE_IMAGES.default) }}
-                                            style={styles.exGridImage}
-                                            resizeMode="cover"
-                                        />
-                                        <View style={styles.exGridOverlay}>
-                                            <Text style={styles.exGridName} numberOfLines={2}>{ex.nombre}</Text>
-                                            <View style={styles.exBadgeRow}>
-                                                <View style={styles.exBadgeGreen}>
-                                                    <Text style={styles.exBadgeGreenText}>{ex.series}×{ex.reps}</Text>
-                                                </View>
-                                                {ex.rir && (
-                                                    <View style={styles.exBadgeGold}>
-                                                        <Text style={styles.exBadgeGoldText}>RIR {ex.rir}</Text>
-                                                    </View>
-                                                )}
-                                            </View>
-                                            {ex.pesoSugerido && (
-                                                <Text style={{ color: '#a855f7', fontSize: 10, fontWeight: '800', marginTop: 3 }}>{ex.pesoSugerido}</Text>
-                                            )}
-                                            {ex.tecnica && <Text style={{ color: '#f59e0b', fontSize: 10, marginTop: 3 }}>⚡ {ex.tecnica}</Text>}
-                                        </View>
-                                    </View>
-                                ))}
-                            </View>
-
-                            {/* Vuelta a la calma */}
-                            {dia.vueltaCalma?.length > 0 && (
-                                <View style={{ backgroundColor: '#0d0d1f', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: 'rgba(168,85,247,0.15)' }}>
-                                    <Text style={{ color: '#a855f7', fontSize: 11, fontWeight: '800', letterSpacing: 1, marginBottom: 8 }}>🧘 VUELTA A LA CALMA</Text>
-                                    {dia.vueltaCalma.map((c, ci) => (
-                                        <Text key={ci} style={{ color: '#888', fontSize: 13, marginBottom: 4 }}>• {c}</Text>
-                                    ))}
-                                </View>
-                            )}
-                        </View>
-                    ))}
-
-                    {/* Suplementación */}
-                    {plan.suplementacion?.length > 0 && (
-                        <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
-                            <Text style={{ color: '#FFD700', fontSize: 11, fontWeight: '800', letterSpacing: 1.5, marginBottom: 12 }}>💊 SUPLEMENTACIÓN RECOMENDADA</Text>
-                            {plan.suplementacion.map((s, i) => (
-                                <View key={i} style={{ backgroundColor: '#111', borderRadius: 14, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: '#FFD70020' }}>
-                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                                        <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>{s.nombre}</Text>
-                                        <Text style={{ color: '#FFD700', fontWeight: '700', fontSize: 13 }}>{s.dosis}</Text>
-                                    </View>
-                                    <Text style={{ color: '#63ff15', fontSize: 11, marginBottom: 2 }}>⏰ {s.timing}</Text>
-                                    <Text style={{ color: '#666', fontSize: 11, fontStyle: 'italic' }}>{s.motivo}</Text>
-                                </View>
-                            ))}
-                        </View>
-                    )}
-
-                    {/* Acciones */}
-                    <View style={{ marginHorizontal: 20, gap: 12 }}>
-                        <TouchableOpacity style={styles.syncBtnMain} onPress={handleScheduleToCalendar}>
-                            <LinearGradient colors={['#FFD700','#b8860b']} style={styles.syncBtnGrad}>
-                                <Ionicons name="calendar" size={26} color="black" />
-                                <View>
-                                    <Text style={styles.syncBtnT}>PROGRAMAR EN CALENDARIO</Text>
-                                    <Text style={styles.syncBtnS}>Repetir mesociclo las próximas semanas</Text>
-                                </View>
-                            </LinearGradient>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.saveBtnSec} onPress={handleSavePlan}>
-                            <Ionicons name={guardado ? 'checkmark-circle' : 'cloud-upload-outline'} size={20} color="#FFD700" />
-                            <Text style={[styles.saveBtnSecText, { color: '#FFD700' }]}>{guardado ? 'GUARDADO EN VAULT' : 'GUARDAR PLAN EN NUBE'}</Text>
-                        </TouchableOpacity>
-                    </View>
-                </ScrollView>
-
-                <NexusAlert visible={alert.visible} title={alert.title} message={alert.message} type={alert.type} onConfirm={alert.onConfirm} />
-            </SafeAreaView>
-        );
-    }
-
     const handleSavePlan = async () => {
         try {
             const token = await AsyncStorage.getItem('token');
             const response = await fetch(`${BACKEND_URL}/save-plan`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ planData: plan })
             });
-
             if (response.ok) {
                 setGuardado(true);
-                showAlert("✨ Plan Guardado", "El plan se ha guardado en tu Bóveda.", "success");
+                showAlert('✨ Plan Guardado', 'El plan se ha guardado en tu Bóveda.', 'success');
+            } else {
+                showAlert('Error', 'No se pudo guardar el plan.', 'error');
             }
-        } catch (error) { console.error(error); }
+        } catch (error) {
+            console.error(error);
+            showAlert('Error', 'No se pudo guardar el plan.', 'error');
+        }
     };
 
     const handleScheduleToCalendar = async () => {
@@ -482,6 +272,217 @@ export default function ElitePlanScreen({ route, navigation }) {
             showAlert('Error', 'No se pudo programar el plan.', 'error');
         }
     };
+
+    // ─── Render ULTIMATE ────────────────────────────────────────────────────
+    if (plan.esUltimate && plan.semanas) {
+        const semana = plan.semanas[semanaActiva] || plan.semanas[0];
+        const FASE_COLORS = {
+            'Acumulación': ['#3b82f6','#1d4ed8'],
+            'Intensificación': ['#f59e0b','#b45309'],
+            'Peak': ['#ef4444','#991b1b'],
+            'Deload': ['#22c55e','#15803d'],
+        };
+        const faseColors = FASE_COLORS[semana?.tipo] || ['#63ff15','#38c000'];
+
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.topNav}>
+                    <TouchableOpacity onPress={() => navigation.goBack()}><Ionicons name="close" size={30} color="white" /></TouchableOpacity>
+                    <Text style={styles.navTitle}>NEXUS <Text style={{ color: '#FFD700' }}>ULTIMATE</Text></Text>
+                    <View style={{ width: 30 }} />
+                </View>
+
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+                    {/* Resumen + análisis */}
+                    <LinearGradient colors={['#FFD70015','transparent']} style={{ padding: 20 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                            <Text style={{ fontSize: 18 }}>👑</Text>
+                            <Text style={[styles.slideLabel, { color: '#FFD700' }]}>MESOCICLO ULTIMATE • {plan.resumen?.duracion}</Text>
+                        </View>
+                        <Text style={[styles.slideTitle, { fontSize: 24, marginBottom: 12 }]}>{plan.resumen?.objetivo?.toUpperCase()}</Text>
+                        <View style={[styles.summaryCard, { borderLeftColor: '#FFD700' }]}>
+                            <Text style={styles.summaryText}>{plan.resumen?.estrategia}</Text>
+                        </View>
+
+                        {/* Macros */}
+                        <View style={styles.macroGrid}>
+                            {Object.entries(plan.resumen?.macros || {}).map(([k, v]) => (
+                                <View key={k} style={styles.macroItem}>
+                                    <Text style={[styles.macroVal, { color: '#FFD700' }]}>{v}</Text>
+                                    <Text style={styles.macroKey}>{k.toUpperCase()}</Text>
+                                </View>
+                            ))}
+                        </View>
+
+                        {/* Nutrición timing */}
+                        {plan.resumen?.nutricionTiming && (
+                            <View style={[styles.summaryCard, { marginTop: 14, borderLeftColor: '#63ff15' }]}>
+                                <Text style={{ color: '#63ff15', fontWeight: '800', fontSize: 12, letterSpacing: 1, marginBottom: 10 }}>⏱ NUTRICIÓN TIMING</Text>
+                                {[['🕐 Pre-Entreno', plan.resumen.nutricionTiming.preWorkout],
+                                  ['🏋️ Post-Entreno', plan.resumen.nutricionTiming.postWorkout],
+                                  ['🌙 Antes de Dormir', plan.resumen.nutricionTiming.antesDormir]
+                                ].map(([label, val]) => val ? (
+                                    <View key={label} style={{ marginBottom: 8 }}>
+                                        <Text style={{ color: '#aaa', fontSize: 12, fontWeight: '700', marginBottom: 2 }}>{label}</Text>
+                                        <Text style={{ color: '#ddd', fontSize: 14, lineHeight: 20 }}>{val}</Text>
+                                    </View>
+                                ) : null)}
+                            </View>
+                        )}
+
+                        {/* Análisis de fuerza */}
+                        {plan.analisis && (
+                            <View style={[styles.summaryCard, { marginTop: 14, borderLeftColor: '#a855f7' }]}>
+                                <Text style={{ color: '#a855f7', fontWeight: '800', fontSize: 12, letterSpacing: 1, marginBottom: 10 }}>🔬 ANÁLISIS PERSONALIZADO</Text>
+                                <Text style={{ color: '#aaa', fontSize: 12, fontWeight: '700', marginBottom: 6 }}>✅ PUNTOS FUERTES</Text>
+                                {(plan.analisis.puntosFuertes || []).map((p, i) => (
+                                    <Text key={i} style={{ color: '#ddd', fontSize: 14, lineHeight: 20, marginBottom: 4 }}>• {p}</Text>
+                                ))}
+                                <Text style={{ color: '#aaa', fontSize: 12, fontWeight: '700', marginTop: 10, marginBottom: 6 }}>⚠️ A MEJORAR</Text>
+                                {(plan.analisis.puntosMejora || []).map((p, i) => (
+                                    <Text key={i} style={{ color: '#ddd', fontSize: 14, lineHeight: 20, marginBottom: 4 }}>• {p}</Text>
+                                ))}
+                                <Text style={{ color: '#aaa', fontSize: 12, fontWeight: '700', marginTop: 10, marginBottom: 6 }}>🎯 AJUSTES APLICADOS</Text>
+                                <Text style={{ color: '#ddd', fontSize: 14, lineHeight: 21 }}>{plan.analisis.ajustes}</Text>
+                            </View>
+                        )}
+                    </LinearGradient>
+
+                    {/* Selector de semanas */}
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 12 }}>
+                        {plan.semanas.map((s, i) => {
+                            const colors = FASE_COLORS[s.tipo] || ['#63ff15','#38c000'];
+                            const active = semanaActiva === i;
+                            return (
+                                <TouchableOpacity key={i} onPress={() => setSemanaActiva(i)}>
+                                    {active
+                                        ? <LinearGradient colors={colors} style={{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20 }}>
+                                            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>SEM {s.semana}</Text>
+                                            <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: '700' }}>{s.tipo}</Text>
+                                          </LinearGradient>
+                                        : <View style={{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, borderWidth: 1, borderColor: '#2a2a2a' }}>
+                                            <Text style={{ color: '#666', fontWeight: '700', fontSize: 13 }}>SEM {s.semana}</Text>
+                                            <Text style={{ color: '#555', fontSize: 11 }}>{s.tipo}</Text>
+                                          </View>
+                                    }
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </ScrollView>
+
+                    {/* Badge de fase */}
+                    <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+                        <LinearGradient colors={faseColors} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 16 }}>
+                            <View>
+                                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>Semana {semana?.semana} — {semana?.tipo}</Text>
+                                <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, marginTop: 2 }}>{semana?.descripcion}</Text>
+                            </View>
+                            <View style={{ marginLeft: 'auto', alignItems: 'center' }}>
+                                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 18 }}>{semana?.rpe}</Text>
+                                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: '800' }}>RPE</Text>
+                            </View>
+                        </LinearGradient>
+                    </View>
+
+                    {/* Días de la semana activa */}
+                    {(semana?.dias || []).map((dia, di) => (
+                        <View key={di} style={{ marginHorizontal: 20, marginBottom: 20 }}>
+                            <View style={styles.dayBanner}>
+                                <Text style={styles.dayNumber}>DÍA {dia.dia}</Text>
+                                <Text style={styles.dayTitle}>{dia.titulo}</Text>
+                            </View>
+
+                            {/* Calentamiento */}
+                            {dia.calentamiento?.length > 0 && (
+                                <View style={{ backgroundColor: '#0d1f0d', borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(99,255,21,0.15)' }}>
+                                    <Text style={{ color: '#63ff15', fontSize: 12, fontWeight: '800', letterSpacing: 1, marginBottom: 8 }}>🔥 CALENTAMIENTO</Text>
+                                    {dia.calentamiento.map((c, ci) => (
+                                        <Text key={ci} style={{ color: '#bbb', fontSize: 14, lineHeight: 20, marginBottom: 4 }}>• {c}</Text>
+                                    ))}
+                                </View>
+                            )}
+
+                            {/* Ejercicios — grid 2 columnas */}
+                            <View style={styles.exGrid}>
+                                {(dia.ejercicios || []).map((ex, ei) => (
+                                    <View key={ei} style={styles.exGridCard}>
+                                        <Image
+                                            source={{ uri: apiGifs[ex.imgKey] ? `${BACKEND_URL}/exercises/gif/${apiGifs[ex.imgKey]}` : (EXERCISE_IMAGES[ex.imgKey] || EXERCISE_IMAGES.default) }}
+                                            style={styles.exGridImage}
+                                            resizeMode="cover"
+                                        />
+                                        <View style={styles.exGridOverlay}>
+                                            <Text style={styles.exGridName} numberOfLines={2}>{ex.nombre}</Text>
+                                            <View style={styles.exBadgeRow}>
+                                                <View style={styles.exBadgeGreen}>
+                                                    <Text style={styles.exBadgeGreenText}>{ex.series}×{ex.reps}</Text>
+                                                </View>
+                                                {ex.rir && (
+                                                    <View style={styles.exBadgeGold}>
+                                                        <Text style={styles.exBadgeGoldText}>RIR {ex.rir}</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                            {ex.pesoSugerido && (
+                                                <Text style={{ color: '#a855f7', fontSize: 12, fontWeight: '800', marginTop: 4 }}>{ex.pesoSugerido}</Text>
+                                            )}
+                                            {ex.tecnica && <Text style={{ color: '#f59e0b', fontSize: 11, marginTop: 3 }}>⚡ {ex.tecnica}</Text>}
+                                        </View>
+                                    </View>
+                                ))}
+                            </View>
+
+                            {/* Vuelta a la calma */}
+                            {dia.vueltaCalma?.length > 0 && (
+                                <View style={{ backgroundColor: '#0d0d1f', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: 'rgba(168,85,247,0.15)' }}>
+                                    <Text style={{ color: '#a855f7', fontSize: 12, fontWeight: '800', letterSpacing: 1, marginBottom: 8 }}>🧘 VUELTA A LA CALMA</Text>
+                                    {dia.vueltaCalma.map((c, ci) => (
+                                        <Text key={ci} style={{ color: '#bbb', fontSize: 14, lineHeight: 20, marginBottom: 4 }}>• {c}</Text>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+                    ))}
+
+                    {/* Suplementación */}
+                    {plan.suplementacion?.length > 0 && (
+                        <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
+                            <Text style={{ color: '#FFD700', fontSize: 13, fontWeight: '800', letterSpacing: 1.5, marginBottom: 12 }}>💊 SUPLEMENTACIÓN RECOMENDADA</Text>
+                            {plan.suplementacion.map((s, i) => (
+                                <View key={i} style={{ backgroundColor: '#111', borderRadius: 14, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: '#FFD70020' }}>
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                                        <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>{s.nombre}</Text>
+                                        <Text style={{ color: '#FFD700', fontWeight: '700', fontSize: 13 }}>{s.dosis}</Text>
+                                    </View>
+                                    <Text style={{ color: '#63ff15', fontSize: 12, marginBottom: 3 }}>⏰ {s.timing}</Text>
+                                    <Text style={{ color: '#999', fontSize: 12, fontStyle: 'italic' }}>{s.motivo}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    )}
+
+                    {/* Acciones */}
+                    <View style={{ marginHorizontal: 20, gap: 12 }}>
+                        <TouchableOpacity style={styles.syncBtnMain} onPress={handleScheduleToCalendar}>
+                            <LinearGradient colors={['#FFD700','#b8860b']} style={styles.syncBtnGrad}>
+                                <Ionicons name="calendar" size={26} color="black" />
+                                <View>
+                                    <Text style={styles.syncBtnT}>PROGRAMAR EN CALENDARIO</Text>
+                                    <Text style={styles.syncBtnS}>Repetir mesociclo las próximas semanas</Text>
+                                </View>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.saveBtnSec} onPress={handleSavePlan}>
+                            <Ionicons name={guardado ? 'checkmark-circle' : 'cloud-upload-outline'} size={20} color="#FFD700" />
+                            <Text style={[styles.saveBtnSecText, { color: '#FFD700' }]}>{guardado ? 'GUARDADO EN VAULT' : 'GUARDAR PLAN EN NUBE'}</Text>
+                        </TouchableOpacity>
+                    </View>
+                </ScrollView>
+
+                <NexusAlert visible={alert.visible} title={alert.title} message={alert.message} type={alert.type} onConfirm={alert.onConfirm} />
+            </SafeAreaView>
+        );
+    }
 
     const renderSlide = ({ item }) => {
         if (item.type === 'summary') {
@@ -651,8 +652,8 @@ const styles = StyleSheet.create({
     exerciseScroll: { flex: 1 },
     exGrid: { flexDirection: 'column', gap: 8 },
     exGridCard: { width: '100%', borderRadius: 14, overflow: 'hidden', backgroundColor: '#161616', flexDirection: 'row', alignItems: 'center' },
-    exGridImage: { width: 72, height: 72, backgroundColor: '#111' },
-    exGridOverlay: { flex: 1, padding: 10 },
+    exGridImage: { width: 80, height: 80, backgroundColor: '#111' },
+    exGridOverlay: { flex: 1, padding: 10, justifyContent: 'center' },
     exGridName: { color: '#fff', fontSize: 15, fontWeight: '900', lineHeight: 20, marginBottom: 6 },
     exBadgeRow: { flexDirection: 'row', gap: 5, flexWrap: 'wrap' },
     exerciseCard: { borderRadius: 20, marginBottom: 14, overflow: 'hidden', backgroundColor: '#161616' },
