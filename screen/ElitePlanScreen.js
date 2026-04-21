@@ -425,43 +425,61 @@ export default function ElitePlanScreen({ route, navigation }) {
             const savedRoutines = await AsyncStorage.getItem('assigned_routines');
             let currentRoutines = savedRoutines ? JSON.parse(savedRoutines) : {};
 
-            const today = new Date();
-            const dayOfWeek = today.getDay();
-            const diffToMonday = today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
-            const startMonday = new Date(today.setDate(diffToMonday));
+            const now = new Date();
+            const dow = now.getDay();
+            const startMonday = new Date(now);
+            startMonday.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
+            startMonday.setHours(0, 0, 0, 0);
 
-            // Sincronizamos para las próximas 8 semanas (2 meses aproximadamente)
-            const WEEKS_TO_PLAN = 8;
+            const mapEx = (ex, dateKey, i) => ({
+                id: `ai-${dateKey}-${i}`,
+                name: ex.nombre,
+                muscle: 'IA Nexus',
+                sets: parseInt(ex.series) || 3,
+                reps: ex.reps || '10-12',
+                weight: 0,
+                icon: 'sparkles',
+            });
 
-            for (let week = 0; week < WEEKS_TO_PLAN; week++) {
-                plan.dias.forEach((diaPlan, index) => {
-                    const targetDate = new Date(startMonday);
-                    targetDate.setDate(startMonday.getDate() + (week * 7) + index);
-                    const dateKey = targetDate.toISOString().split('T')[0];
-
-                    currentRoutines[dateKey] = {
-                        title: diaPlan.titulo,
-                        isElite: true,
-                        planId: plan.id || 'ai-master', // Para identificar de qué plan viene
-                        exercises: diaPlan.ejercicios.map((ex, i) => ({
-                            id: `ai-${dateKey}-${i}`,
-                            name: ex.nombre,
-                            muscle: 'IA Nexus',
-                            icon: 'sparkles'
-                        }))
-                    };
+            if (plan.esUltimate && plan.semanas) {
+                plan.semanas.forEach((semana, weekIdx) => {
+                    (semana.dias || []).forEach((diaPlan, dayIdx) => {
+                        const d = new Date(startMonday);
+                        d.setDate(startMonday.getDate() + weekIdx * 7 + dayIdx);
+                        const dateKey = d.toISOString().split('T')[0];
+                        currentRoutines[dateKey] = {
+                            title: diaPlan.titulo,
+                            isElite: true,
+                            planId: plan.resumen?.objetivo || 'ai-ultimate',
+                            exercises: (diaPlan.ejercicios || []).map((ex, i) => mapEx(ex, dateKey, i)),
+                        };
+                    });
                 });
+                await AsyncStorage.setItem('assigned_routines', JSON.stringify(currentRoutines));
+                setAgendado(true);
+                showAlert('🚀 Mesociclo en Calendario', `${plan.semanas.length} semanas inyectadas. Visible en tu calendario.`, 'success');
+            } else {
+                const WEEKS = 8;
+                for (let week = 0; week < WEEKS; week++) {
+                    (plan.dias || []).forEach((diaPlan, index) => {
+                        const d = new Date(startMonday);
+                        d.setDate(startMonday.getDate() + week * 7 + index);
+                        const dateKey = d.toISOString().split('T')[0];
+                        currentRoutines[dateKey] = {
+                            title: diaPlan.titulo,
+                            isElite: true,
+                            planId: plan.resumen?.objetivo || 'ai-master',
+                            exercises: (diaPlan.ejercicios || []).map((ex, i) => mapEx(ex, dateKey, i)),
+                        };
+                    });
+                }
+                await AsyncStorage.setItem('assigned_routines', JSON.stringify(currentRoutines));
+                setAgendado(true);
+                showAlert('🚀 Propagación Nexus Completada', 'Tu rutina se ha inyectado para los próximos 2 meses.', 'success');
             }
-
-            await AsyncStorage.setItem('assigned_routines', JSON.stringify(currentRoutines));
-            setAgendado(true);
-            showAlert(
-                "🚀 Propagación Nexus Completada",
-                "Tu rutina se ha inyectado para los próximos 2 meses. Puedes verla repetida semanalmente en tu calendario.",
-                "success"
-            );
         } catch (error) {
-            console.error("Schedule error:", error);
+            console.error('Schedule error:', error);
+            showAlert('Error', 'No se pudo programar el plan.', 'error');
         }
     };
 
@@ -527,7 +545,7 @@ export default function ElitePlanScreen({ route, navigation }) {
                                             )}
                                         </View>
                                         {ex.pesoSugerido && (
-                                            <Text style={{ color: '#a855f7', fontSize: 10, fontWeight: '800', marginTop: 3 }}>{ex.pesoSugerido}</Text>
+                                            <Text style={{ color: '#a855f7', fontSize: 12, fontWeight: '800', marginTop: 4 }}>{ex.pesoSugerido}</Text>
                                         )}
                                     </View>
                                 </View>
@@ -624,7 +642,7 @@ const styles = StyleSheet.create({
     macroGrid: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 15 },
     macroItem: { width: '47%', backgroundColor: '#161616', padding: 20, borderRadius: 20, alignItems: 'center' },
     macroVal: { color: '#63ff15', fontSize: 24, fontWeight: '900' },
-    macroKey: { color: '#666', fontSize: 10, fontWeight: 'bold', marginTop: 5 },
+    macroKey: { color: '#888', fontSize: 12, fontWeight: '700', marginTop: 5, letterSpacing: 0.5 },
     startBtn: { marginTop: 'auto', backgroundColor: '#63ff15', padding: 20, borderRadius: 20, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10 },
     startBtnText: { color: 'black', fontWeight: '900', fontSize: 14 },
     dayBanner: { backgroundColor: '#111', padding: 20, borderRadius: 20, borderLeftWidth: 5, borderLeftColor: '#63ff15', marginBottom: 20 },
@@ -635,7 +653,7 @@ const styles = StyleSheet.create({
     exGridCard: { width: '100%', borderRadius: 14, overflow: 'hidden', backgroundColor: '#161616', flexDirection: 'row', alignItems: 'center' },
     exGridImage: { width: 72, height: 72, backgroundColor: '#111' },
     exGridOverlay: { flex: 1, padding: 10 },
-    exGridName: { color: '#fff', fontSize: 13, fontWeight: '900', lineHeight: 17, marginBottom: 5 },
+    exGridName: { color: '#fff', fontSize: 15, fontWeight: '900', lineHeight: 20, marginBottom: 6 },
     exBadgeRow: { flexDirection: 'row', gap: 5, flexWrap: 'wrap' },
     exerciseCard: { borderRadius: 20, marginBottom: 14, overflow: 'hidden', backgroundColor: '#161616' },
     exImageBanner: { width: '100%', height: 110, backgroundColor: '#111' },
@@ -646,12 +664,12 @@ const styles = StyleSheet.create({
     exStats: { marginTop: 4 },
     exStatText: { color: '#63ff15', fontSize: 11, fontWeight: '800' },
     exBadgeGreen: { backgroundColor: 'rgba(99,255,21,0.15)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(99,255,21,0.4)' },
-    exBadgeGreenText: { color: '#63ff15', fontSize: 12, fontWeight: '900' },
+    exBadgeGreenText: { color: '#63ff15', fontSize: 13, fontWeight: '900' },
     exBadgeGold: { backgroundColor: 'rgba(255,215,0,0.12)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(255,215,0,0.35)' },
     exBadgeGoldText: { color: '#FFD700', fontSize: 12, fontWeight: '800' },
     exBadgePurple: { backgroundColor: 'rgba(168,85,247,0.12)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(168,85,247,0.35)' },
     exBadgePurpleText: { color: '#a855f7', fontSize: 12, fontWeight: '800' },
-    exNota: { color: '#666', fontSize: 11, fontStyle: 'italic', marginTop: 5 },
+    exNota: { color: '#999', fontSize: 12, fontStyle: 'italic', marginTop: 5, lineHeight: 16 },
     syncBtnMain: { borderRadius: 25, overflow: 'hidden' },
     syncBtnGrad: { padding: 25, flexDirection: 'row', alignItems: 'center', gap: 20 },
     syncBtnT: { color: 'black', fontWeight: '900', fontSize: 16 },
