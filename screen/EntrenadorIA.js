@@ -813,6 +813,72 @@ export default function EntrenadorIA() {
                         </View>
 
                         <ScrollView showsVerticalScrollIndicator={false}>
+                            {/* ── Comparativa Pro vs Ultimate ── */}
+                            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
+                                {/* PRO */}
+                                <View style={{
+                                    flex: 1, borderRadius: 16, borderWidth: 2,
+                                    borderColor: user?.plan === 'Pro' ? '#63ff15' : '#222',
+                                    backgroundColor: user?.plan === 'Pro' ? 'rgba(99,255,21,0.06)' : '#111',
+                                    padding: 12,
+                                }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                                        <Text style={{ fontSize: 14 }}>⚡</Text>
+                                        <Text style={{ color: '#63ff15', fontWeight: '900', fontSize: 13, letterSpacing: 1 }}>PRO</Text>
+                                        {user?.plan === 'Pro' && <View style={{ backgroundColor: '#63ff15', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}><Text style={{ color: '#000', fontSize: 9, fontWeight: '900' }}>TU PLAN</Text></View>}
+                                    </View>
+                                    {[
+                                        'Plan semanal completo',
+                                        'GIFs de cada ejercicio',
+                                        'Series × repeticiones',
+                                        'Macros personalizados',
+                                        'Sincroniza 8 semanas',
+                                    ].map((f, i) => (
+                                        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 5 }}>
+                                            <Text style={{ color: '#63ff15', fontSize: 11 }}>✓</Text>
+                                            <Text style={{ color: '#ccc', fontSize: 11, flex: 1, lineHeight: 15 }}>{f}</Text>
+                                        </View>
+                                    ))}
+                                </View>
+
+                                {/* ULTIMATE */}
+                                <View style={{
+                                    flex: 1, borderRadius: 16, borderWidth: 2,
+                                    borderColor: user?.plan === 'Ultimate' ? '#FFD700' : '#222',
+                                    backgroundColor: user?.plan === 'Ultimate' ? 'rgba(255,215,0,0.06)' : '#111',
+                                    padding: 12,
+                                }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                                        <Text style={{ fontSize: 14 }}>👑</Text>
+                                        <Text style={{ color: '#FFD700', fontWeight: '900', fontSize: 13, letterSpacing: 1 }}>ULTIMATE</Text>
+                                        {user?.plan === 'Ultimate' && <View style={{ backgroundColor: '#FFD700', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}><Text style={{ color: '#000', fontSize: 9, fontWeight: '900' }}>TU PLAN</Text></View>}
+                                    </View>
+                                    {[
+                                        'Mesociclo N semanas',
+                                        'Periodización DUP/Lineal',
+                                        'Análisis 1RM real',
+                                        'RPE · RIR por fase',
+                                        'Nutrición + timing',
+                                        'Suplementación',
+                                        'Deload automático',
+                                        'Calendario exacto',
+                                    ].map((f, i) => (
+                                        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 5 }}>
+                                            <Text style={{ color: '#FFD700', fontSize: 11 }}>✓</Text>
+                                            <Text style={{ color: '#ccc', fontSize: 11, flex: 1, lineHeight: 15 }}>{f}</Text>
+                                        </View>
+                                    ))}
+                                    {user?.plan !== 'Ultimate' && (
+                                        <TouchableOpacity
+                                            onPress={() => { setModalConfigPlan(false); navigation.navigate('PlanesPago'); }}
+                                            style={{ marginTop: 8, backgroundColor: '#FFD700', borderRadius: 10, paddingVertical: 6, alignItems: 'center' }}
+                                        >
+                                            <Text style={{ color: '#000', fontWeight: '900', fontSize: 11 }}>MEJORAR →</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            </View>
+
                             <Text style={styles.labelPlan}>¿Cuál es tu objetivo principal?</Text>
                             <View style={styles.optionsGrid}>
                                 {['Ganar Músculo', 'Perder Grasa', 'Fuerza Pura', 'Resistencia'].map(opt => (
