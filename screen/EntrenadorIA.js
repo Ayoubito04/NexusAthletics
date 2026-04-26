@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Image, KeyboardAvoidingView, Platform, Modal, FlatList, Animated } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -234,7 +234,14 @@ export default function EntrenadorIA() {
     const overlayAnim = useRef(new Animated.Value(0)).current;
 
     const navigation = useNavigation();
+    const route = useRoute();
     const scrollRef = useRef();
+
+    useEffect(() => {
+        if (route.params?.prefillMessage) {
+            setInputUsuario(route.params.prefillMessage);
+        }
+    }, [route.params?.prefillMessage]);
 
     const toggleSidebar = (show) => {
         if (show) {

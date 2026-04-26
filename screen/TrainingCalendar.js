@@ -64,6 +64,7 @@ export default function TrainingCalendar({ navigation }) {
     // WorkoutTimer states
     const [timerVisible, setTimerVisible] = useState(false);
     const [workoutExercises, setWorkoutExercises] = useState([]);
+    const [workoutMeta, setWorkoutMeta] = useState(null);
 
     // Review states
     const [reviewVisible, setReviewVisible] = useState(false);
@@ -228,6 +229,13 @@ export default function TrainingCalendar({ navigation }) {
             ];
 
         setWorkoutExercises(exercises);
+        setWorkoutMeta({
+            isUltimate: !!routine.isUltimate,
+            fase: routine.fase || null,
+            rpe: routine.rpe || null,
+            semanaNum: routine.semanaNum || null,
+            preWorkout: routine.preWorkout || null,
+        });
         setTimerVisible(true);
     };
 
@@ -239,25 +247,33 @@ export default function TrainingCalendar({ navigation }) {
         const todayKey = new Date().toISOString().split('T')[0];
         await toggleDayCompletion(todayKey);
 
-        // Sync workout sets to backend for strength tracking & rankings
+        // Sync real weights/reps from session to backend for strength tracking
         try {
             const token = await AsyncStorage.getItem('token');
-            if (token && workoutExercises.length > 0) {
+            const sessionData = stats?.sessionData;
+            if (token && sessionData?.length > 0) {
+                // Group by exercise: keep best weight per exercise
+                const byExercise = {};
+                sessionData.forEach(entry => {
+                    const key = entry.exerciseName;
+                    if (!byExercise[key] || entry.weight > byExercise[key].weight) {
+                        byExercise[key] = entry;
+                    }
+                });
+                const exercises = Object.values(byExercise).map(e => ({
+                    name: e.exerciseName,
+                    muscle: e.muscle || 'General',
+                    weight: e.weight || 0,
+                    reps: e.reps || 10,
+                    sets: sessionData.filter(s => s.exerciseName === e.exerciseName).length,
+                }));
                 await fetch(`${BACKEND_URL}/strength/log`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        exercises: workoutExercises,
-                        duration: stats?.duration || null
-                    })
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ exercises, duration: stats?.duration || null }),
                 });
             }
-        } catch (_) {
-            // Silently fail — local data is already saved
-        }
+        } catch (_) {}
     };
 
     const handleReviewConfirm = () => {
@@ -858,6 +874,7 @@ export default function TrainingCalendar({ navigation }) {
             <WorkoutTimer
                 visible={timerVisible}
                 exercises={workoutExercises}
+                workoutMeta={workoutMeta}
                 onClose={() => setTimerVisible(false)}
                 onComplete={handleWorkoutComplete}
             />

@@ -114,6 +114,10 @@ export default function ElitePlanScreen({ route, navigation }) {
                 weight: 0,
                 icon: 'sparkles',
                 imgKey: ex.imgKey || null,
+                rir: ex.rir || null,
+                pesoSugerido: ex.pesoSugerido || null,
+                tecnica: ex.tecnica || null,
+                nota: ex.nota || null,
             });
 
             if (plan.esUltimate && plan.semanas) {
@@ -130,6 +134,7 @@ export default function ElitePlanScreen({ route, navigation }) {
                             rpe: semana.rpe,
                             semanaNum: semana.semana,
                             planId: plan.resumen?.objetivo || 'ai-ultimate',
+                            preWorkout: plan.resumen?.nutricionTiming?.preWorkout || null,
                             exercises: (diaPlan.ejercicios || []).map((ex, i) => mapEx(ex, dateKey, i)),
                         };
                     });
