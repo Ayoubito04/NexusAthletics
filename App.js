@@ -182,6 +182,14 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Keepalive: ping al servidor cada 14 min para evitar cold starts de Render
+  useEffect(() => {
+    const ping = () => fetch('https://nexusathletics.onrender.com/').catch(() => {});
+    ping();
+    const interval = setInterval(ping, 14 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   if (showSplash) {
     return <SplashScreen onFinish={() => setShowSplash(false)} />;
   }

@@ -6,129 +6,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Config from '../constants/Config';
+import { EXERCISE_IMAGES } from '../utils/exerciseMedia';
 
 const BACKEND_URL = Config.BACKEND_URL;
 
 const { width, height } = Dimensions.get('window');
 
-const F = 'https://fitnessprogramer.com/wp-content/uploads';
-// URLs verificadas o mapeadas explícitamente al GIF más cercano del mismo músculo
-const EXERCISE_IMAGES = {
-    // ── PECHO ──
-    "press_banca":             `${F}/2021/02/Barbell-Bench-Press.gif`,
-    "press_inclinado":         `${F}/2021/02/Incline-Barbell-Bench-Press.gif`,
-    "press_declinado":         `${F}/2021/02/Decline-Barbell-Bench-Press.gif`,
-    "press_mancuernas":        `${F}/2021/02/Dumbbell-Bench-Press.gif`,
-    "press_inclinado_mdb":     `${F}/2021/02/Incline-Dumbbell-Press.gif`,
-    "aperturas":               `${F}/2021/02/Dumbbell-Flyes.gif`,
-    "aperturas_inclinadas":    `${F}/2021/02/Incline-Dumbbell-Flyes.gif`,
-    "aperturas_cable":         `${F}/2021/02/Cable-Crossover.gif`,
-    "fondos":                  `${F}/2021/02/Parallel-Bar-Dip.gif`,       // misma mecánica
-    "push_up":                 `${F}/2021/02/Push-Up.gif`,
-    "push_up_diamante":        `${F}/2021/06/Diamond-Push-Up.gif`,
-    "push_up_ancho":           `${F}/2021/02/Push-Up.gif`,                 // fallback consciente
-    "pullover":                `${F}/2021/02/Dumbbell-Pullover.gif`,
-    // ── ESPALDA ──
-    "peso_muerto":             `${F}/2021/02/Barbell-Deadlift.gif`,
-    "peso_muerto_rumano":      `${F}/2021/02/Romanian-Deadlift.gif`,
-    "peso_muerto_sumo":        `${F}/2021/02/Sumo-Deadlift.gif`,
-    "dominadas":               `${F}/2021/02/Pull-Up.gif`,
-    "dominadas_supinas":       `${F}/2021/02/Chin-Up.gif`,
-    "remo":                    `${F}/2021/02/Bent-Over-Barbell-Row.gif`,
-    "remo_mancuerna":          `${F}/2021/02/Dumbbell-Row.gif`,
-    "remo_sentado":            `${F}/2021/02/Seated-Cable-Rows.gif`,
-    "remo_polea":              `${F}/2021/02/Seated-Cable-Rows.gif`,       // misma máquina
-    "remo_tbar":               `${F}/2021/02/T-Bar-Row.gif`,
-    "jalon":                   `${F}/2021/02/Lat-Pulldown.gif`,
-    "jalon_neutro":            `${F}/2021/02/Lat-Pulldown.gif`,            // mismo movimiento
-    "face_pull":               `${F}/2021/06/Face-Pull.gif`,
-    "buenos_dias":             `${F}/2021/02/Good-Morning.gif`,
-    "encogimientos":           `${F}/2021/02/Barbell-Shrug.gif`,
-    "encogimientos_mdb":       `${F}/2021/02/Dumbbell-Shrug.gif`,
-    "australian_row":          `${F}/2021/02/Bent-Over-Barbell-Row.gif`,   // mismo patrón de tracción
-    // ── HOMBROS ──
-    "press_hombros":           `${F}/2021/06/Dumbbell-Shoulder-Press.gif`,
-    "press_militar":           `${F}/2021/02/Barbell-Shoulder-Press.gif`,
-    "press_arnold":            `${F}/2021/06/Dumbbell-Shoulder-Press.gif`, // variante overhead
-    "press_sentado":           `${F}/2021/06/Dumbbell-Shoulder-Press.gif`, // misma mecánica sentado
-    "elevaciones_laterales":   `${F}/2021/02/Lateral-Raise.gif`,
-    "elevaciones_frontales":   `${F}/2021/02/Front-Raise.gif`,
-    "vuelo_posterior":         `${F}/2021/06/Bent-Over-Dumbbell-Lateral-Raise.gif`,
-    "elevacion_cable":         `${F}/2021/02/Lateral-Raise.gif`,           // mismo músculo
-    // ── BÍCEPS ──
-    "curls":                   `${F}/2021/02/Dumbbell-Curl.gif`,
-    "curl_barra":              `${F}/2021/02/Barbell-Curl.gif`,
-    "curl_martillo":           `${F}/2021/02/Dumbbell-Hammer-Curl.gif`,
-    "curl_concentrado":        `${F}/2021/02/Concentration-Curl.gif`,
-    "curl_predicador":         `${F}/2021/02/Preacher-Curl.gif`,
-    "curl_cable":              `${F}/2021/02/Barbell-Curl.gif`,            // mismo músculo
-    "curl_inclinado":          `${F}/2021/02/Dumbbell-Curl.gif`,           // mismo músculo
-    "curl_martillo_cable":     `${F}/2021/02/Dumbbell-Hammer-Curl.gif`,    // mismo patrón
-    // ── TRÍCEPS ──
-    "extension_triceps":       `${F}/2021/06/Triceps-Pushdown.gif`,
-    "triceps_frances":         `${F}/2021/02/Skull-Crusher.gif`,
-    "patada_triceps":          `${F}/2021/02/Dumbbell-Kickback.gif`,
-    "fondos_triceps":          `${F}/2021/02/Parallel-Bar-Dip.gif`,
-    "extension_polea":         `${F}/2021/06/Triceps-Pushdown.gif`,        // mismo músculo
-    "press_cerrado":           `${F}/2021/02/Close-Grip-Bench-Press.gif`,
-    "extension_mancuerna":     `${F}/2021/02/Dumbbell-Kickback.gif`,       // mismo músculo
-    // ── PIERNAS ──
-    "sentadilla":              `${F}/2021/02/Barbell-Full-Squat.gif`,
-    "sentadilla_goblet":       `${F}/2021/02/Goblet-Squat.gif`,
-    "sentadilla_bulgara":      `${F}/2021/06/Bulgarian-Split-Squat.gif`,
-    "sentadilla_hack":         `${F}/2021/02/Hack-Squat.gif`,
-    "sentadilla_front":        `${F}/2021/02/Front-Squat.gif`,
-    "zancadas":                `${F}/2021/02/Dumbbell-Lunges.gif`,
-    "zancadas_caminando":      `${F}/2021/02/Walking-Lunges.gif`,
-    "zancadas_inversas":       `${F}/2021/02/Dumbbell-Lunges.gif`,         // mismo patrón
-    "prensa":                  `${F}/2021/02/Leg-Press.gif`,
-    "extension_cuadriceps":    `${F}/2021/02/Leg-Extension.gif`,
-    "curl_femoral":            `${F}/2021/02/Lying-Leg-Curl.gif`,
-    "curl_sentado":            `${F}/2021/02/Lying-Leg-Curl.gif`,          // mismo músculo
-    "hip_thrust":              `${F}/2021/02/Barbell-Hip-Thrust.gif`,
-    "hip_thrust_mdb":          `${F}/2021/02/Barbell-Hip-Thrust.gif`,      // mismo patrón
-    "gemelos":                 `${F}/2021/02/Standing-Calf-Raises.gif`,
-    "gemelos_sentado":         `${F}/2021/02/Seated-Calf-Raise.gif`,
-    "step_up":                 `${F}/2021/02/Step-Up.gif`,
-    "pistol_squat":            `${F}/2021/06/Pistol-Squat.gif`,
-    "good_morning":            `${F}/2021/02/Good-Morning.gif`,
-    // ── CORE ──
-    "pilates_core":            `${F}/2021/02/Plank.gif`,
-    "plank_lateral":           `${F}/2021/02/Side-Plank.gif`,
-    "abdominales":             `${F}/2021/02/Crunch.gif`,
-    "crunch_cable":            `${F}/2021/02/Crunch.gif`,                  // mismo músculo
-    "russian_twist":           `${F}/2021/06/Russian-Twist.gif`,
-    "leg_raise":               `${F}/2021/02/Lying-Leg-Raise.gif`,
-    "leg_raise_colgado":       `${F}/2021/02/Hanging-Leg-Raise.gif`,
-    "superman":                `${F}/2021/06/Superman.gif`,
-    "mountain_climber":        `${F}/2021/06/Mountain-Climber.gif`,
-    "dead_bug":                `${F}/2021/02/Plank.gif`,                   // patrón estabilidad
-    "rueda_abdominal":         `${F}/2021/02/Ab-Wheel-Rollout.gif`,
-    "pallof_press":            `${F}/2021/02/Plank.gif`,                   // core antirotación
-    "bird_dog":                `${F}/2021/06/Superman.gif`,                // mismo patrón extensión
-    // ── CALISTENIA ──
-    "muscle_up":               `${F}/2021/06/Muscle-Up.gif`,
-    "fondos_paralelas":        `${F}/2021/02/Parallel-Bar-Dip.gif`,
-    "pike_push":               `${F}/2021/06/Pike-Push-Up.gif`,
-    "archer_push":             `${F}/2021/02/Push-Up.gif`,                 // variante push-up
-    "l_sit":                   `${F}/2021/02/Parallel-Bar-Dip.gif`,        // mismo apoyo
-    "dragon_flag":             `${F}/2021/02/Lying-Leg-Raise.gif`,         // mismo patrón
-    "burpees":                 `${F}/2021/06/Burpee.gif`,
-    "salto_caja":              `${F}/2021/06/Box-Jump.gif`,
-    "salto_cuerda":            `${F}/2021/06/Jumping-Jacks.gif`,           // cardio similar
-    "sprint":                  `${F}/2021/06/High-Knees.gif`,
-    // ── CARDIO / YOGA / FLEX ──
-    "cardio_burn":             `${F}/2021/06/Jumping-Jacks.gif`,
-    "yoga_stretch":            `${F}/2021/06/Cat-Stretch.gif`,
-    "flex_stretch":            `${F}/2021/06/Single-Leg-Stretch.gif`,
-    "yoga_warrior":            `${F}/2021/06/Cat-Stretch.gif`,             // yoga similar
-    "hip_flexor":              `${F}/2021/06/Single-Leg-Stretch.gif`,      // flex cadera
-    "foam_roller":             `${F}/2021/06/Cat-Stretch.gif`,             // recuperación
-    "estiramiento_isquios":    `${F}/2021/06/Single-Leg-Stretch.gif`,
-    "estiramiento_cuadriceps": `${F}/2021/06/Single-Leg-Stretch.gif`,
-    "estiramiento_pecho":      `${F}/2021/06/Cat-Stretch.gif`,
-    "default":                 `${F}/2021/02/Barbell-Bench-Press.gif`,
-};
+// EXERCISE_IMAGES is now in utils/exerciseMedia.js and imported above
 
 const GIF_CACHE_KEY = 'nexus_exercise_gifs_v1';
 
@@ -229,6 +113,7 @@ export default function ElitePlanScreen({ route, navigation }) {
                 reps: ex.reps || '10-12',
                 weight: 0,
                 icon: 'sparkles',
+                imgKey: ex.imgKey || null,
             });
 
             if (plan.esUltimate && plan.semanas) {

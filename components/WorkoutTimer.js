@@ -2,15 +2,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     StyleSheet, Text, View, TouchableOpacity,
     Animated, Vibration, Modal, FlatList, TextInput,
-    KeyboardAvoidingView, Platform,
+    KeyboardAvoidingView, Platform, Image, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getGifUrl, nameToImgKey } from '../utils/exerciseMedia';
+import Config from '../constants/Config';
 
 const REST_DEFAULT = 90;
+const GIF_CACHE_KEY = 'nexus_exercise_gifs_v1';
+const BACKEND_URL = Config.BACKEND_URL;
 
-// Inicializa las filas de series para un ejercicio
 function initSets(ex) {
     const count = ex?.sets || 3;
     const targetReps = ex?.reps?.toString().split('-')[0] || '12';
@@ -23,6 +27,88 @@ function initSets(ex) {
     }));
 }
 
+// ── GIF / TUTORIAL PANEL ──────────────────────────────────────────────
+const ExerciseGifPanel = React.memo(({ ex }) => {
+    const [expanded, setExpanded] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [imgError, setImgError] = useState(false);
+    const [gifUrl, setGifUrl] = useState(null);
+
+    const name = ex?.name || '';
+
+    useEffect(() => {
+        setExpanded(false);
+        setLoading(true);
+        setImgError(false);
+
+        (async () => {
+            try {
+                // 1. Leer caché local
+                let apiGifs = {};
+                const cached = await AsyncStorage.getItem(GIF_CACHE_KEY);
+                if (cached) apiGifs = JSON.parse(cached);
+
+                // Si el caché está vacío, pedir al backend y guardarlo
+                if (Object.keys(apiGifs).length === 0) {
+                    const res = await fetch(`${BACKEND_URL}/exercises/gifs`);
+                    if (res.ok) {
+                        apiGifs = await res.json();
+                        await AsyncStorage.setItem(GIF_CACHE_KEY, JSON.stringify(apiGifs));
+                    }
+                }
+
+                // 2. Resolver la clave: imgKey directo o por nombre
+                const key = ex?.imgKey || nameToImgKey(name);
+                if (key && apiGifs[key]) {
+                    setGifUrl(`${BACKEND_URL}/exercises/gif/${apiGifs[key]}`);
+                    return;
+                }
+            } catch (_) {}
+            // 3. Último recurso: URL estática
+            setGifUrl(getGifUrl(ex));
+        })();
+    }, [name]);
+
+    if (!gifUrl) return null;
+
+    return (
+        <View style={s.gifPanel}>
+            <TouchableOpacity
+                style={s.gifToggle}
+                onPress={() => setExpanded(v => !v)}
+                activeOpacity={0.7}
+            >
+                <Ionicons
+                    name={expanded ? 'chevron-up-circle-outline' : 'play-circle-outline'}
+                    size={16}
+                    color="#63ff15"
+                />
+                <Text style={s.gifToggleText}>
+                    {expanded ? 'Ocultar' : 'Cómo hacerlo'}
+                </Text>
+            </TouchableOpacity>
+
+            {expanded && (
+                <View style={s.gifBox}>
+                    {loading && (
+                        <View style={s.gifLoaderBox}>
+                            <ActivityIndicator color="#63ff15" size="small" />
+                        </View>
+                    )}
+                    <Image
+                        source={{ uri: gifUrl }}
+                        style={[s.gifImage, loading && { height: 0 }]}
+                        resizeMode="contain"
+                        onLoad={() => setLoading(false)}
+                        onError={() => { setImgError(true); setLoading(false); }}
+                    />
+                </View>
+            )}
+        </View>
+    );
+});
+
+// ── MAIN COMPONENT ────────────────────────────────────────────────────
 export default function WorkoutTimer({ visible, exercises = [], onClose, onComplete }) {
     const [exIdx, setExIdx] = useState(0);
     const [setsData, setSetsData] = useState([]);
@@ -38,7 +124,6 @@ export default function WorkoutTimer({ visible, exercises = [], onClose, onCompl
 
     const ex = exercises[exIdx];
 
-    // Init sets when exercise changes
     useEffect(() => {
         if (ex) setSetsData(initSets(ex));
         setIsResting(false);
@@ -46,14 +131,12 @@ export default function WorkoutTimer({ visible, exercises = [], onClose, onCompl
         restProgress.setValue(0);
     }, [exIdx, exercises]);
 
-    // Total workout timer
     useEffect(() => {
         if (!visible) return;
         totalRef.current = setInterval(() => setTotalSecs(s => s + 1), 1000);
         return () => clearInterval(totalRef.current);
     }, [visible]);
 
-    // Rest countdown
     useEffect(() => {
         clearInterval(restRef.current);
         if (!isResting) { restProgress.setValue(0); return; }
@@ -152,6 +235,7 @@ export default function WorkoutTimer({ visible, exercises = [], onClose, onCompl
     return (
         <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
             <SafeAreaView style={s.container}>
+
                 {/* ── HEADER ── */}
                 <View style={s.header}>
                     <TouchableOpacity onPress={onClose} style={s.iconBtn}>
@@ -169,15 +253,15 @@ export default function WorkoutTimer({ visible, exercises = [], onClose, onCompl
                     </TouchableOpacity>
                 </View>
 
-                {/* ── EXERCISE NAV DOTS ── */}
+                {/* ── NAV DOTS ── */}
                 {exercises.length > 1 && (
                     <View style={s.navDots}>
                         {exercises.map((_, i) => {
-                            const allDone = i < exIdx;
+                            const done = i < exIdx;
                             const active = i === exIdx;
                             return (
                                 <TouchableOpacity key={i} onPress={() => setExIdx(i)}>
-                                    <View style={[s.navDot, allDone && s.navDotDone, active && s.navDotActive]} />
+                                    <View style={[s.navDot, done && s.navDotDone, active && s.navDotActive]} />
                                 </TouchableOpacity>
                             );
                         })}
@@ -195,7 +279,10 @@ export default function WorkoutTimer({ visible, exercises = [], onClose, onCompl
                     </View>
                 </View>
 
-                {/* ── TABLA DE SERIES ── */}
+                {/* ── GIF / TUTORIAL PANEL ── */}
+                <ExerciseGifPanel key={ex.name} ex={ex} />
+
+                {/* ── TABLE HEADER ── */}
                 <View style={s.tableHeader}>
                     <Text style={[s.colHead, { width: 32 }]}>SET</Text>
                     <Text style={[s.colHead, { flex: 1, textAlign: 'center' }]}>KG</Text>
@@ -254,6 +341,7 @@ export default function WorkoutTimer({ visible, exercises = [], onClose, onCompl
     );
 }
 
+// ── SET ROW ───────────────────────────────────────────────────────────
 const SetRow = React.memo(({ item, index, onComplete, onChangeWeight, onChangeReps }) => {
     const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -299,15 +387,13 @@ const SetRow = React.memo(({ item, index, onComplete, onChangeWeight, onChangeRe
             </View>
 
             <TouchableOpacity style={[s.checkBtn, item.done && s.checkBtnDone]} onPress={handleComplete}>
-                {item.done
-                    ? <Ionicons name="checkmark" size={20} color="#000" />
-                    : <Ionicons name="checkmark" size={20} color="#2a2a2a" />
-                }
+                <Ionicons name="checkmark" size={20} color={item.done ? '#000' : '#2a2a2a'} />
             </TouchableOpacity>
         </Animated.View>
     );
 });
 
+// ── STYLES ────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#0a0a0a' },
 
@@ -329,19 +415,40 @@ const s = StyleSheet.create({
     navDotActive: { width: 20, backgroundColor: '#63ff15' },
     navDotDone: { backgroundColor: '#2a4a1a' },
 
-    exInfo: { paddingHorizontal: 20, marginBottom: 20 },
+    exInfo: { paddingHorizontal: 20, marginBottom: 12 },
     exName: { color: '#fff', fontSize: 26, fontWeight: '900', lineHeight: 30, marginBottom: 6 },
     exMeta: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     exMuscle: { color: '#555', fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
     exBadge: { backgroundColor: 'rgba(99,255,21,0.08)', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8 },
     exBadgeText: { color: '#63ff15', fontSize: 11, fontWeight: '900' },
 
+    // ── GIF panel ──
+    gifPanel: { marginHorizontal: 20, marginBottom: 14 },
+    gifToggle: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        backgroundColor: '#111', borderRadius: 12,
+        paddingHorizontal: 14, paddingVertical: 10,
+        borderWidth: 1, borderColor: 'rgba(99,255,21,0.12)',
+    },
+    gifToggleLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    gifToggleText: { color: '#63ff15', fontSize: 13, fontWeight: '700' },
+    gifBox: {
+        marginTop: 6, borderRadius: 12, overflow: 'hidden',
+        backgroundColor: '#0f0f0f', borderWidth: 1, borderColor: '#1a1a1a',
+        alignItems: 'center',
+    },
+    gifLoaderBox: {
+        paddingVertical: 32, alignItems: 'center', gap: 10,
+    },
+    gifLoadingText: { color: '#444', fontSize: 12, fontWeight: '600' },
+    gifImage: { width: '100%', height: 220 },
+
+    // ── Table ──
     tableHeader: {
         flexDirection: 'row', alignItems: 'center',
         paddingHorizontal: 20, marginBottom: 8,
     },
     colHead: { color: '#333', fontSize: 10, fontWeight: '900', letterSpacing: 1 },
-
     setList: { paddingHorizontal: 20, paddingBottom: 20 },
 
     setRow: {
@@ -361,10 +468,7 @@ const s = StyleSheet.create({
         borderWidth: 1, borderColor: '#1f1f1f', alignItems: 'center',
     },
     numInputDone: { backgroundColor: '#0d160d', borderColor: '#1a2f1a' },
-    numText: {
-        color: '#fff', fontSize: 20, fontWeight: '900',
-        textAlign: 'center', width: '100%',
-    },
+    numText: { color: '#fff', fontSize: 20, fontWeight: '900', textAlign: 'center', width: '100%' },
     multiply: { color: '#333', fontSize: 16, fontWeight: '900', width: 12, textAlign: 'center' },
 
     checkBtn: {
@@ -382,6 +486,7 @@ const s = StyleSheet.create({
     },
     addSetText: { color: '#444', fontSize: 13, fontWeight: '700' },
 
+    // ── Rest banner ──
     restBanner: {
         backgroundColor: '#0d160d',
         borderTopWidth: 1, borderTopColor: 'rgba(99,255,21,0.15)',
