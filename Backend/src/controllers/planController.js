@@ -221,10 +221,17 @@ CARDIO/FLEX: cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor, 
         try {
             let cleanText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
             cleanText = cleanText.replace(/```json/gi, '').replace(/```/g, '').trim();
-            // Arreglar JSON truncado: cerrar llaves/corchetes si faltan
-            const openBraces = (cleanText.match(/\{/g) || []).length;
-            const closeBraces = (cleanText.match(/\}/g) || []).length;
-            if (openBraces > closeBraces) cleanText += '}'.repeat(openBraces - closeBraces);
+            // Extraer sólo el bloque JSON
+            const start = cleanText.indexOf('{');
+            const end = cleanText.lastIndexOf('}');
+            if (start !== -1 && end !== -1) cleanText = cleanText.slice(start, end + 1);
+            // Reparar JSON truncado: cerrar corchetes y llaves no cerrados
+            const openBr  = (cleanText.match(/\[/g) || []).length;
+            const closeBr = (cleanText.match(/\]/g) || []).length;
+            const opens   = (cleanText.match(/\{/g) || []).length;
+            const closes  = (cleanText.match(/\}/g) || []).length;
+            if (openBr > closeBr) cleanText += ']'.repeat(openBr - closeBr);
+            if (opens  > closes)  cleanText += '}'.repeat(opens  - closes);
             planJson = JSON.parse(cleanText);
         } catch (e) {
             console.error("Error parsing AI JSON:", e.message);
@@ -477,15 +484,29 @@ cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor
 7. Genera exactamente ${semanas} semanas con progresión lógica`;
 
         const contents = [{ parts: [{ text: systemPrompt }] }];
-        const response = await tryGeminiWithFallback(contents);
+        const response = await tryGeminiWithFallback(contents, { maxOutputTokens: 8192 });
 
         let planJson;
         try {
-            let cleanText = response.data.candidates[0].content.parts[0].text;
-            cleanText = cleanText.replace(/```json/g, '').replace(/```/g, '').trim();
+            let cleanText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            cleanText = cleanText.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+            // Extraer sólo el bloque JSON (desde { hasta el último })
+            const start = cleanText.indexOf('{');
+            const end = cleanText.lastIndexOf('}');
+            if (start !== -1 && end !== -1) cleanText = cleanText.slice(start, end + 1);
+
+            // Reparar JSON truncado: cerrar llaves y corchetes no cerrados
+            const opens  = (cleanText.match(/\{/g) || []).length;
+            const closes = (cleanText.match(/\}/g) || []).length;
+            const openBr  = (cleanText.match(/\[/g) || []).length;
+            const closeBr = (cleanText.match(/\]/g) || []).length;
+            if (openBr > closeBr)  cleanText += ']'.repeat(openBr - closeBr);
+            if (opens  > closes)   cleanText += '}'.repeat(opens - closes);
+
             planJson = JSON.parse(cleanText);
         } catch (e) {
-            console.error('[Ultimate] Error parsing JSON:', e);
+            console.error('[Ultimate] Error parsing JSON:', e.message);
             throw new Error('La IA no generó un formato compatible. Reintenta.');
         }
 
