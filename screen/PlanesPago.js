@@ -1,16 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, ActivityIndicator, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import NexusAlert from '../components/NexusAlert';
 import Config from '../constants/Config';
+import { colors } from '../theme';
 
 const BACKEND_URL = Config.BACKEND_URL;
-const PRO_FULL     = 4.99;
-const PRO_DISCOUNT = 2.49;
+const PRO_BASE_PRICE = 4.99;
+const MAX_DISCOUNT_INVITES = 3;
+const MAX_DISCOUNT_PERCENT = 0.50;
+const DISCOUNT_PER_INVITE = (PRO_BASE_PRICE * MAX_DISCOUNT_PERCENT) / MAX_DISCOUNT_INVITES;
+
+function getProgressivePrice(invites) {
+    const discount = Math.min(invites, MAX_DISCOUNT_INVITES) * DISCOUNT_PER_INVITE;
+    const minPrice = PRO_BASE_PRICE * (1 - MAX_DISCOUNT_PERCENT);
+    return Math.max(minPrice, Math.round((PRO_BASE_PRICE - discount) * 100) / 100);
+}
+
+function getNextDiscountInfo(invites) {
+    const currentPrice = getProgressivePrice(invites);
+    const nextPrice = invites < MAX_DISCOUNT_INVITES ? getProgressivePrice(invites + 1) : 0;
+    const savedAmount = Math.round((PRO_BASE_PRICE - currentPrice) * 100) / 100;
+    const maxReached = invites >= MAX_DISCOUNT_INVITES;
+    return {
+        currentPrice,
+        nextPrice,
+        savedAmount,
+        savedPercent: Math.round((savedAmount / PRO_BASE_PRICE) * 100),
+        maxReached,
+        totalInvites: invites,
+        invitesForMax: MAX_DISCOUNT_INVITES,
+    };
+}
 
 export default function PlanesPago() {
     const navigation = useNavigation();
@@ -121,16 +147,44 @@ export default function PlanesPago() {
 
     const onInvite = async () => {
         try {
-            await Share.share({
+            const result = await Share.share({
                 message: `¡Únete a Nexus Athletics AI y entrena con el mejor Coach de IA! Usa mi código: ${user.referralCode} y ambos obtenemos beneficios. ¡Descárgala ahora!`,
             });
+            if (result?.action === Share.sharedAction && token) {
+                const res = await fetch(`${BACKEND_URL}/plans/register-share`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data?.user) {
+                        await AsyncStorage.setItem('user', JSON.stringify(data.user));
+                        setUser(data.user);
+                    }
+                    if (data?.invites !== undefined) {
+                        setTrialStatus(prev => ({
+                            ...(prev || {}),
+                            invites: data.invites,
+                            pricing: data.pricing,
+                            renewPrice: data.renewPrice,
+                            hasDiscount: data.hasDiscount,
+                            hasMaxDiscount: data.hasMaxDiscount,
+                        }));
+                    }
+                    showAlert('Compartido', 'Se aplicó progreso de descuento por compartir.', 'success');
+                }
+            }
         } catch (_) {}
     };
 
     // ─── Datos derivados ────────────────────────────────────────────────────
     const invites      = trialStatus?.invites ?? (user?.invitacionesExitosas || 0);
-    const hasDiscount  = invites >= 3;
-    const proPrice     = hasDiscount ? PRO_DISCOUNT : PRO_FULL;
+    const pricing      = getNextDiscountInfo(invites);
+    const hasDiscount  = invites > 0;
+    const proPrice     = pricing.currentPrice;
     const isInTrial    = trialStatus?.trialActive;
     const trialExpired = trialStatus?.trialExpired;
     const daysLeft     = trialStatus?.daysLeft;
@@ -227,33 +281,130 @@ export default function PlanesPago() {
                     <View style={styles.promoCard}>
                         <Text style={styles.promoTitle}>🎁 Invita y Ahorra</Text>
                         <Text style={styles.promoText}>
-                            Invita a <Text style={{ color: '#fff', fontWeight: '800' }}>3 amigos</Text> y consigue un{' '}
-                            <Text style={{ color: '#63ff15', fontWeight: '900' }}>50% de descuento</Text> permanente en el Plan Pro.{'\n'}
-                            Sin invitaciones: <Text style={{ color: '#aaa' }}>4.99€/mes</Text> {'  '}·{'  '}
-                            Con 3+ invitaciones: <Text style={{ color: '#63ff15' }}>2.49€/mes</Text>
+                            Cada amigo que se registre con tu código reduce el precio del Plan Pro.{'\n'}
+                            ¡Consigue <Text style={{ color: '#63ff15', fontWeight: '900' }}>{MAX_DISCOUNT_INVITES} invitaciones</Text> y llévate un <Text style={{ color: '#63ff15', fontWeight: '900' }}>50% de DESCUENTO</Text>!
                         </Text>
+
+                        {/* Price Ladder */}
+                        <View style={styles.priceLadder}>
+                            <View style={styles.priceLadderHeader}>
+                                <Text style={styles.priceLadderLabel}>PRECIO ACTUAL</Text>
+                                <View style={styles.priceDisplay}>
+                                    <Text style={styles.priceCurrent}>{pricing.currentPrice.toFixed(2)}€</Text>
+                                    <Text style={styles.priceMonth}>/mes</Text>
+                                    {pricing.maxReached && (
+                                        <View style={styles.maxBadge}>
+                                            <Text style={styles.maxBadgeText}>MAX 50%</Text>
+                                        </View>
+                                    )}
+                                </View>
+                            </View>
+
+                            {!pricing.maxReached && (
+                                <>
+                                    {/* Savings bar */}
+                                    <View style={styles.savingsBar}>
+                                        <View style={[styles.savingsFill, { width: `${pricing.savedPercent}%` }]} />
+                                    </View>
+                                    <View style={styles.savingsInfo}>
+                                        <Text style={styles.savingsText}>
+                                            Ahorrado: <Text style={{ color: '#63ff15', fontWeight: '800' }}>{pricing.savedAmount.toFixed(2)}€</Text>
+                                            ({pricing.savedPercent}%)
+                                        </Text>
+                                        <Text style={styles.savingsText}>
+                                            Base: <Text style={{ color: '#888' }}>{PRO_BASE_PRICE.toFixed(2)}€</Text>
+                                        </Text>
+                                    </View>
+
+                                    {/* Price ladder steps */}
+                                    <View style={styles.ladderSteps}>
+                                        {Array.from({ length: MAX_DISCOUNT_INVITES + 1 }, (_, i) => i).map(step => {
+                                            const stepPrice = getProgressivePrice(step);
+                                            const isReached = step <= invites;
+                                            const isNext = step === invites + 1;
+                                            return (
+                                                <View
+                                                    key={step}
+                                                    style={[
+                                                        styles.ladderStep,
+                                                        isReached && styles.ladderStepReached,
+                                                        isNext && styles.ladderStepNext,
+                                                    ]}
+                                                >
+                                                    <View style={styles.ladderStepLeft}>
+                                                        <View style={[
+                                                            styles.ladderDot,
+                                                            isReached && styles.ladderDotReached,
+                                                            isNext && styles.ladderDotNext,
+                                                        ]}>
+                                                            {isReached && (
+                                                                <Ionicons name="checkmark" size={10} color="#000" />
+                                                            )}
+                                                        </View>
+                                                        <Text style={[
+                                                            styles.ladderStepLabel,
+                                                            isReached && styles.ladderStepLabelReached,
+                                                        ]}>
+                                                            {step}/{MAX_DISCOUNT_INVITES} inv.
+                                                        </Text>
+                                                    </View>
+                                                    <Text style={[
+                                                        styles.ladderStepPrice,
+                                                        isReached && styles.ladderStepPriceReached,
+                                                        isNext && { color: '#63ff15' },
+                                                    ]}>
+                                                        {`${stepPrice.toFixed(2)}€`}
+                                                    </Text>
+                                                </View>
+                                            );
+                                        })}
+                                    </View>
+
+                                    {invites < MAX_DISCOUNT_INVITES && (
+                                        <View style={styles.nextDiscountBanner}>
+                                            <Ionicons name="trending-down-outline" size={16} color="#63ff15" />
+                                            <Text style={styles.nextDiscountText}>
+                                                {MAX_DISCOUNT_INVITES - invites} invitación(es) más para llegar al 50% de descuento
+                                            </Text>
+                                        </View>
+                                    )}
+                                </>
+                            )}
+
+                            {pricing.maxReached && (
+                                <View style={styles.freeBanner}>
+                                    <Ionicons name="trophy" size={24} color="#FFD700" />
+                                    <Text style={styles.freeBannerText}>
+                                        ¡Felicidades! Ya alcanzaste el descuento máximo del 50% en Plan Pro.
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
 
                         {/* Progreso de invitaciones */}
                         <View style={styles.inviteProgress}>
-                            {[0, 1, 2].map(i => (
+                            {Array.from({ length: MAX_DISCOUNT_INVITES }).map((_, i) => (
                                 <View key={i} style={[styles.inviteDot, i < invites && styles.inviteDotFull]}>
                                     <Ionicons
-                                        name={i < invites ? 'person-add' : 'person-add-outline'}
-                                        size={14}
+                                        name={i < invites ? 'person' : 'person-outline'}
+                                        size={12}
                                         color={i < invites ? '#000' : '#444'}
                                     />
                                 </View>
                             ))}
                             <Text style={styles.inviteCount}>
-                                {invites}/3 amigos{hasDiscount ? ' ✓ ¡Descuento activado!' : ''}
+                                {invites}/{MAX_DISCOUNT_INVITES} amigos
                             </Text>
                         </View>
 
                         <View style={styles.referralBox}>
-                            <Text style={styles.refCode}>{user.referralCode}</Text>
+                            <View style={styles.refCodeContainer}>
+                                <Text style={styles.refLabel}>TU CÓDIGO</Text>
+                                <Text style={styles.refCode}>{user.referralCode}</Text>
+                            </View>
                             <TouchableOpacity style={styles.inviteBtn} onPress={onInvite}>
-                                <Ionicons name="share-social-outline" size={14} color="#000" />
-                                <Text style={styles.inviteBtnText}>INVITAR</Text>
+                                <Ionicons name="share-social" size={16} color="#000" />
+                                <Text style={styles.inviteBtnText}>COMPARTIR</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -299,6 +450,7 @@ export default function PlanesPago() {
                                             isInTrial={isInTrial}
                                             hasDiscount={hasDiscount}
                                             proPrice={proPrice}
+                                            invites={invites}
                                         />
                                     ) : (
                                         <Text style={styles.planPrice}>
@@ -368,13 +520,13 @@ export default function PlanesPago() {
     );
 }
 
-// Subcomponente de precio para el Plan Pro
-function ProPricing({ trialUsed, isInTrial, hasDiscount, proPrice }) {
+function ProPricing({ trialUsed, isInTrial, hasDiscount, proPrice, invites }) {
+    const pricing = getNextDiscountInfo(invites || 0);
     if (!trialUsed) {
         return (
             <View>
                 <Text style={styles.planPriceFree}>1er mes GRATIS</Text>
-                <Text style={styles.planPriceSub}>Luego {proPrice.toFixed(2)}€/mes</Text>
+                <Text style={styles.planPriceSub}>Luego {pricing.currentPrice.toFixed(2)}€/mes</Text>
             </View>
         );
     }
@@ -382,18 +534,23 @@ function ProPricing({ trialUsed, isInTrial, hasDiscount, proPrice }) {
         return (
             <View>
                 <Text style={styles.planPriceFree}>En prueba gratuita</Text>
-                <Text style={styles.planPriceSub}>Renovación: {proPrice.toFixed(2)}€/mes</Text>
+                <Text style={styles.planPriceSub}>Renovación: {pricing.currentPrice.toFixed(2)}€/mes</Text>
             </View>
         );
     }
     return (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            {hasDiscount && (
-                <Text style={[styles.planPrice, { textDecorationLine: 'line-through', fontSize: 13, color: '#555' }]}>4.99€</Text>
+            {invites > 0 && (
+                <Text style={[styles.planPrice, { textDecorationLine: 'line-through', fontSize: 13, color: '#555' }]}>{PRO_BASE_PRICE.toFixed(2)}€</Text>
             )}
-            <Text style={[styles.planPrice, hasDiscount && { color: '#63ff15' }]}>
-                {proPrice.toFixed(2)}€/mes
+            <Text style={[styles.planPrice, invites > 0 && { color: '#63ff15' }]}>
+                {pricing.currentPrice.toFixed(2)}€/mes
             </Text>
+            {pricing.isFree && (
+                <View style={{ backgroundColor: '#FFD70020', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                    <Text style={{ color: '#FFD700', fontSize: 10, fontWeight: '900' }}>GRATIS</Text>
+                </View>
+            )}
         </View>
     );
 }
@@ -482,4 +639,191 @@ const styles = StyleSheet.create({
         shadowColor: '#63ff15', shadowOpacity: 0.5, shadowRadius: 12, elevation: 6,
     },
     selectBtnText: { fontWeight: '900', fontSize: 14 },
+
+    // Price Ladder
+    priceLadder: {
+        backgroundColor: '#0A0A0A',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.15)',
+    },
+    priceLadderHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    priceLadderLabel: {
+        color: '#888',
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 1,
+    },
+    priceDisplay: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+        gap: 4,
+    },
+    maxBadge: {
+        marginLeft: 6,
+        backgroundColor: 'rgba(255,215,0,0.15)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,215,0,0.35)',
+        borderRadius: 8,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+    },
+    maxBadgeText: {
+        color: '#FFD700',
+        fontSize: 9,
+        fontWeight: '900',
+        letterSpacing: 0.5,
+    },
+    priceCurrent: {
+        color: '#63ff15',
+        fontSize: 28,
+        fontWeight: '900',
+        letterSpacing: -1,
+    },
+    priceMonth: {
+        color: '#888',
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    priceFree: {
+        color: '#63ff15',
+        fontSize: 24,
+        fontWeight: '900',
+        letterSpacing: 1,
+    },
+    savingsBar: {
+        height: 4,
+        backgroundColor: '#1a1a1a',
+        borderRadius: 2,
+        overflow: 'hidden',
+        marginBottom: 8,
+    },
+    savingsFill: {
+        height: '100%',
+        backgroundColor: '#63ff15',
+        borderRadius: 2,
+    },
+    savingsInfo: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 16,
+    },
+    savingsText: {
+        color: '#666',
+        fontSize: 11,
+        fontWeight: '600',
+    },
+    ladderSteps: {
+        gap: 6,
+        marginBottom: 12,
+    },
+    ladderStep: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 10,
+        backgroundColor: '#0d0d0d',
+        borderWidth: 1,
+        borderColor: '#1a1a1a',
+    },
+    ladderStepReached: {
+        backgroundColor: 'rgba(99,255,21,0.06)',
+        borderColor: 'rgba(99,255,21,0.2)',
+    },
+    ladderStepNext: {
+        borderColor: 'rgba(99,255,21,0.4)',
+        borderStyle: 'dashed',
+    },
+    ladderStepLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    ladderDot: {
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        backgroundColor: '#1a1a1a',
+        borderWidth: 1,
+        borderColor: '#333',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    ladderDotReached: {
+        backgroundColor: '#63ff15',
+        borderColor: '#63ff15',
+    },
+    ladderDotNext: {
+        borderColor: '#63ff15',
+        borderWidth: 2,
+    },
+    ladderStepLabel: {
+        color: '#666',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    ladderStepLabelReached: {
+        color: '#63ff15',
+        fontWeight: '800',
+    },
+    ladderStepPrice: {
+        color: '#555',
+        fontSize: 13,
+        fontWeight: '700',
+    },
+    ladderStepPriceReached: {
+        color: '#63ff15',
+    },
+    nextDiscountBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: 'rgba(99,255,21,0.08)',
+        padding: 10,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.15)',
+    },
+    nextDiscountText: {
+        color: '#63ff15',
+        fontSize: 12,
+        fontWeight: '700',
+        flex: 1,
+    },
+    freeBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        backgroundColor: 'rgba(255,215,0,0.08)',
+        padding: 12,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(255,215,0,0.2)',
+    },
+    freeBannerText: {
+        color: '#FFD700',
+        fontSize: 12,
+        fontWeight: '600',
+        flex: 1,
+        lineHeight: 18,
+    },
+    refCodeContainer: {
+        flex: 1,
+    },
+    refLabel: {
+        color: '#555',
+        fontSize: 9,
+        fontWeight: '800',
+        letterSpacing: 1,
+        marginBottom: 2,
+    },
 });

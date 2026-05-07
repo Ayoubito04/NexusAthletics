@@ -42,6 +42,7 @@ export default function Register() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+    const [referralCode, setReferralCode] = useState('');
     const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', type: 'info', onConfirm: null });
 
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -108,7 +109,7 @@ export default function Register() {
             const response = await fetch(`${BACKEND_URL}/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nombre, apellido, email, password: contraseña })
+                body: JSON.stringify({ nombre, apellido, email, password: contraseña, referralCode })
             });
 
             console.log('📊 Register response status:', response.status);
@@ -325,6 +326,15 @@ export default function Register() {
                         <Text style={styles.registerSubtitle}>⚡ EMPIEZA TU TRANSFORMACIÓN</Text>
                     </Animated.View>
 
+                    {/* Referral Banner */}
+                    <Animated.View style={[styles.referralBanner, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+                        <Ionicons name="gift" size={16} color="#63ff15" />
+                        <Text style={styles.referralBannerText}>
+                            ¿Tienes un código de invitación?{' '}
+                            <Text style={{ color: '#63ff15', fontWeight: '800' }}>Ingrésalo abajo</Text> y ambos obtendréis descuentos en el Plan Pro.
+                        </Text>
+                    </Animated.View>
+
                     {/* Form Card */}
                     <View style={styles.formCard}>
 
@@ -425,6 +435,25 @@ export default function Register() {
                                 <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} activeOpacity={0.7}>
                                     <Ionicons name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'} size={18} color="#555" />
                                 </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        {/* Código de Referido (Opcional) */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.fieldLabel}>Código de Invitación (Opcional)</Text>
+                            <View style={[styles.inputWrapper, focusedInput === 'referral' && styles.inputFocused]}>
+                                <Ionicons name="gift-outline" size={18} color="#555" />
+                                <TextInput
+                                    placeholder="Ej: JUA-4821"
+                                    placeholderTextColor={colors.textPlaceholder}
+                                    value={referralCode}
+                                    onChangeText={setReferralCode}
+                                    onFocus={() => setFocusedInput('referral')}
+                                    onBlur={() => setFocusedInput(null)}
+                                    editable={!isLoading}
+                                    autoCapitalize="characters"
+                                    style={styles.input}
+                                />
                             </View>
                         </View>
 
@@ -625,5 +654,24 @@ const styles = StyleSheet.create({
     neonText: {
         color: colors.primary,
         fontWeight: '700',
+    },
+    referralBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        backgroundColor: 'rgba(99,255,21,0.06)',
+        padding: 12,
+        borderRadius: 12,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.15)',
+        maxWidth: 400,
+    },
+    referralBannerText: {
+        color: '#aaa',
+        fontSize: 12,
+        flex: 1,
+        lineHeight: 17,
+        fontWeight: '500',
     },
 });

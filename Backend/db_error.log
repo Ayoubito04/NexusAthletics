@@ -1,0 +1,7 @@
+[dotenv@17.2.3] injecting env (20) from .env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+🔥 Firebase Admin inicializado correctamente.
+✅ Voice Controller cargado correctamente
+✅ Ruta /voice/transcribe registrada correctamente
+🚀 Servidor MODULAR corriendo en http://localhost:3000
+✅ Cloudinary: Conexión establecida con éxito
+❌ ERROR: No se pudo conectar a la Base de Datos: Error querying the database: FATAL: Tenant or user not found

@@ -48,11 +48,8 @@ export default function Analytics() {
     const loadData = async () => {
         try {
             const token = await AsyncStorage.getItem('token');
-            const userJson = await AsyncStorage.getItem('user');
-            if (userJson) {
-                const u = JSON.parse(userJson);
-                if (u.streak) setStreak(u.streak);
-            }
+            const streakVal = await AsyncStorage.getItem('streak_count');
+            if (streakVal) setStreak(parseInt(streakVal) || 0);
             if (token) {
                 const response = await fetch(`${BACKEND_URL}/activities/stats`, {
                     headers: { 'Authorization': `Bearer ${token}` }

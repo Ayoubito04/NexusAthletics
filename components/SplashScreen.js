@@ -1,8 +1,12 @@
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, View, Animated, Dimensions, Text } from 'react-native';
+import { StyleSheet, View, Animated, Dimensions, Text, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
+
+const HEX_SIZE = 30;
+const COLS = Math.ceil(width / (HEX_SIZE * 1.5)) + 2;
+const ROWS = Math.ceil(height / (HEX_SIZE * 0.866)) + 2;
 
 export default function SplashScreen({ onFinish }) {
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -10,56 +14,78 @@ export default function SplashScreen({ onFinish }) {
     const glowAnim = useRef(new Animated.Value(0)).current;
     const pulseAnim = useRef(new Animated.Value(1)).current;
     const loadingBarAnim = useRef(new Animated.Value(0)).current;
+    const rotateAnim = useRef(new Animated.Value(0)).current;
+    const gridOpacity = useRef(new Animated.Value(0)).current;
+
+    const hexOpacities = useRef(
+        Array.from({ length: 6 }, () => new Animated.Value(0))
+    ).current;
 
     useEffect(() => {
         Animated.sequence([
-            // Entrada - aparición del logo
             Animated.parallel([
+                Animated.timing(gridOpacity, {
+                    toValue: 1,
+                    duration: 1000,
+                    useNativeDriver: true,
+                    easing: Easing.out(Easing.ease),
+                }),
                 Animated.timing(fadeAnim, {
                     toValue: 1,
                     duration: 800,
                     useNativeDriver: true,
+                    easing: Easing.out(Easing.back(0.3)),
                 }),
                 Animated.spring(scaleAnim, {
                     toValue: 1,
-                    tension: 20,
-                    friction: 7,
+                    tension: 15,
+                    friction: 6,
                     useNativeDriver: true,
                 }),
             ]),
-            // Pulso del logo
+            Animated.stagger(200, hexOpacities.map(anim =>
+                Animated.timing(anim, {
+                    toValue: 1,
+                    duration: 600,
+                    useNativeDriver: true,
+                    easing: Easing.out(Easing.ease),
+                })
+            )),
             Animated.loop(
                 Animated.sequence([
                     Animated.timing(pulseAnim, {
-                        toValue: 1.1,
-                        duration: 1000,
+                        toValue: 1.08,
+                        duration: 1200,
                         useNativeDriver: true,
+                        easing: Easing.inOut(Easing.sin),
                     }),
                     Animated.timing(pulseAnim, {
                         toValue: 1,
-                        duration: 1000,
+                        duration: 1200,
                         useNativeDriver: true,
+                        easing: Easing.inOut(Easing.sin),
                     }),
                 ]),
                 { iterations: 2 }
             ),
-            // Barra de carga animada
             Animated.timing(loadingBarAnim, {
                 toValue: 1,
-                duration: 1500,
+                duration: 1200,
                 useNativeDriver: false,
+                easing: Easing.inOut(Easing.cubic),
             }),
-            // Salida - desvanecimiento
             Animated.parallel([
                 Animated.timing(fadeAnim, {
                     toValue: 0,
-                    duration: 500,
+                    duration: 400,
                     useNativeDriver: true,
+                    easing: Easing.in(Easing.ease),
                 }),
                 Animated.timing(scaleAnim, {
-                    toValue: 1.3,
-                    duration: 500,
+                    toValue: 1.4,
+                    duration: 400,
                     useNativeDriver: true,
+                    easing: Easing.in(Easing.ease),
                 }),
             ]),
         ]).start(() => {
@@ -67,25 +93,70 @@ export default function SplashScreen({ onFinish }) {
         });
     }, []);
 
-    const glowOpacity = glowAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0.4, 0.8],
+    const loadingBarWidth = loadingBarAnim.interpolate({
+        inputRange: [0, 0.3, 0.7, 1],
+        outputRange: ['0%', '25%', '70%', '100%'],
     });
 
-    const loadingBarWidth = loadingBarAnim.interpolate({
+    const spin = rotateAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: ['0%', '100%'],
+        outputRange: ['0deg', '360deg'],
     });
+
+    const hexPositions = [
+        { x: '15%', y: '20%', size: 1.0, delay: 0 },
+        { x: '55%', y: '15%', size: 0.7, delay: 1 },
+        { x: '80%', y: '35%', size: 1.2, delay: 2 },
+        { x: '30%', y: '55%', size: 0.8, delay: 3 },
+        { x: '70%', y: '65%', size: 1.1, delay: 4 },
+        { x: '45%', y: '80%', size: 0.6, delay: 5 },
+    ];
 
     return (
         <View style={styles.container}>
-            {/* Fondo con líneas decorativas */}
-            <View style={styles.backgroundLines}>
-                <View style={[styles.line, { top: '20%' }]} />
-                <View style={[styles.line, { top: '40%' }]} />
-                <View style={[styles.line, { top: '60%' }]} />
-                <View style={[styles.line, { top: '80%' }]} />
-            </View>
+            {/* Animated hex grid background */}
+            <Animated.View style={[styles.hexGrid, { opacity: gridOpacity }]}>
+                {Array.from({ length: ROWS }).map((_, row) =>
+                    Array.from({ length: COLS }).map((_, col) => {
+                        const offsetX = row % 2 === 0 ? 0 : HEX_SIZE * 0.75;
+                        return (
+                            <View
+                                key={`${row}-${col}`}
+                                style={[
+                                    styles.hexCell,
+                                    {
+                                        left: col * HEX_SIZE * 1.5 + offsetX,
+                                        top: row * HEX_SIZE * 0.866,
+                                        opacity: 0.04 + ((row + col) % 3) * 0.02,
+                                    },
+                                ]}
+                            />
+                        );
+                    })
+                )}
+            </Animated.View>
+
+            {/* Floating hex particles */}
+            {hexPositions.map((hex, i) => (
+                <Animated.View
+                    key={i}
+                    style={[
+                        styles.hexParticle,
+                        {
+                            left: hex.x,
+                            top: hex.y,
+                            opacity: hexOpacities[i],
+                            transform: [
+                                { scale: hex.size * 0.6 },
+                            ],
+                            borderColor: `rgba(99,255,21,${0.15 + i * 0.04})`,
+                        },
+                    ]}
+                />
+            ))}
+
+            {/* Scanline overlay */}
+            <View style={styles.scanlineOverlay} />
 
             {/* Logo Container */}
             <Animated.View
@@ -97,62 +168,52 @@ export default function SplashScreen({ onFinish }) {
                     },
                 ]}
             >
-                {/* Glow effect */}
-                <Animated.View
-                    style={[
-                        styles.glowCircle,
-                        {
-                            opacity: glowOpacity,
-                        },
-                    ]}
-                />
+                {/* Outer glow ring */}
+                <Animated.View style={[styles.outerGlowRing, { opacity: fadeAnim }]} />
 
-                {/* Logo Box */}
+                {/* Inner glow circle */}
+                <Animated.View style={[styles.glowCircle, { opacity: Animated.multiply(fadeAnim, 0.6) }]} />
+
+                {/* Logo Box with gradient border */}
                 <LinearGradient
-                    colors={['rgba(99,255,21,0.2)', 'rgba(99,255,21,0.05)']}
+                    colors={['rgba(99,255,21,0.25)', 'rgba(0,209,255,0.15)']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={styles.logoBox}
                 >
-                    <Text style={styles.logoText}>N</Text>
+                    <View style={styles.logoInner}>
+                        <Text style={styles.logoText}>N</Text>
+                    </View>
                 </LinearGradient>
             </Animated.View>
 
-            {/* Tagline */}
-            <Animated.Text
-                style={[
-                    styles.tagline,
-                    {
-                        opacity: fadeAnim,
-                    },
-                ]}
-            >
-                NEXUS FITNESS
-            </Animated.Text>
+            {/* Brand name */}
+            <Animated.View style={{ opacity: fadeAnim }}>
+                <Text style={styles.brandName}>NEXUS</Text>
+                <View style={styles.brandAccent}>
+                    <View style={styles.accentLineLeft} />
+                    <Text style={styles.brandSub}>ATHLETICS</Text>
+                    <View style={styles.accentLineRight} />
+                </View>
+            </Animated.View>
 
-            <Animated.Text
-                style={[
-                    styles.subtitle,
-                    {
-                        opacity: fadeAnim,
-                    },
-                ]}
-            >
-                Tu entrenador personal con IA
+            <Animated.Text style={[styles.subtitle, { opacity: fadeAnim }]}>
+                Entremaniento con IA
             </Animated.Text>
 
             {/* Loading Bar */}
             <View style={styles.loadingBarContainer}>
-                <Animated.View
-                    style={[
-                        styles.loadingBar,
-                        {
-                            width: loadingBarWidth,
-                        },
-                    ]}
-                />
+                <LinearGradient
+                    colors={['#63ff15', '#00D1FF']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.loadingBarTrack}
+                >
+                    <Animated.View style={[styles.loadingBar, { width: loadingBarWidth }]} />
+                </LinearGradient>
             </View>
 
+            <Text style={styles.versionText}>v2.0 ELITE</Text>
         </View>
     );
 }
@@ -165,87 +226,157 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         overflow: 'hidden',
     },
-    backgroundLines: {
+    hexGrid: {
         position: 'absolute',
         width: '100%',
         height: '100%',
     },
-    line: {
+    hexCell: {
+        position: 'absolute',
+        width: HEX_SIZE,
+        height: HEX_SIZE * 0.866,
+        backgroundColor: '#63ff15',
+        transform: [{ rotate: '90deg' }],
+    },
+    hexParticle: {
+        position: 'absolute',
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        borderWidth: 2,
+        transform: [{ rotate: '45deg' }],
+    },
+    scanlineOverlay: {
         position: 'absolute',
         width: '100%',
-        height: 1,
-        backgroundColor: 'rgba(99,255,21,0.08)',
+        height: '100%',
+        opacity: 0.03,
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
     },
     logoContainer: {
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 48,
+        marginBottom: 32,
+    },
+    outerGlowRing: {
+        position: 'absolute',
+        width: 300,
+        height: 300,
+        borderRadius: 150,
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.15)',
     },
     glowCircle: {
         position: 'absolute',
-        width: 260,
-        height: 260,
-        borderRadius: 130,
+        width: 220,
+        height: 220,
+        borderRadius: 110,
         backgroundColor: '#63ff15',
         shadowColor: '#63ff15',
         shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.6,
-        shadowRadius: 60,
+        shadowOpacity: 0.4,
+        shadowRadius: 80,
         elevation: 25,
     },
     logoBox: {
-        width: 180,
-        height: 180,
-        borderRadius: 32,
+        width: 140,
+        height: 140,
+        borderRadius: 36,
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 3,
-        borderColor: '#63ff15',
+        borderWidth: 2,
+        borderColor: 'rgba(99,255,21,0.8)',
         shadowColor: '#63ff15',
         shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.8,
-        shadowRadius: 30,
-        elevation: 15,
+        shadowOpacity: 0.9,
+        shadowRadius: 40,
+        elevation: 20,
+    },
+    logoInner: {
+        width: 120,
+        height: 120,
+        borderRadius: 28,
+        backgroundColor: '#0A0A0A',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.2)',
     },
     logoText: {
-        fontSize: 80,
+        fontSize: 64,
         fontWeight: '900',
         color: '#63ff15',
         letterSpacing: 2,
+        textShadowColor: 'rgba(99,255,21,0.5)',
+        textShadowOffset: { width: 0, height: 0 },
+        textShadowRadius: 20,
     },
-    tagline: {
-        fontSize: 24,
+    brandName: {
+        fontSize: 36,
         fontWeight: '900',
         color: '#fff',
-        letterSpacing: 3,
+        letterSpacing: 12,
         marginBottom: 8,
+        textShadowColor: 'rgba(99,255,21,0.3)',
+        textShadowOffset: { width: 0, height: 0 },
+        textShadowRadius: 10,
+    },
+    brandAccent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 24,
+        gap: 10,
+    },
+    accentLineLeft: {
+        width: 30,
+        height: 1,
+        backgroundColor: 'rgba(99,255,21,0.5)',
+    },
+    accentLineRight: {
+        width: 30,
+        height: 1,
+        backgroundColor: 'rgba(99,255,21,0.5)',
+    },
+    brandSub: {
+        fontSize: 11,
+        color: '#63ff15',
+        fontWeight: '700',
+        letterSpacing: 4,
     },
     subtitle: {
         fontSize: 13,
-        color: '#63ff15',
-        fontWeight: '700',
-        letterSpacing: 1.5,
-        marginBottom: 60,
+        color: '#71717A',
+        fontWeight: '600',
+        letterSpacing: 2,
+        textTransform: 'uppercase',
+        marginBottom: 80,
     },
     loadingBarContainer: {
         position: 'absolute',
-        bottom: 80,
-        width: '70%',
+        bottom: 100,
+        width: '60%',
         height: 3,
-        backgroundColor: 'rgba(99,255,21,0.15)',
+        backgroundColor: 'rgba(99,255,21,0.1)',
         borderRadius: 2,
         overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.3)',
+    },
+    loadingBarTrack: {
+        flex: 1,
+        borderRadius: 2,
     },
     loadingBar: {
         height: '100%',
         backgroundColor: '#63ff15',
         borderRadius: 2,
-        shadowColor: '#63ff15',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.5,
-        shadowRadius: 4,
-        elevation: 3,
+    },
+    versionText: {
+        position: 'absolute',
+        bottom: 40,
+        fontSize: 9,
+        color: '#52525B',
+        fontWeight: '800',
+        letterSpacing: 2,
     },
 });

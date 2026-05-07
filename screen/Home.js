@@ -431,8 +431,7 @@ export default function Home() {
                 >
                     <QuickAction icon="mic-outline" label="Voz Coach" color="#00D1FF" onPress={() => navigation.navigate('VoiceCoach')} delay={1} />
                     <QuickAction icon="diamond" label="Elite Vault" color="#FFD700" onPress={() => navigation.navigate('SavedElitePlans')} delay={2} />
-                    <QuickAction icon="bar-chart" label="Ranking" color="#FF6B6B" onPress={() => navigation.navigate('Ranking')} delay={3} />
-                    <QuickAction icon="trophy-outline" label="Liga Nexus" color="#a855f7" onPress={() => navigation.navigate('UserRanking')} delay={4} />
+                    <QuickAction icon="trophy-outline" label="Liga Nexus" color="#a855f7" onPress={() => navigation.navigate('Ranking')} delay={3} />
                 </ScrollView>
 
                 {/* SECTIONS: BENTO STYLE LISTS */}

@@ -135,9 +135,13 @@ const getStats = async (req, res) => {
             }
         });
 
-        const activities = await prisma.activity.findMany({
-            where: { userId }
-        });
+        const [activities, workoutSessions] = await Promise.all([
+            prisma.activity.findMany({ where: { userId } }),
+            prisma.workoutSession.findMany({
+                where: { userId },
+                select: { duration: true, date: true }
+            }),
+        ]);
 
         // Calcular datos semanales (últimos 7 días)
         const sevenDaysAgo = new Date();
@@ -145,10 +149,7 @@ const getStats = async (req, res) => {
         sevenDaysAgo.setHours(0, 0, 0, 0);
 
         const weeklyActivities = await prisma.activity.findMany({
-            where: {
-                userId,
-                fecha: { gte: sevenDaysAgo }
-            },
+            where: { userId, fecha: { gte: sevenDaysAgo } },
             orderBy: { fecha: 'asc' }
         });
 
@@ -174,6 +175,9 @@ const getStats = async (req, res) => {
             }
         });
 
+        // Sumar tiempo de sesiones de gym (workoutSession.duration está en segundos)
+        const gymSegundos = workoutSessions.reduce((s, w) => s + (w.duration || 0), 0);
+
         const stats = activities.reduce((acc, curr) => {
             acc.totalKm += (curr.distancia / 1000);
             acc.totalKcal += (curr.calorias || 0);
@@ -182,13 +186,13 @@ const getStats = async (req, res) => {
         }, {
             totalKm: 0,
             totalKcal: 0,
-            totalSegundos: 0,
-            count: activities.length,
+            totalSegundos: gymSegundos, // empieza con el tiempo de gym
+            count: workoutSessions.length, // sesiones de gym, no GPS
             healthSynced: user.healthSynced,
             healthService: user.healthService,
             healthCalories: user.healthCalories || 0,
             healthSteps: user.healthSteps || 0,
-            weeklyProgress: dailyStats // Añadimos el progreso semanal aquí
+            weeklyProgress: dailyStats
         });
 
         res.json(stats);

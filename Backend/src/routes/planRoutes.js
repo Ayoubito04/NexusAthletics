@@ -23,4 +23,8 @@ router.post('/generate-plan-ultimate', authenticateToken, planController.generat
 router.post('/plans/start-trial', authenticateToken, planController.startTrial);
 router.get('/plans/trial-status', authenticateToken, planController.getTrialStatus);
 
+// Referral
+router.post('/plans/use-referral', authenticateToken, planController.useReferral);
+router.post('/plans/register-share', authenticateToken, planController.registerShare);
+
 module.exports = router;

@@ -1,4 +1,5 @@
 const { prisma } = require('../config/prisma');
+const { sendPushNotification } = require('../services/notificationService');
 
 // Fórmula Brzycki para 1RM estimado
 const calc1RM = (weight, reps) => {
@@ -87,6 +88,50 @@ const logWorkoutSession = async (req, res) => {
         const session = await prisma.workoutSession.create({
             data: { userId, exercises: processed, totalVolume, duration: duration || null }
         });
+
+        // Notificar a usuarios superados en el ranking global de fuerza
+        try {
+            const newScore = (await prisma.muscleStrength.findMany({
+                where: { userId },
+                select: { bestOneRM: true },
+            })).reduce((s, m) => s + m.bestOneRM, 0);
+
+            // Usuarios cuyo totalScore estaba por encima del antiguo y ahora es inferior
+            const allUsers = await prisma.user.findMany({
+                where: {
+                    id: { not: userId },
+                    pushToken: { not: null },
+                    muscleStrengths: { some: {} },
+                },
+                select: {
+                    id: true,
+                    nombre: true,
+                    pushToken: true,
+                    muscleStrengths: { select: { bestOneRM: true } },
+                },
+            });
+
+            const currentUser = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { nombre: true, apellido: true },
+            });
+
+            const overtaken = allUsers.filter(u => {
+                const theirScore = u.muscleStrengths.reduce((s, m) => s + m.bestOneRM, 0);
+                return theirScore < newScore && theirScore > 0;
+            });
+
+            for (const u of overtaken) {
+                if (u.pushToken) {
+                    sendPushNotification(
+                        u.pushToken,
+                        '⚡ ¡Te han superado en el Ranking!',
+                        `${currentUser.nombre} ${currentUser.apellido || ''} te ha superado en el ranking de fuerza. ¡Entrena para recuperar tu posición!`,
+                        { screen: 'Ranking', tab: 'fuerza' }
+                    ).catch(() => {});
+                }
+            }
+        } catch (_) {}
 
         // Auto-publicar en el feed si hay PRs
         let post = null;

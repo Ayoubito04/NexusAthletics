@@ -68,7 +68,7 @@ const sendVerificationEmail = async (email, code) => {
 
 const register = async (req, res) => {
     try {
-        const { email, nombre, apellido, password } = req.body;
+        const { email, nombre, apellido, password, referralCode } = req.body;
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) return res.status(400).json({ error: "El email ya está registrado" });
 
@@ -86,6 +86,24 @@ const register = async (req, res) => {
                 referralCode: refCode
             }
         });
+
+        // Si viene un código de referido, incrementamos las invitaciones del referidor
+        if (referralCode) {
+            try {
+                const referrer = await prisma.user.findUnique({
+                    where: { referralCode: referralCode.trim().toUpperCase() }
+                });
+                if (referrer && referrer.id !== user.id) {
+                    await prisma.user.update({
+                        where: { id: referrer.id },
+                        data: { invitacionesExitosas: { increment: 1 } }
+                    });
+                    console.log(`✅ Referido exitoso: ${referrer.email} invitó a ${email}`);
+                }
+            } catch (refErr) {
+                console.error("Error al procesar referido:", refErr);
+            }
+        }
 
         const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
         const { password: _, ...userWithoutPassword } = user;

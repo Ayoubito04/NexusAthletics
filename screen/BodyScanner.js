@@ -554,7 +554,7 @@ export default function BodyScanner() {
                         {/* ── Botones finales ── */}
                         <TouchableOpacity
                             style={[styles.rankingBtn, { backgroundColor: cfg.color }]}
-                            onPress={() => navigation.navigate('MuscleRankings')}
+                            onPress={() => navigation.navigate('Ranking', { tab: 'estetica' })}
                         >
                             <Text style={styles.rankingBtnText}>VER RANKING GLOBAL</Text>
                             <Ionicons name="trophy-outline" size={18} color="black" />

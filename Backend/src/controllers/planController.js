@@ -517,8 +517,36 @@ cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor
     }
 };
 
-const PRO_PRICE_FULL     = 4.99;
-const PRO_PRICE_DISCOUNT = 2.49; // 50% off por ≥3 invitaciones exitosas
+const PRO_BASE_PRICE = 4.99;
+const MAX_DISCOUNT_INVITES = 3;
+const MAX_DISCOUNT_PERCENT = 0.50;
+const DISCOUNT_PER_INVITE = (PRO_BASE_PRICE * MAX_DISCOUNT_PERCENT) / MAX_DISCOUNT_INVITES;
+
+function getProgressivePrice(invites) {
+    const discount = Math.min(invites, MAX_DISCOUNT_INVITES) * DISCOUNT_PER_INVITE;
+    const minPrice = PRO_BASE_PRICE * (1 - MAX_DISCOUNT_PERCENT);
+    return Math.max(minPrice, Math.round((PRO_BASE_PRICE - discount) * 100) / 100);
+}
+
+function getNextDiscountInfo(invites) {
+    const currentPrice = getProgressivePrice(invites);
+    const invitesNeeded = invites >= MAX_DISCOUNT_INVITES ? 0 : MAX_DISCOUNT_INVITES - invites;
+    const nextPrice = invites < MAX_DISCOUNT_INVITES ? getProgressivePrice(invites + 1) : 0;
+    const savedAmount = Math.round((PRO_BASE_PRICE - currentPrice) * 100) / 100;
+    const maxReached = invites >= MAX_DISCOUNT_INVITES;
+    const savedPercent = Math.round((savedAmount / PRO_BASE_PRICE) * 100);
+    return {
+        currentPrice,
+        nextPrice,
+        invitesNeeded,
+        savedAmount,
+        savedPercent,
+        maxReached,
+        totalInvites: invites,
+        invitesForMax: MAX_DISCOUNT_INVITES,
+        discountPerInvite: Math.round(DISCOUNT_PER_INVITE * 100) / 100,
+    };
+}
 
 const startTrial = async (req, res) => {
     try {
@@ -560,8 +588,8 @@ const getTrialStatus = async (req, res) => {
             });
         }
 
-        const hasDiscount = (user.invitacionesExitosas || 0) >= 3;
-        const renewPrice  = hasDiscount ? PRO_PRICE_DISCOUNT : PRO_PRICE_FULL;
+        const invites = user.invitacionesExitosas || 0;
+        const pricing = getNextDiscountInfo(invites);
 
         let daysLeft = null;
         if (user.haUsadoTrial && user.trialEndDate && user.trialEndDate > now) {
@@ -574,9 +602,11 @@ const getTrialStatus = async (req, res) => {
             trialActive:  daysLeft !== null,
             trialExpired: trialExpired,
             daysLeft,
-            hasDiscount,
-            renewPrice,
-            invites: user.invitacionesExitosas || 0,
+            hasDiscount: invites > 0,
+            hasMaxDiscount: pricing.maxReached,
+            renewPrice: pricing.currentPrice,
+            invites,
+            pricing,
         });
     } catch (error) {
         console.error("TrialStatus Error:", error);
@@ -584,4 +614,82 @@ const getTrialStatus = async (req, res) => {
     }
 };
 
-module.exports = { downloadPDF, generatePDF, generatePlanInteractive, generateUltimatePlan, savePlan, getSavedPlans, getSavedPlanById, updateSavedPlan, deleteSavedPlan, startTrial, getTrialStatus };
+const useReferral = async (req, res) => {
+    try {
+        const { referralCode } = req.body;
+        if (!referralCode) {
+            return res.status(400).json({ error: "Código de referido requerido" });
+        }
+
+        const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+        if (!user) {
+            return res.status(404).json({ error: "Usuario no encontrado" });
+        }
+
+        if (user.referralCode === referralCode.trim().toUpperCase()) {
+            return res.status(400).json({ error: "No puedes usar tu propio código de referido" });
+        }
+
+        const referrer = await prisma.user.findUnique({
+            where: { referralCode: referralCode.trim().toUpperCase() }
+        });
+
+        if (!referrer) {
+            return res.status(404).json({ error: "Código de referido inválido" });
+        }
+
+        await prisma.user.update({
+            where: { id: referrer.id },
+            data: { invitacionesExitosas: { increment: 1 } }
+        });
+
+        const updatedUser = await prisma.user.findUnique({
+            where: { id: req.user.id }
+        });
+
+        const { password: _, ...userWithoutPassword } = updatedUser;
+        res.json({
+            success: true,
+            message: "Código de referido aplicado correctamente",
+            user: userWithoutPassword,
+        });
+    } catch (error) {
+        console.error("useReferral Error:", error);
+        res.status(500).json({ error: "Error al procesar el código de referido" });
+    }
+};
+
+const registerShare = async (req, res) => {
+    try {
+        const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+        if (!user) {
+            return res.status(404).json({ error: "Usuario no encontrado" });
+        }
+
+        const currentInvites = user.invitacionesExitosas || 0;
+        const nextInvites = Math.min(currentInvites + 1, MAX_DISCOUNT_INVITES);
+
+        const updatedUser = await prisma.user.update({
+            where: { id: req.user.id },
+            data: { invitacionesExitosas: nextInvites }
+        });
+
+        const pricing = getNextDiscountInfo(nextInvites);
+        const { password: _, ...userWithoutPassword } = updatedUser;
+
+        res.json({
+            success: true,
+            user: userWithoutPassword,
+            invites: nextInvites,
+            pricing,
+            renewPrice: pricing.currentPrice,
+            hasDiscount: nextInvites > 0,
+            hasMaxDiscount: pricing.maxReached,
+        });
+    } catch (error) {
+        console.error("registerShare Error:", error);
+        res.status(500).json({ error: "Error al registrar el compartido" });
+    }
+};
+
+module.exports = { downloadPDF, generatePDF, generatePlanInteractive, generateUltimatePlan, savePlan, getSavedPlans, getSavedPlanById, updateSavedPlan, deleteSavedPlan, startTrial, getTrialStatus, useReferral, registerShare };
