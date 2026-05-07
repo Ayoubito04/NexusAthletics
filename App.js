@@ -67,23 +67,40 @@ function TabNavigator() {
           fontSize: rs(10),
           fontWeight: '600',
           marginBottom: 4,
-          letterSpacing: 0.3,
+          letterSpacing: 0.25,
+        },
+        tabBarItemStyle: {
+          paddingTop: 2,
         },
         tabBarStyle: {
-          backgroundColor: colors.tabBar,
+          backgroundColor: 'transparent',
           position: 'absolute',
           bottom: 16,
           left: 16,
           right: 16,
-          height: 64,
+          height: 66,
           borderRadius: radius.tab,
           borderTopWidth: 0,
           borderWidth: 1,
-          borderColor: colors.tabBarBorder,
+          borderColor: 'rgba(99,255,21,0.16)',
           ...shadows.tabBar,
           overflow: 'hidden',
         },
-        tabBarBackground: () => null,
+        tabBarBackground: () => (
+          <View style={{ flex: 1 }}>
+            <BlurView
+              intensity={18}
+              tint="dark"
+              style={{ ...StyleSheet.absoluteFillObject }}
+            />
+            <LinearGradient
+              colors={['rgba(255,255,255,0.02)', 'rgba(10,10,10,0.80)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ ...StyleSheet.absoluteFillObject }}
+            />
+          </View>
+        ),
         tabBarActiveTintColor: colors.tabBarActive,
         tabBarInactiveTintColor: colors.tabBarInactive,
         tabBarIcon: ({ focused, color, size }) => {
@@ -104,8 +121,8 @@ function TabNavigator() {
               <Ionicons name={iconName} size={rs(23)} color={color} />
               {focused && (
                 <View style={{
-                  width: 4,
-                  height: 4,
+                  width: 14,
+                  height: 2,
                   borderRadius: 2,
                   backgroundColor: colors.primary,
                   marginTop: 4,
@@ -217,27 +234,27 @@ export default function App() {
                     {
                       translateX: current.progress.interpolate({
                         inputRange: [0, 1],
-                        outputRange: [layouts.screen.width, 0],
+                        outputRange: [layouts.screen.width * 0.35, 0],
                       }),
                     },
                     {
                       scale: next
                         ? next.progress.interpolate({
                           inputRange: [0, 1],
-                          outputRange: [1, 0.95],
+                          outputRange: [1, 0.985],
                         })
                         : 1,
                     },
                   ],
                   opacity: current.progress.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [0, 1],
+                    outputRange: [0.75, 1],
                   }),
                 },
                 overlayStyle: {
                   opacity: current.progress.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [0, 0.5],
+                    outputRange: [0, 0.12],
                   }),
                 },
               };

@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import Config from '../constants/Config';
@@ -59,6 +59,15 @@ const PLAN_STEPS = [
     'Seleccionando ejercicios óptimos...',
     'Ajustando macros y nutrición...',
     'Preparando tu plan maestro...',
+];
+
+const FUN_PROMPTS = [
+    { icon: 'flame', text: 'Reto rápido 10 min' },
+    { icon: 'nutrition', text: 'Snack fitness ahora' },
+    { icon: 'happy', text: 'Motívame fuerte' },
+    { icon: 'barbell', text: 'Entreno pecho brutal' },
+    { icon: 'walk', text: 'Cardio sin aburrirme' },
+    { icon: 'bed', text: 'Dormir mejor hoy' },
 ];
 
 const PlanGeneratingBanner = ({ isUltimate }) => {
@@ -169,6 +178,7 @@ const WelcomeState = ({ onChipPress }) => (
 );
 
 export default function EntrenadorIA() {
+    const insets = useSafeAreaInsets();
     const [mensajes, setMensajes] = useState([]);
     const [sesiones, setSesiones] = useState([]);
     const [sesionActual, setSesionActual] = useState(null);
@@ -705,10 +715,15 @@ export default function EntrenadorIA() {
         setInputUsuario('');
     };
 
+    const handleQuickPrompt = (text) => {
+        setInputUsuario(text);
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 6 : 0}
                 style={{ flex: 1 }}
             >
                 <View style={styles.header}>
@@ -764,28 +779,49 @@ export default function EntrenadorIA() {
                     contentContainerStyle={{ paddingBottom: 20, flexGrow: 1 }}
                 />
 
-                <View style={styles.inputArea}>
+                <View style={styles.funPromptsWrap}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.funPromptsRow}>
+                        {FUN_PROMPTS.map((p) => (
+                            <TouchableOpacity key={p.text} style={styles.funChip} onPress={() => handleQuickPrompt(p.text)} activeOpacity={0.85}>
+                                <LinearGradient colors={['rgba(99,255,21,0.18)', 'rgba(0,209,255,0.12)']} style={styles.funChipGrad}>
+                                    <Ionicons name={p.icon} size={14} color="#63ff15" />
+                                    <Text style={styles.funChipText}>{p.text}</Text>
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </View>
+
+                <View style={[styles.inputArea, { marginBottom: Platform.OS === 'ios' ? 82 : 74, paddingBottom: Math.max(insets.bottom, 8) }]}> 
                     <View style={styles.inputRow}>
                         <TouchableOpacity style={styles.routineBtn} onPress={handleGenerarRutina}>
-                            <Ionicons name="barbell-outline" size={22} color="#63ff15" />
+                            <Ionicons name="add" size={22} color="#D4D4D8" />
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.cameraBtn} onPress={analizarFoto}>
-                            <Ionicons name="camera-outline" size={22} color="#63ff15" />
+                            <Ionicons name="image-outline" size={20} color="#D4D4D8" />
                         </TouchableOpacity>
                         <TextInput
                             style={styles.input}
-                            placeholder="Consulta a Nexus AI..."
-                            placeholderTextColor="rgba(99,255,21,0.35)"
+                            placeholder="Escribe tu objetivo o pregunta..."
+                            placeholderTextColor="rgba(255,255,255,0.42)"
                             value={inputUsuario}
                             onChangeText={setInputUsuario}
-                            multiline
+                            multiline={false}
+                            returnKeyType="send"
+                            onSubmitEditing={() => {
+                                if (inputUsuario.trim()) enviarMensajes();
+                            }}
                         />
-                        <TouchableOpacity style={styles.sendBtn} onPress={() => enviarMensajes()}>
+                        <TouchableOpacity
+                            style={[styles.sendBtn, !inputUsuario.trim() && styles.sendBtnDisabled]}
+                            onPress={() => enviarMensajes()}
+                            disabled={!inputUsuario.trim()}
+                        >
                             <LinearGradient
-                                colors={['#7bff35', '#4dd10e']}
+                                colors={inputUsuario.trim() ? ['#7bff35', '#4dd10e'] : ['#3A3A3F', '#2A2A2E']}
                                 style={styles.sendBtnGradient}
                             >
-                                <Ionicons name="arrow-up" size={20} color="#000" />
+                                <Ionicons name="arrow-up" size={18} color={inputUsuario.trim() ? '#000' : '#8E8E95'} />
                             </LinearGradient>
                         </TouchableOpacity>
                     </View>
@@ -1504,7 +1540,7 @@ const styles = StyleSheet.create({
     chatContainer: {
         flex: 1,
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingVertical: 10,
     },
 
     // MESSAGE BUBBLES PREMIUM
@@ -1536,7 +1572,7 @@ const styles = StyleSheet.create({
         elevation: 6,
     },
     iaBubble: {
-        backgroundColor: '#141414',
+        backgroundColor: '#151515',
         borderBottomLeftRadius: 5,
         borderWidth: 1,
         borderColor: 'rgba(99,255,21,0.18)',
@@ -1599,7 +1635,7 @@ const styles = StyleSheet.create({
         lineHeight: 21,
     },
     iaText: {
-        color: '#DEDEDE',
+        color: '#E7E7EA',
         fontWeight: '400',
         fontSize: 15,
         lineHeight: 23,
@@ -1766,48 +1802,80 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         letterSpacing: 0.2,
     },
-    inputArea: {
+    funPromptsWrap: {
+        paddingTop: 4,
+        paddingBottom: 6,
         backgroundColor: '#0a0a0a',
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(99,255,21,0.1)',
+    },
+    funPromptsRow: {
         paddingHorizontal: 14,
-        paddingTop: 12,
-        paddingBottom: Platform.OS === 'ios' ? 36 : 16,
+        gap: 8,
+    },
+    funChip: {
+        borderRadius: 18,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.16)',
+    },
+    funChipGrad: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    funChipText: {
+        color: '#D9D9DF',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    inputArea: {
+        backgroundColor: 'transparent',
+        paddingHorizontal: 12,
+        paddingTop: 6,
+        paddingBottom: 8,
     },
     inputRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#141414',
-        borderRadius: 28,
+        backgroundColor: '#1B1B1F',
+        borderRadius: 24,
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.18)',
+        borderColor: 'rgba(255,255,255,0.12)',
         paddingHorizontal: 8,
         paddingVertical: 6,
-        shadowColor: '#63ff15',
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-        elevation: 2,
+        height: 56,
+        shadowColor: '#000',
+        shadowOpacity: 0.35,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 5,
     },
     input: {
         flex: 1,
         backgroundColor: 'transparent',
         paddingHorizontal: 12,
-        paddingVertical: 8,
-        color: '#fff',
-        maxHeight: 100,
+        paddingVertical: 0,
+        color: '#F5F5F7',
+        height: 40,
         fontSize: 15,
-        lineHeight: 21,
+        lineHeight: 20,
     },
     sendBtn: {
         width: 42,
         height: 42,
         borderRadius: 21,
         overflow: 'hidden',
+        alignSelf: 'center',
         shadowColor: '#63ff15',
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.5,
         shadowRadius: 8,
         elevation: 6,
+    },
+    sendBtnDisabled: {
+        shadowOpacity: 0,
+        elevation: 0,
     },
     sendBtnGradient: {
         flex: 1,
@@ -1818,23 +1886,25 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: 'rgba(99,255,21,0.07)',
+        backgroundColor: 'rgba(255,255,255,0.06)',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.18)',
+        borderColor: 'rgba(255,255,255,0.12)',
         marginRight: 4,
+        alignSelf: 'center',
     },
     cameraBtn: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: 'rgba(99,255,21,0.07)',
+        backgroundColor: 'rgba(255,255,255,0.06)',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.18)',
+        borderColor: 'rgba(255,255,255,0.12)',
         marginRight: 4,
+        alignSelf: 'center',
     },
     // --- ESTILOS SIDEBAR ---
     sidebarOverlay: {

@@ -235,11 +235,17 @@ export default function Home() {
             data-testid={`feature-${screen.toLowerCase()}`}
         >
             <LinearGradient
-                colors={['#141414', '#0c0c0c']}
+                colors={['#1B1B1B', '#121212']}
                 style={StyleSheet.absoluteFill}
             />
+            <LinearGradient
+                colors={['rgba(255,255,255,0.06)', 'transparent']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.featureCardTopSheen}
+            />
             <View style={styles.featureCardContent}>
-                <View style={[styles.featureIconWrap, { backgroundColor: color + '15' }]}>
+                <View style={[styles.featureIconWrap, { backgroundColor: color + '15' }]}> 
                     {iconType === "Ionicons" ? (
                         <Ionicons name={icon} size={24} color={color} />
                     ) : iconType === "FontAwesome5" ? (
@@ -258,7 +264,9 @@ export default function Home() {
                     <Text style={styles.featureBadgeText}>{badge}</Text>
                 </View>
             )}
-            <Ionicons name="chevron-forward" size={18} color="#3F3F46" style={styles.featureArrow} />
+            <View style={styles.featureArrowWrap}>
+                <Ionicons name="chevron-forward" size={16} color="#9CA3AF" style={styles.featureArrow} />
+            </View>
         </TouchableOpacity>
     );
 
@@ -319,6 +327,20 @@ export default function Home() {
 
     return (
         <SafeAreaView style={styles.container}>
+            <View style={styles.backgroundLayer} pointerEvents="none">
+                <LinearGradient
+                    colors={['rgba(99,255,21,0.08)', 'transparent']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.bgOrbTop}
+                />
+                <LinearGradient
+                    colors={['rgba(0,209,255,0.08)', 'transparent']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.bgOrbMid}
+                />
+            </View>
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
@@ -435,7 +457,7 @@ export default function Home() {
                 </ScrollView>
 
                 {/* SECTIONS: BENTO STYLE LISTS */}
-                <View style={styles.sectionGroup}>
+                <View style={[styles.sectionGroup, styles.sectionCardWrap]}>
                     <View style={styles.premiumSectionHeader}>
                         <View style={styles.accentLine} />
                         <Text style={styles.premiumSectionTitle}>INTELIGENCIA NEXUS</Text>
@@ -447,7 +469,7 @@ export default function Home() {
                     </View>
                 </View>
 
-                <View style={styles.sectionGroup}>
+                <View style={[styles.sectionGroup, styles.sectionCardWrap]}>
                     <View style={styles.premiumSectionHeader}>
                         <View style={styles.accentLine} />
                         <Text style={styles.premiumSectionTitle}>PROTOCOLO DE ENTRENAMIENTO</Text>
@@ -463,7 +485,7 @@ export default function Home() {
                 )}
 
                 {/* SECCIÓN: SOCIAL */}
-                <View style={styles.sectionGroup}>
+                <View style={[styles.sectionGroup, styles.sectionCardWrap]}>
                     <View style={styles.premiumSectionHeader}>
                         <View style={styles.accentLine} />
                         <Text style={styles.premiumSectionTitle}>COMUNIDAD NEXUS</Text>
@@ -634,17 +656,36 @@ export default function Home() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    scrollContent: { paddingHorizontal: 0, paddingBottom: BOTTOM_PADDING },
+    backgroundLayer: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    bgOrbTop: {
+        position: 'absolute',
+        top: -110,
+        right: -70,
+        width: 260,
+        height: 260,
+        borderRadius: 160,
+    },
+    bgOrbMid: {
+        position: 'absolute',
+        top: 260,
+        left: -90,
+        width: 240,
+        height: 240,
+        borderRadius: 160,
+    },
+    scrollContent: { paddingHorizontal: 0, paddingBottom: BOTTOM_PADDING + 16 },
 
     // HEADER
-    header: { paddingHorizontal: PAGE_PADDING, paddingTop: spacing.md, marginBottom: spacing.xl },
+    header: { paddingHorizontal: PAGE_PADDING, paddingTop: spacing.md, marginBottom: spacing.lg },
     mainHeaderCard: {
-        borderRadius: radius.xxxl,
+        borderRadius: radius.xxl,
         padding: spacing.lg,
         borderWidth: 1,
         borderColor: colors.primaryBorder,
         overflow: 'hidden',
-        backgroundColor: colors.surface,
+        backgroundColor: 'rgba(18,18,18,0.94)',
         ...shadows.cardMd,
     },
     headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.base },
@@ -661,7 +702,7 @@ const styles = StyleSheet.create({
     },
     welcomeTextContainer: { gap: 2 },
     greetingText: { color: colors.textDim, fontSize: rs(11), fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.2 },
-    userName: { color: colors.textPrimary, fontSize: rs(24), fontWeight: '900', letterSpacing: -0.5 },
+    userName: { color: colors.textPrimary, fontSize: rs(22), fontWeight: '900', letterSpacing: -0.4 },
 
     headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
     notifBtn: {
@@ -712,7 +753,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: colors.primaryGlow,
+        backgroundColor: 'rgba(99,255,21,0.06)',
         paddingHorizontal: 14,
         paddingVertical: spacing.sm,
         borderRadius: radius.lg,
@@ -724,12 +765,12 @@ const styles = StyleSheet.create({
     membershipText: { fontSize: rs(11), fontWeight: '800', letterSpacing: 1, color: colors.primary },
 
     // BENTO GRID
-    bentoGrid: { paddingHorizontal: PAGE_PADDING, gap: spacing.md, marginBottom: spacing.xl },
+    bentoGrid: { paddingHorizontal: PAGE_PADDING, gap: spacing.md, marginBottom: spacing.lg },
     bentoRow: { flexDirection: 'row', gap: spacing.md },
     bentoCard: {
-        borderRadius: radius.xxl,
+        borderRadius: radius.xl,
         padding: 18,
-        backgroundColor: colors.surface,
+        backgroundColor: 'rgba(18,18,18,0.93)',
         borderWidth: 1,
         borderColor: colors.primaryBorder,
         overflow: 'hidden',
@@ -747,64 +788,96 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: colors.primaryBorder,
     },
-    bentoValue: { color: colors.primary, fontSize: rs(28), fontWeight: '900', letterSpacing: -0.8, marginTop: spacing.sm },
+    bentoValue: { color: colors.primary, fontSize: rs(30), fontWeight: '900', letterSpacing: -1, marginTop: spacing.sm },
     unitText: { fontSize: rs(13), color: colors.textDim, fontWeight: '600' },
-    bentoLabel: { color: '#666', fontSize: rs(10), fontWeight: '800', letterSpacing: 0.6, marginTop: spacing.xs },
+    bentoLabel: { color: '#7A7A7A', fontSize: rs(10), fontWeight: '800', letterSpacing: 0.8, marginTop: spacing.xs },
     bentoMiniGraph: { height: 4, backgroundColor: colors.primaryGlow, borderRadius: 2, marginTop: spacing.md, overflow: 'hidden' },
     graphBar: { height: '100%', borderRadius: 2 },
 
     // QUICK ACTIONS & FEATURES
-    premiumHorizontalScroll: { paddingLeft: PAGE_PADDING, paddingRight: PAGE_PADDING, gap: spacing.md, marginBottom: spacing.xxl },
+    premiumHorizontalScroll: { paddingLeft: PAGE_PADDING, paddingRight: PAGE_PADDING, gap: spacing.md, marginBottom: spacing.xl },
     quickAction: {
         width: rs(100),
         height: rs(110),
-        borderRadius: radius.card,
-        backgroundColor: colors.surfaceHighlight,
+        borderRadius: radius.xl,
+        backgroundColor: 'rgba(24,24,24,0.95)',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
         borderColor: colors.primaryBorder,
+        shadowColor: '#000',
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 2,
     },
     quickActionGradient: { ...StyleSheet.absoluteFill, borderRadius: radius.card },
     quickActionIconBox: { width: 44, height: 44, borderRadius: radius.lg, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', marginBottom: spacing.sm },
-    quickActionLabelText: { color: colors.textPrimary, fontSize: rs(11), fontWeight: '800', marginTop: spacing.xs, textAlign: 'center' },
+    quickActionLabelText: { color: colors.textPrimary, fontSize: rs(11), fontWeight: '800', marginTop: spacing.xs, textAlign: 'center', letterSpacing: 0.4 },
 
     // SECTION SYSTEM
     sectionGroup: { paddingHorizontal: PAGE_PADDING, marginBottom: spacing.xxl },
+    sectionCardWrap: {
+        backgroundColor: 'transparent',
+        borderWidth: 0,
+        borderColor: 'transparent',
+        borderRadius: radius.xl,
+        paddingTop: spacing.xs,
+        paddingBottom: 0,
+        paddingHorizontal: 0,
+    },
     premiumSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.base },
     accentLine: { width: 3, height: 16, backgroundColor: colors.primary, borderRadius: 1.5 },
-    premiumSectionTitle: { color: colors.textDim, fontSize: rs(11), fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' },
+    premiumSectionTitle: { color: '#A2A2AC', fontSize: rs(11), fontWeight: '900', letterSpacing: 1.2, textTransform: 'uppercase' },
     bentoFeatureList: { gap: spacing.sm },
 
     // FEATURE CARD
     featureCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: spacing.base,
-        borderRadius: radius.card,
-        backgroundColor: colors.surface,
-        borderWidth: 1,
-        borderColor: colors.primaryBorder,
+        padding: spacing.lg,
+        borderRadius: radius.xl,
+        backgroundColor: '#161616',
+        borderWidth: 0,
+        borderColor: 'transparent',
         marginBottom: spacing.sm,
+        minHeight: 86,
+        overflow: 'hidden',
         ...shadows.card,
+    },
+    featureCardTopSheen: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 1,
     },
     featureCardContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
     featureIconWrap: {
-        width: 44,
-        height: 44,
+        width: 48,
+        height: 48,
         borderRadius: radius.lg,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: spacing.md,
-        borderWidth: 1,
-        borderColor: colors.primaryDim,
+        borderWidth: 0,
+        borderColor: 'transparent',
     },
     featureTextWrap: { flex: 1 },
-    featureTitle: { color: colors.textPrimary, fontSize: rs(16), fontWeight: '800' },
-    featureDesc: { color: '#666', fontSize: rs(12), fontWeight: '600', marginTop: 2 },
+    featureTitle: { color: colors.textPrimary, fontSize: rs(16), fontWeight: '900', letterSpacing: -0.2 },
+    featureDesc: { color: '#A1A1AA', fontSize: rs(12), fontWeight: '500', marginTop: 3, lineHeight: rs(16) },
     featureBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.md, marginLeft: spacing.sm },
     featureBadgeText: { color: '#000', fontSize: rs(9), fontWeight: '900', letterSpacing: 0.5 },
-    featureArrow: { marginLeft: spacing.sm },
+    featureArrowWrap: {
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        backgroundColor: 'rgba(255,255,255,0.04)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: spacing.sm,
+    },
+    featureArrow: { opacity: 0.9 },
 
     // PROMO BANNER
     promoBanner: {

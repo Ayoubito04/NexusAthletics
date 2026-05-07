@@ -197,8 +197,8 @@ export default function SplashScreen({ onFinish }) {
                 </View>
             </Animated.View>
 
-            <Animated.Text style={[styles.subtitle, { opacity: fadeAnim }]}>
-                Entremaniento con IA
+            <Animated.Text style={[styles.subtitle, { opacity: fadeAnim }]}> 
+                Entrenamiento con IA
             </Animated.Text>
 
             {/* Loading Bar */}
@@ -213,7 +213,7 @@ export default function SplashScreen({ onFinish }) {
                 </LinearGradient>
             </View>
 
-            <Text style={styles.versionText}>v2.0 ELITE</Text>
+            <Text style={styles.versionText}>NEXUS PERFORMANCE SYSTEM</Text>
         </View>
     );
 }
@@ -347,8 +347,8 @@ const styles = StyleSheet.create({
     },
     subtitle: {
         fontSize: 13,
-        color: '#71717A',
-        fontWeight: '600',
+        color: '#8A8A92',
+        fontWeight: '700',
         letterSpacing: 2,
         textTransform: 'uppercase',
         marginBottom: 80,
@@ -374,9 +374,9 @@ const styles = StyleSheet.create({
     versionText: {
         position: 'absolute',
         bottom: 40,
-        fontSize: 9,
+        fontSize: 10,
         color: '#52525B',
-        fontWeight: '800',
-        letterSpacing: 2,
+        fontWeight: '700',
+        letterSpacing: 1.2,
     },
 });

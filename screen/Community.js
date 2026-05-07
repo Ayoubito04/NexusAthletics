@@ -343,6 +343,10 @@ export default function Community() {
 
     return (
         <View style={styles.container}>
+            <View style={styles.bgLayer} pointerEvents="none">
+                <LinearGradient colors={['rgba(99,255,21,0.08)','transparent']} style={styles.bgOrbA} />
+                <LinearGradient colors={['rgba(0,209,255,0.07)','transparent']} style={styles.bgOrbB} />
+            </View>
             <View style={styles.header}>
                 <View>
                     <Text style={styles.title}>Comunidad <Text style={styles.titleHighlight}>Elite</Text></Text>
@@ -369,6 +373,11 @@ export default function Community() {
                         </TouchableOpacity>
                     )}
                 </View>
+            </View>
+
+            <View style={styles.eliteStrip}>
+                <Ionicons name="sparkles" size={14} color="#63ff15" />
+                <Text style={styles.eliteStripText}>Zona Elite: comparte progreso, récords y retos con tu comunidad.</Text>
             </View>
 
             {searchResults.length > 0 && (
@@ -466,18 +475,36 @@ export default function Community() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#060606' },
+    bgLayer: { ...StyleSheet.absoluteFillObject },
+    bgOrbA: { position: 'absolute', top: -110, right: -70, width: 260, height: 260, borderRadius: 140 },
+    bgOrbB: { position: 'absolute', top: 220, left: -90, width: 240, height: 240, borderRadius: 140 },
 
     // Header
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 12 },
     title: { fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
     titleHighlight: { color: '#63ff15' },
-    subtitle: { color: '#555', fontSize: 13, marginTop: 1, fontWeight: '600' },
+    subtitle: { color: '#707070', fontSize: 13, marginTop: 1, fontWeight: '600' },
     friendsBtn: { backgroundColor: 'rgba(99,255,21,0.08)', padding: 12, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(99,255,21,0.2)' },
 
     // Search
     searchContainer: { paddingHorizontal: 16, marginTop: 8, marginBottom: 4 },
-    searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', borderRadius: 18, height: 46, borderWidth: 1, borderColor: 'rgba(99,255,21,0.1)' },
+    searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(17,17,17,0.92)', borderRadius: 18, height: 48, borderWidth: 1, borderColor: 'rgba(99,255,21,0.14)' },
     searchInput: { flex: 1, color: 'white', paddingHorizontal: 12, fontSize: 14 },
+    eliteStrip: {
+        marginHorizontal: 16,
+        marginTop: 6,
+        marginBottom: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: 'rgba(99,255,21,0.06)',
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.15)',
+    },
+    eliteStripText: { color: '#A0A0A8', fontSize: 12, fontWeight: '600', flex: 1 },
     searchResultsBox: { backgroundColor: '#0a0a0a', borderBottomWidth: 1, borderBottomColor: '#111' },
     userResultCard: { backgroundColor: '#141414', width: 200, padding: 14, borderRadius: 20, marginRight: 12, borderWidth: 1, borderColor: 'rgba(99,255,21,0.1)' },
     userInfoMini: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
@@ -491,7 +518,7 @@ const styles = StyleSheet.create({
     // Feed
     listContent: { paddingHorizontal: 16, paddingBottom: 100, paddingTop: 6 },
     postCard: {
-        backgroundColor: '#111',
+        backgroundColor: 'rgba(17,17,17,0.93)',
         borderRadius: 24,
         padding: 18,
         marginBottom: 16,
@@ -528,7 +555,7 @@ const styles = StyleSheet.create({
     timeAgo: { color: '#444', fontSize: 12, fontWeight: '600', marginTop: 2 },
 
     // Description
-    description: { color: '#ccc', fontSize: 14, lineHeight: 21, marginBottom: 14 },
+    description: { color: '#D0D0D5', fontSize: 14, lineHeight: 21, marginBottom: 14 },
 
     // Image
     postImageContainer: { width: '100%', height: 240, borderRadius: 18, overflow: 'hidden', marginBottom: 14, backgroundColor: '#000' },
@@ -558,8 +585,8 @@ const styles = StyleSheet.create({
     statCount: { color: '#555', fontSize: 12, fontWeight: '600' },
     statDotSep: { color: '#333', fontSize: 12 },
     actionButtons: { flexDirection: 'row', gap: 24 },
-    actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-    actionText: { color: '#555', fontSize: 13, fontWeight: '600' },
+    actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 6, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.02)' },
+    actionText: { color: '#71717A', fontSize: 13, fontWeight: '700' },
     likedText: { color: '#ff4d4d' },
 
     // Comments

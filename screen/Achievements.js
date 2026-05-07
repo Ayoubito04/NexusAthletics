@@ -199,6 +199,10 @@ export default function Achievements() {
 
     return (
         <SafeAreaView style={styles.container}>
+            <View style={styles.bgLayer} pointerEvents="none">
+                <LinearGradient colors={['rgba(255,215,0,0.10)','transparent']} style={styles.bgOrbTop} />
+                <LinearGradient colors={['rgba(99,255,21,0.08)','transparent']} style={styles.bgOrbBottom} />
+            </View>
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -294,6 +298,9 @@ export default function Achievements() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#060606' },
+    bgLayer: { ...StyleSheet.absoluteFillObject },
+    bgOrbTop: { position: 'absolute', width: 240, height: 240, borderRadius: 140, top: -80, right: -60 },
+    bgOrbBottom: { position: 'absolute', width: 260, height: 260, borderRadius: 140, bottom: -90, left: -80 },
 
     // Header
     header: {
@@ -319,7 +326,7 @@ const styles = StyleSheet.create({
     headerBadgeSub: { color: '#888', fontSize: 13, fontWeight: '700', alignSelf: 'flex-end', marginBottom: 1 },
 
     // Summary
-    summaryCard: { marginHorizontal: 16, marginTop: 16, borderRadius: 20, overflow: 'hidden' },
+    summaryCard: { marginHorizontal: 16, marginTop: 16, borderRadius: 22, overflow: 'hidden' },
     summaryInner: {
         flexDirection: 'row', gap: 16, padding: 18,
         borderWidth: 1, borderColor: 'rgba(255,215,0,0.1)', borderRadius: 20,
@@ -350,16 +357,16 @@ const styles = StyleSheet.create({
     filterTextActive: { color: '#000', fontSize: 12, fontWeight: '800' },
 
     // List
-    list: { paddingHorizontal: 16, paddingBottom: 40, gap: 10, paddingTop: 4 },
+    list: { paddingHorizontal: 16, paddingBottom: 40, gap: 12, paddingTop: 6 },
 
     // Card
     card: {
         flexDirection: 'row', alignItems: 'center', gap: 14,
-        backgroundColor: '#111', borderRadius: 22,
+        backgroundColor: 'rgba(17,17,17,0.92)', borderRadius: 22,
         padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)',
         overflow: 'hidden',
     },
-    cardUnlocked: { borderColor: 'rgba(255,215,0,0.18)' },
+    cardUnlocked: { borderColor: 'rgba(255,215,0,0.24)' },
     iconWrap: {},
     iconCircle: {
         width: 58, height: 58, borderRadius: 18,
@@ -368,14 +375,14 @@ const styles = StyleSheet.create({
     iconCircleLocked: { backgroundColor: '#1a1a1a' },
     cardBody: { flex: 1, gap: 5 },
     cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-    cardTitle: { color: '#fff', fontSize: 15, fontWeight: '800', flex: 1 },
+    cardTitle: { color: '#fff', fontSize: 16, fontWeight: '900', flex: 1, letterSpacing: -0.2 },
     textLocked: { color: '#555' },
     unlockedBadge: {
         flexDirection: 'row', alignItems: 'center', gap: 3,
         borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3,
     },
     unlockedBadgeText: { color: '#000', fontSize: 8, fontWeight: '900', letterSpacing: 0.5 },
-    cardDesc: { color: '#555', fontSize: 12, lineHeight: 17 },
+    cardDesc: { color: '#707070', fontSize: 12, lineHeight: 18 },
     progressWrap: { gap: 5, marginTop: 2 },
     progressBg: { height: 5, backgroundColor: '#1a1a1a', borderRadius: 3, overflow: 'hidden' },
     progressFill: { height: '100%', borderRadius: 3 },
