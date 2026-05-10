@@ -161,7 +161,15 @@ export default function PlanesPago() {
             if (res.ok && data.success) {
                 setCodigoAplicado(true);
                 setCodigoInput('');
-                showAlert('✅ Código Aplicado', 'El descuento ha sido registrado correctamente.', 'success');
+                if (data.user) {
+                    await AsyncStorage.setItem('user', JSON.stringify(data.user));
+                    setUser(data.user);
+                }
+                if (data.invites !== undefined) {
+                    setTrialStatus(prev => ({ ...(prev || {}), invites: data.invites }));
+                }
+                await fetchTrialStatus(token);
+                showAlert('✅ Código Aplicado', `¡Descuento activado! Tu nuevo precio Pro: €${data.newPrice?.toFixed(2) || ''}`, 'success');
             } else {
                 showAlert('Error', data.error || 'Código inválido', 'error');
             }

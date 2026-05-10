@@ -616,20 +616,26 @@ const useReferral = async (req, res) => {
             return res.status(404).json({ error: "Código de referido inválido" });
         }
 
+        // Beneficio para el dueño del código
         await prisma.user.update({
             where: { id: referrer.id },
             data: { invitacionesExitosas: { increment: 1 } }
         });
 
-        const updatedUser = await prisma.user.findUnique({
-            where: { id: req.user.id }
+        // Beneficio para quien aplica el código (descuento propio)
+        const updatedUser = await prisma.user.update({
+            where: { id: req.user.id },
+            data: { invitacionesExitosas: { increment: 1 } }
         });
 
         const { password: _, ...userWithoutPassword } = updatedUser;
+        const pricing = getProgressivePrice(updatedUser.invitacionesExitosas);
         res.json({
             success: true,
             message: "Código de referido aplicado correctamente",
             user: userWithoutPassword,
+            newPrice: pricing,
+            invites: updatedUser.invitacionesExitosas,
         });
     } catch (error) {
         console.error("useReferral Error:", error);
