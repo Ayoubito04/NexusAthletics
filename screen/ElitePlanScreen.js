@@ -121,27 +121,32 @@ export default function ElitePlanScreen({ route, navigation }) {
             });
 
             if (plan.esUltimate && plan.semanas) {
-                plan.semanas.forEach((semana, weekIdx) => {
-                    (semana.dias || []).forEach((diaPlan, dayIdx) => {
-                        const d = new Date(startMonday);
-                        d.setDate(startMonday.getDate() + weekIdx * 7 + dayIdx);
-                        const dateKey = d.toISOString().split('T')[0];
-                        currentRoutines[dateKey] = {
-                            title: diaPlan.titulo,
-                            isElite: true,
-                            isUltimate: true,
-                            fase: semana.tipo,
-                            rpe: semana.rpe,
-                            semanaNum: semana.semana,
-                            planId: plan.resumen?.objetivo || 'ai-ultimate',
-                            preWorkout: plan.resumen?.nutricionTiming?.preWorkout || null,
-                            exercises: (diaPlan.ejercicios || []).map((ex, i) => mapEx(ex, dateKey, i)),
-                        };
+                const CYCLES = 3;
+                const totalWeeks = plan.semanas.length * CYCLES;
+                for (let cycle = 0; cycle < CYCLES; cycle++) {
+                    plan.semanas.forEach((semana, weekIdx) => {
+                        const globalWeek = cycle * plan.semanas.length + weekIdx;
+                        (semana.dias || []).forEach((diaPlan, dayIdx) => {
+                            const d = new Date(startMonday);
+                            d.setDate(startMonday.getDate() + globalWeek * 7 + dayIdx);
+                            const dateKey = d.toISOString().split('T')[0];
+                            currentRoutines[dateKey] = {
+                                title: diaPlan.titulo,
+                                isElite: true,
+                                isUltimate: true,
+                                fase: semana.tipo,
+                                rpe: semana.rpe,
+                                semanaNum: globalWeek + 1,
+                                planId: plan.resumen?.objetivo || 'ai-ultimate',
+                                preWorkout: plan.resumen?.nutricionTiming?.preWorkout || null,
+                                exercises: (diaPlan.ejercicios || []).map((ex, i) => mapEx(ex, dateKey, i)),
+                            };
+                        });
                     });
-                });
+                }
                 await AsyncStorage.setItem('assigned_routines', JSON.stringify(currentRoutines));
                 setAgendado(true);
-                showAlert('🚀 Mesociclo en Calendario', `${plan.semanas.length} semanas inyectadas. Visible en tu calendario.`, 'success');
+                showAlert('🚀 Mesociclo en Calendario', `${totalWeeks} semanas inyectadas (3 meses). Visible en tu calendario.`, 'success');
             } else {
                 const WEEKS = 12;
                 for (let week = 0; week < WEEKS; week++) {

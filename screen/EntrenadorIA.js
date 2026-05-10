@@ -203,7 +203,7 @@ export default function EntrenadorIA() {
     const [lesiones, setLesiones] = useState('');
     const [horasSueno, setHorasSueno] = useState('7-8h');
     const [nivelEstres, setNivelEstres] = useState('Moderado');
-    const [semanasMeso, setSemanasMeso] = useState('12');
+    const [semanasMeso, setSemanasMeso] = useState('4');
     const [aiRecomendacion, setAiRecomendacion] = useState('');
     const [cargandoRecom, setCargandoRecom] = useState(false);
     // Onboarding
