@@ -131,7 +131,8 @@ const getStats = async (req, res) => {
                 healthSynced: true,
                 healthService: true,
                 healthCalories: true,
-                healthSteps: true
+                healthSteps: true,
+                invitacionesExitosas: true,
             }
         });
 
@@ -187,11 +188,12 @@ const getStats = async (req, res) => {
             totalKm: 0,
             totalKcal: 0,
             totalSegundos: gymSegundos, // empieza con el tiempo de gym
-            count: workoutSessions.length, // sesiones de gym, no GPS
+            count: workoutSessions.length,
             healthSynced: user.healthSynced,
             healthService: user.healthService,
             healthCalories: user.healthCalories || 0,
             healthSteps: user.healthSteps || 0,
+            invites: user.invitacionesExitosas || 0,
             weeklyProgress: dailyStats
         });
 

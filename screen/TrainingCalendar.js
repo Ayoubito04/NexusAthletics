@@ -165,7 +165,7 @@ export default function TrainingCalendar({ navigation }) {
         );
     };
 
-    const toggleDayCompletion = async (dayKey) => {
+    const toggleDayCompletion = async (dayKey, skipLog = false) => {
         if (!assignedRoutines[dayKey]) return;
         let newList = [...completedDays];
         const index = newList.indexOf(dayKey);
@@ -174,6 +174,30 @@ export default function TrainingCalendar({ navigation }) {
         } else {
             newList.push(dayKey);
             triggerStreakAnimation();
+
+            // Registrar sesión en el backend si no viene del timer (que lo hace por su cuenta)
+            if (!skipLog) {
+                try {
+                    const token = await AsyncStorage.getItem('token');
+                    const routine = assignedRoutines[dayKey];
+                    const exercises = (routine.exercises || [])
+                        .map(ex => ({
+                            name: ex.name,
+                            muscle: ex.muscle || 'General',
+                            weight: ex.weight || 0,
+                            reps: parseInt(ex.reps) || 10,
+                            sets: ex.sets || 3,
+                        }))
+                        .filter(ex => ex.name);
+                    if (token && exercises.length > 0) {
+                        await fetch(`${BACKEND_URL}/strength/log`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                            body: JSON.stringify({ exercises }),
+                        });
+                    }
+                } catch (_) {}
+            }
         }
         setCompletedDays(newList);
         await AsyncStorage.setItem('completed_days', JSON.stringify(newList));
@@ -245,7 +269,7 @@ export default function TrainingCalendar({ navigation }) {
         setReviewVisible(true);
 
         const todayKey = new Date().toISOString().split('T')[0];
-        await toggleDayCompletion(todayKey);
+        await toggleDayCompletion(todayKey, true); // el timer ya loguea la sesión abajo
 
         // Sync real weights/reps from session to backend for strength tracking
         try {

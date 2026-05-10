@@ -71,8 +71,8 @@ const ACHIEVEMENTS = [
     {
         id: 8, cat: 'Social', title: 'Comunidad Nexus',
         desc: 'Invita a 3 compañeros de entrenamiento.',
-        icon: 'people-outline', req: () => false,
-        progress: () => 0, total: 3,
+        icon: 'people-outline', req: s => (s.invites || 0) >= 3,
+        progress: s => Math.min(s.invites || 0, 3), total: 3,
         colors: ['#22d3ee','#0891b2'],
     },
 ];
