@@ -14,15 +14,6 @@ const ACHIEVEMENTS = [
         description: 'Te uniste a la comunidad de Nexus Athletics.',
     },
     {
-        id: 'walker',
-        title: 'Caminante\nPro',
-        icon: 'footsteps',
-        iconType: 'Ionicons',
-        color: '#00D1FF',
-        check: (user) => (user.healthSteps || 0) >= 5000,
-        description: 'Superaste los 5 000 pasos en un día.',
-    },
-    {
         id: 'ai_user',
         title: 'IA\nFriend',
         icon: 'robot',
@@ -39,15 +30,6 @@ const ACHIEVEMENTS = [
         color: '#FFD700',
         check: (user) => user.plan !== 'Gratis',
         description: 'Suscrito a un plan premium.',
-    },
-    {
-        id: 'explorer',
-        title: 'Explor\nador',
-        icon: 'map-marker-distance',
-        iconType: 'MaterialCommunityIcons',
-        color: '#FF6B6B',
-        check: (user) => user.activities && user.activities.length > 0,
-        description: 'Completaste tu primera ruta GPS.',
     },
     {
         id: 'fit',
@@ -222,7 +204,7 @@ const styles = StyleSheet.create({
     },
     badgeWrapper: {
         alignItems: 'center',
-        width: '30%',
+        width: '47%',
     },
     badgeCircle: {
         width: 64,
