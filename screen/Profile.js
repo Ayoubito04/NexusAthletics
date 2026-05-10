@@ -163,6 +163,19 @@ export default function Profile() {
                         <Text style={styles.menuText}>Facturación</Text>
                         <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
                     </TouchableOpacity>
+                    {user.plan === 'Ultimate' && (
+                        <TouchableOpacity
+                            style={[styles.menuItem, { borderColor: 'rgba(99,255,21,0.3)', borderWidth: 1, borderRadius: 12 }]}
+                            onPress={() => navigation.navigate('DigitalTwin')}
+                        >
+                            <Ionicons name="body-outline" size={22} color="#63ff15" />
+                            <View style={{ flex: 1, marginLeft: 12 }}>
+                                <Text style={[styles.menuText, { color: '#63ff15', marginLeft: 0 }]}>Digital Twin</Text>
+                                <Text style={{ color: 'rgba(99,255,21,0.6)', fontSize: 11, marginTop: 1 }}>Evolución física IA · Exclusivo Ultimate</Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={20} color="#63ff15" />
+                        </TouchableOpacity>
+                    )}
                 </View>
 
                 {user.role === 'ADMIN' && (
