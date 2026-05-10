@@ -146,15 +146,13 @@ Duración: ${semanas} semanas | Periodización: ${periodi || 'DUP'} | Técnicas:
   },
   "semanas": [
     {
-      "semana": 1, "tipo": "Acumulación", "descripcion": "...", "rpe": "7", "rir": "3",
+      "semana": 1, "tipo": "Acumulación", "rpe": "7", "rir": "3",
       "dias": [
         {
           "dia": 1, "titulo": "nombre",
-          "calentamiento": ["ejercicio 1", "ejercicio 2"],
           "ejercicios": [
-            { "nombre": "...", "series": "4", "reps": "10-12", "rir": "2-3", "pesoSugerido": "Xkg", "tecnica": "...", "nota": "...", "imgKey": "press_banca" }
-          ],
-          "vueltaCalma": ["estiramiento 1"]
+            { "nombre": "...", "series": "4", "reps": "10-12", "rir": "2", "pesoSugerido": "Xkg", "imgKey": "press_banca" }
+          ]
         }
       ]
     }
@@ -164,6 +162,7 @@ Duración: ${semanas} semanas | Periodización: ${periodi || 'DUP'} | Técnicas:
 
 REGLAS CRÍTICAS:
 - El array "dias" de CADA semana debe tener EXACTAMENTE ${diasSemana} objetos (días de entrenamiento).
+- Máximo 5 ejercicios por día. JSON compacto, sin calentamiento ni vueltaCalma.
 - semana ${semanas} = Deload (vol -40%, intensidad -50%).
 - Usa 70-85% del 1RM según fase.
 imgKey debe ser el MÁS ESPECÍFICO para cada ejercicio. Lista completa:
@@ -416,59 +415,31 @@ Duración del mesociclo: ${semanas} semanas
 Periodización: ${periodi || 'Ondulada Diaria (DUP)'}
 Técnicas avanzadas a incluir: ${tecnicas.length > 0 ? tecnicas.join(', ') : 'Las más apropiadas según el nivel'}
 
-=== ESTRUCTURA JSON REQUERIDA ===
+=== ESTRUCTURA JSON REQUERIDA (COMPACTA) ===
 {
   "esUltimate": true,
   "resumen": {
-    "objetivo": "título conciso",
-    "estrategia": "explicación detallada de 2-3 frases del enfoque científico",
+    "objetivo": "título",
+    "estrategia": "1-2 frases",
     "duracion": "${semanas} semanas",
-    "frecuencia": "X días/semana",
-    "volumenSemanal": { "Pecho": "X series", "Espalda": "X series", "Piernas": "X series", "Hombros": "X series", "Brazos": "X series", "Core": "X series" },
     "macros": { "Proteina": "Xg", "Carbos": "Xg", "Grasas": "Xg", "Calorias": "Xkcal" },
-    "nutricionTiming": {
-      "preWorkout": "qué comer 1-2h antes",
-      "postWorkout": "qué comer 30min después",
-      "antesDormir": "qué comer antes de dormir"
-    }
+    "nutricionTiming": { "preWorkout": "...", "postWorkout": "...", "antesDormir": "..." }
   },
-  "analisis": {
-    "puntosFuertes": ["descripción basada en datos reales"],
-    "puntosMejora": ["descripción basada en datos reales"],
-    "ajustes": "cómo el plan corrige los desequilibrios detectados"
-  },
+  "analisis": { "puntosFuertes": ["..."], "puntosMejora": ["..."], "ajustes": "..." },
   "semanas": [
     {
-      "semana": 1,
-      "tipo": "Acumulación",
-      "descripcion": "breve descripción de la fase",
-      "rpe": "7",
-      "rir": "3",
+      "semana": 1, "tipo": "Acumulación", "rpe": "7", "rir": "3",
       "dias": [
         {
-          "dia": 1,
-          "titulo": "nombre del día",
-          "calentamiento": ["ejercicio 1", "ejercicio 2"],
+          "dia": 1, "titulo": "nombre",
           "ejercicios": [
-            {
-              "nombre": "nombre del ejercicio",
-              "series": "4",
-              "reps": "10-12",
-              "rir": "2-3",
-              "pesoSugerido": "Xkg (basado en 1RM si disponible)",
-              "tecnica": "técnica avanzada si aplica",
-              "nota": "tip técnico clave",
-              "imgKey": "press_banca"
-            }
-          ],
-          "vueltaCalma": ["estiramiento 1", "estiramiento 2"]
+            { "nombre": "...", "series": "4", "reps": "10-12", "rir": "2", "pesoSugerido": "Xkg", "imgKey": "press_banca" }
+          ]
         }
       ]
     }
   ],
-  "suplementacion": [
-    { "nombre": "suplemento", "dosis": "Xg", "timing": "cuándo tomarlo", "motivo": "por qué" }
-  ]
+  "suplementacion": [{ "nombre": "...", "dosis": "Xg", "timing": "...", "motivo": "..." }]
 }
 
 === REGLAS CRÍTICAS ===
@@ -487,7 +458,8 @@ cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor
 5. Adapta el plan a las lesiones: ${lesiones || 'ninguna restricción'}
 6. Con estrés ${nivelEstres || 'moderado'} y ${horasSueno || '7-8h'} de sueño, ajusta el volumen apropiadamente
 7. Genera exactamente ${semanas} semanas con progresión lógica
-8. El array "dias" de CADA semana debe tener EXACTAMENTE ${diasSemana} objetos`;
+8. El array "dias" de CADA semana debe tener EXACTAMENTE ${diasSemana} objetos
+9. Máximo 5 ejercicios por día. Respuesta compacta, sin campos opcionales extra`;
 
         const contents = [{ parts: [{ text: systemPrompt }] }];
         const response = await tryGeminiWithFallback(contents, { maxOutputTokens: 8192 });
