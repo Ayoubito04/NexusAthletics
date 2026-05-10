@@ -165,11 +165,12 @@ export default function PlanesPago() {
                     await AsyncStorage.setItem('user', JSON.stringify(data.user));
                     setUser(data.user);
                 }
-                if (data.invites !== undefined) {
-                    setTrialStatus(prev => ({ ...(prev || {}), invites: data.invites }));
-                }
+                const currentInvites = trialStatus?.invites ?? (user?.invitacionesExitosas || 0);
+                const newInvites = data.invites ?? Math.min(currentInvites + 1, MAX_DISCOUNT_INVITES);
+                setTrialStatus(prev => ({ ...(prev || {}), invites: newInvites }));
                 await fetchTrialStatus(token);
-                showAlert('✅ Código Aplicado', `¡Descuento activado! Tu nuevo precio Pro: €${data.newPrice?.toFixed(2) || ''}`, 'success');
+                const newPrice = getProgressivePrice(newInvites);
+                showAlert('✅ Código Aplicado', `¡Descuento activado! Tu nuevo precio Pro: €${newPrice.toFixed(2)}/mes`, 'success');
             } else {
                 showAlert('Error', data.error || 'Código inválido', 'error');
             }
