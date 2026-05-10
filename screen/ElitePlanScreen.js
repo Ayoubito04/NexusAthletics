@@ -143,7 +143,7 @@ export default function ElitePlanScreen({ route, navigation }) {
                 setAgendado(true);
                 showAlert('🚀 Mesociclo en Calendario', `${plan.semanas.length} semanas inyectadas. Visible en tu calendario.`, 'success');
             } else {
-                const WEEKS = 8;
+                const WEEKS = 12;
                 for (let week = 0; week < WEEKS; week++) {
                     (plan.dias || []).forEach((diaPlan, index) => {
                         const d = new Date(startMonday);
@@ -159,7 +159,7 @@ export default function ElitePlanScreen({ route, navigation }) {
                 }
                 await AsyncStorage.setItem('assigned_routines', JSON.stringify(currentRoutines));
                 setAgendado(true);
-                showAlert('🚀 Propagación Nexus Completada', 'Tu rutina se ha inyectado para los próximos 2 meses.', 'success');
+                showAlert('🚀 Propagación Nexus Completada', 'Tu rutina se ha inyectado para los próximos 3 meses (12 semanas).', 'success');
             }
         } catch (error) {
             console.error('Schedule error:', error);

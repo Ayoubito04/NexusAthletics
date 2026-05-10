@@ -183,6 +183,7 @@ export default function EntrenadorIA() {
     const [sesiones, setSesiones] = useState([]);
     const [sesionActual, setSesionActual] = useState(null);
     const [inputUsuario, setInputUsuario] = useState('');
+    const [inputFocused, setInputFocused] = useState(false);
     const [cargando, setCargando] = useState(false);
     const [user, setUser] = useState(null);
     const [sidebarVisible, setSidebarVisible] = useState(false);
@@ -202,7 +203,7 @@ export default function EntrenadorIA() {
     const [lesiones, setLesiones] = useState('');
     const [horasSueno, setHorasSueno] = useState('7-8h');
     const [nivelEstres, setNivelEstres] = useState('Moderado');
-    const [semanasMeso, setSemanasMeso] = useState('4');
+    const [semanasMeso, setSemanasMeso] = useState('12');
     const [aiRecomendacion, setAiRecomendacion] = useState('');
     const [cargandoRecom, setCargandoRecom] = useState(false);
     // Onboarding
@@ -792,25 +793,25 @@ export default function EntrenadorIA() {
                     </ScrollView>
                 </View>
 
-                <View style={[styles.inputArea, { marginBottom: Platform.OS === 'ios' ? 82 : 74, paddingBottom: Math.max(insets.bottom, 8) }]}> 
-                    <View style={styles.inputRow}>
+                <View style={[styles.inputArea, { marginBottom: Platform.OS === 'ios' ? 82 : 74, paddingBottom: Math.max(insets.bottom, 8) }]}>
+                    <View style={[styles.inputRow, inputFocused && styles.inputRowFocused]}>
                         <TouchableOpacity style={styles.routineBtn} onPress={handleGenerarRutina}>
-                            <Ionicons name="add" size={22} color="#D4D4D8" />
+                            <Ionicons name="add" size={22} color={inputFocused ? '#63ff15' : '#D4D4D8'} />
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.cameraBtn} onPress={analizarFoto}>
                             <Ionicons name="image-outline" size={20} color="#D4D4D8" />
                         </TouchableOpacity>
                         <TextInput
-                            style={styles.input}
+                            style={styles.chatInput}
                             placeholder="Escribe tu objetivo o pregunta..."
-                            placeholderTextColor="rgba(255,255,255,0.42)"
+                            placeholderTextColor="rgba(255,255,255,0.35)"
                             value={inputUsuario}
                             onChangeText={setInputUsuario}
-                            multiline={false}
-                            returnKeyType="send"
-                            onSubmitEditing={() => {
-                                if (inputUsuario.trim()) enviarMensajes();
-                            }}
+                            multiline
+                            maxHeight={100}
+                            returnKeyType="default"
+                            onFocus={() => setInputFocused(true)}
+                            onBlur={() => setInputFocused(false)}
                         />
                         <TouchableOpacity
                             style={[styles.sendBtn, !inputUsuario.trim() && styles.sendBtnDisabled]}
@@ -935,7 +936,7 @@ export default function EntrenadorIA() {
                                         'GIFs de cada ejercicio',
                                         'Series × repeticiones',
                                         'Macros personalizados',
-                                        'Sincroniza 8 semanas',
+                                        'Sincroniza 12 semanas (3 meses)',
                                     ].map((f, i) => (
                                         <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 5 }}>
                                             <Text style={{ color: '#63ff15', fontSize: 11 }}>✓</Text>
@@ -1837,36 +1838,45 @@ const styles = StyleSheet.create({
     },
     inputRow: {
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'flex-end',
         backgroundColor: '#1B1B1F',
         borderRadius: 24,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.12)',
         paddingHorizontal: 8,
-        paddingVertical: 6,
-        height: 56,
+        paddingVertical: 8,
+        minHeight: 56,
         shadowColor: '#000',
         shadowOpacity: 0.35,
         shadowRadius: 10,
         shadowOffset: { width: 0, height: 4 },
         elevation: 5,
     },
-    input: {
+    inputRowFocused: {
+        borderColor: '#63ff15',
+        shadowColor: '#63ff15',
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        elevation: 8,
+    },
+    chatInput: {
         flex: 1,
         backgroundColor: 'transparent',
         paddingHorizontal: 12,
-        paddingVertical: 0,
+        paddingVertical: 6,
         color: '#F5F5F7',
-        height: 40,
         fontSize: 15,
-        lineHeight: 20,
+        lineHeight: 22,
+        minHeight: 40,
+        maxHeight: 100,
     },
     sendBtn: {
         width: 42,
         height: 42,
         borderRadius: 21,
         overflow: 'hidden',
-        alignSelf: 'center',
+        alignSelf: 'flex-end',
+        marginBottom: 1,
         shadowColor: '#63ff15',
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.5,
@@ -1883,28 +1893,30 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     routineBtn: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.06)',
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        backgroundColor: 'rgba(99,255,21,0.08)',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.12)',
+        borderColor: 'rgba(99,255,21,0.2)',
         marginRight: 4,
-        alignSelf: 'center',
+        alignSelf: 'flex-end',
+        marginBottom: 1,
     },
     cameraBtn: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 38,
+        height: 38,
+        borderRadius: 19,
         backgroundColor: 'rgba(255,255,255,0.06)',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.12)',
+        borderColor: 'rgba(255,255,255,0.1)',
         marginRight: 4,
-        alignSelf: 'center',
+        alignSelf: 'flex-end',
+        marginBottom: 1,
     },
     // --- ESTILOS SIDEBAR ---
     sidebarOverlay: {
@@ -2139,14 +2151,15 @@ const styles = StyleSheet.create({
         color: '#63ff15',
     },
     input: {
-        backgroundColor: '#0d0d0d',
-        borderWidth: 1,
+        backgroundColor: '#111',
+        borderWidth: 1.5,
         borderColor: '#2a2a2a',
-        borderRadius: 12,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
+        borderRadius: 14,
+        paddingHorizontal: 16,
+        paddingVertical: 13,
         color: '#fff',
         fontSize: 14,
+        marginBottom: 4,
     },
     generateFinalBtn: {
         marginTop: 35,
