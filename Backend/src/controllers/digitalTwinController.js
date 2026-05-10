@@ -118,7 +118,35 @@ Prioriza cambios en músculos más débiles del atleta. Sé ESPECÍFICO, no gen�
             throw new Error('Error al generar el Digital Twin. Inténtalo de nuevo.');
         }
 
-        res.json({ ...twinJson, userName: user.nombre, currentWeight: user.peso, currentHeight: user.altura });
+        // Generate future physique image with Imagen 3
+        let imageBase64 = null;
+        try {
+            const generoEn = user.genero === 'Femenino' ? 'female' : 'male';
+            const somatotipo = twinJson.geneticPotential?.somatotipo || 'Mesomorfo';
+            const forma = twinJson.proyeccion3Meses?.forma || 'Athletic';
+            const grasa = twinJson.proyeccion3Meses?.grasaProyectada || '15%';
+            const estetica = twinJson.proyeccion3Meses?.esteticaScore || 7;
+
+            const imagePrompt = `Professional fitness photography, ultra-realistic. ${generoEn} athlete with ${somatotipo} body type and ${forma} physique. ${grasa} body fat, aesthetics score ${estetica}/10, highly defined muscles. Front-facing athletic standing pose, arms slightly away from body. Pure black studio background with dramatic neon green (#63ff15) rim lighting from behind. Sharp muscle definition, fitness magazine quality. Do not show the face. Full body shot from head to knees.`;
+
+            const imagenUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${process.env.GEMINI_API_KEY}`;
+            const imagenRes = await require('axios').post(imagenUrl, {
+                instances: [{ prompt: imagePrompt }],
+                parameters: {
+                    sampleCount: 1,
+                    aspectRatio: '3:4',
+                    personGeneration: 'allow_adult',
+                    safetyFilterLevel: 'block_only_high',
+                },
+            }, { timeout: 45000 });
+
+            imageBase64 = imagenRes.data?.predictions?.[0]?.bytesBase64Encoded || null;
+            console.log('[DigitalTwin] Image generated:', imageBase64 ? 'ok' : 'empty');
+        } catch (imgErr) {
+            console.error('[DigitalTwin] Image generation failed (non-fatal):', imgErr.response?.data?.error?.message || imgErr.message);
+        }
+
+        res.json({ ...twinJson, userName: user.nombre, currentWeight: user.peso, currentHeight: user.altura, imageBase64 });
     } catch (error) {
         console.error('[DigitalTwin]', error);
         res.status(500).json({ error: error.message });

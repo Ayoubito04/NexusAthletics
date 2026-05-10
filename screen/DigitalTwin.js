@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, ScrollView,
-    ActivityIndicator, Animated, Dimensions,
+    ActivityIndicator, Animated, Dimensions, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -239,7 +239,7 @@ export default function DigitalTwin() {
                 <View style={styles.loadingBox}>
                     <ActivityIndicator size="large" color="#FFD700" />
                     <Text style={styles.loadingTitle}>Analizando tu genética...</Text>
-                    <Text style={styles.loadingSubtitle}>La IA está calculando tu evolución física basada en tus datos reales</Text>
+                    <Text style={styles.loadingSubtitle}>La IA está calculando tu evolución y generando tu imagen futura — puede tardar hasta 30 segundos</Text>
                 </View>
             ) : !data ? (
                 <View style={styles.loadingBox}>
@@ -276,6 +276,32 @@ export default function DigitalTwin() {
                             </View>
                         </View>
                     </View>
+
+                    {/* ── Future Self Image ── */}
+                    {data.imageBase64 ? (
+                        <View style={styles.futureImageCard}>
+                            <LinearGradient colors={['#001a00', 'transparent']} style={StyleSheet.absoluteFill} borderRadius={18} />
+                            <Text style={styles.futureImageLabel}>TU FÍSICO PROYECTADO</Text>
+                            <Text style={styles.futureImageSub}>
+                                Así podrías verte en {horizon} meses con constancia máxima
+                            </Text>
+                            <View style={styles.futureImageWrap}>
+                                <Image
+                                    source={{ uri: `data:image/jpeg;base64,${data.imageBase64}` }}
+                                    style={styles.futureImage}
+                                    resizeMode="cover"
+                                />
+                                <LinearGradient
+                                    colors={['transparent', '#0a0a0a']}
+                                    style={styles.futureImageFade}
+                                />
+                                <View style={styles.futureImageBadge}>
+                                    <Ionicons name="sparkles" size={12} color="#000" />
+                                    <Text style={styles.futureImageBadgeText}>IA GENERADO</Text>
+                                </View>
+                            </View>
+                        </View>
+                    ) : null}
 
                     {/* ── Horizon tabs ── */}
                     <View style={styles.tabRow}>
@@ -541,4 +567,13 @@ const styles = StyleSheet.create({
 
     regenerateBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFD700', borderRadius: 12, paddingVertical: 14, gap: 8, marginTop: 4 },
     regenerateBtnText: { color: '#000', fontSize: 14, fontWeight: '900', letterSpacing: 1 },
+
+    futureImageCard:    { backgroundColor: '#0a120a', borderRadius: 18, padding: 18, borderWidth: 1, borderColor: '#63ff1530', overflow: 'hidden', gap: 6 },
+    futureImageLabel:   { color: '#63ff15', fontSize: 11, fontWeight: '800', letterSpacing: 1.5 },
+    futureImageSub:     { color: '#555', fontSize: 12, marginBottom: 12 },
+    futureImageWrap:    { borderRadius: 14, overflow: 'hidden', height: 320 },
+    futureImage:        { width: '100%', height: '100%' },
+    futureImageFade:    { position: 'absolute', bottom: 0, left: 0, right: 0, height: 80 },
+    futureImageBadge:   { position: 'absolute', bottom: 12, right: 12, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#63ff15', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+    futureImageBadgeText: { color: '#000', fontSize: 9, fontWeight: '900', letterSpacing: 1 },
 });
