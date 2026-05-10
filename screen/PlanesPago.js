@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, ActivityIndicator, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, ActivityIndicator, Animated, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -44,6 +44,9 @@ export default function PlanesPago() {
     const [token, setToken]         = useState(null);
     const [trialStatus, setTrialStatus] = useState(null); // { trialActive, trialExpired, daysLeft, hasDiscount, renewPrice, invites }
     const [loadingTrial, setLoadingTrial] = useState(false);
+    const [codigoInput, setCodigoInput] = useState('');
+    const [aplicandoCodigo, setAplicandoCodigo] = useState(false);
+    const [codigoAplicado, setCodigoAplicado] = useState(false);
     const [alert, setAlert] = useState({ visible: false, title: '', message: '', type: 'info', onConfirm: null });
 
     const showAlert = (title, message, type = 'info', onConfirm = null) => {
@@ -145,10 +148,34 @@ export default function PlanesPago() {
         }
     };
 
+    const handleAplicarCodigo = async () => {
+        if (!codigoInput.trim()) return;
+        setAplicandoCodigo(true);
+        try {
+            const res = await fetch(`${BACKEND_URL}/plans/use-referral`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ referralCode: codigoInput.trim().toUpperCase() }),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                setCodigoAplicado(true);
+                setCodigoInput('');
+                showAlert('✅ Código Aplicado', 'El descuento ha sido registrado correctamente.', 'success');
+            } else {
+                showAlert('Error', data.error || 'Código inválido', 'error');
+            }
+        } catch (_) {
+            showAlert('Error', 'Error de conexión', 'error');
+        } finally {
+            setAplicandoCodigo(false);
+        }
+    };
+
     const onInvite = async () => {
         try {
             const result = await Share.share({
-                message: `¡Únete a Nexus Athletics AI y entrena con el mejor Coach de IA! Usa mi código: ${user.referralCode} y ambos obtenemos beneficios. ¡Descárgala ahora!`,
+                message: `¡Únete a Nexus Athletics AI y entrena con el mejor Coach de IA! 💪\n\nUsa mi código: ${user.referralCode} al registrarte y ambos obtenemos beneficios.\n\n📲 Descarga la app aquí:\nhttps://expo.dev/accounts/ayoubito04/projects/nexus-fitness/builds/2eff8215-a103-4c01-b30d-74d0d8308a7a`,
             });
             if (result?.action === Share.sharedAction && token) {
                 const res = await fetch(`${BACKEND_URL}/plans/register-share`, {
@@ -407,6 +434,39 @@ export default function PlanesPago() {
                                 <Text style={styles.inviteBtnText}>COMPARTIR</Text>
                             </TouchableOpacity>
                         </View>
+
+                        {/* ── Aplicar código de descuento ── */}
+                        {!codigoAplicado ? (
+                            <View style={styles.codigoBox}>
+                                <Text style={styles.codigoLabel}>¿Tienes un código de descuento?</Text>
+                                <View style={styles.codigoRow}>
+                                    <TextInput
+                                        style={styles.codigoInput}
+                                        placeholder="Ej: JUA-5283"
+                                        placeholderTextColor="#555"
+                                        value={codigoInput}
+                                        onChangeText={t => setCodigoInput(t.toUpperCase())}
+                                        autoCapitalize="characters"
+                                        maxLength={10}
+                                    />
+                                    <TouchableOpacity
+                                        style={[styles.codigoBtn, (!codigoInput.trim() || aplicandoCodigo) && { opacity: 0.5 }]}
+                                        onPress={handleAplicarCodigo}
+                                        disabled={!codigoInput.trim() || aplicandoCodigo}
+                                    >
+                                        {aplicandoCodigo
+                                            ? <ActivityIndicator size="small" color="#000" />
+                                            : <Text style={styles.codigoBtnText}>APLICAR</Text>
+                                        }
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        ) : (
+                            <View style={[styles.codigoBox, { borderColor: '#63ff15' }]}>
+                                <Ionicons name="checkmark-circle" size={18} color="#63ff15" />
+                                <Text style={{ color: '#63ff15', fontWeight: '700', marginLeft: 8 }}>Código aplicado correctamente</Text>
+                            </View>
+                        )}
                     </View>
                 )}
 
@@ -608,6 +668,24 @@ const styles = StyleSheet.create({
         backgroundColor: '#63ff15', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10,
     },
     inviteBtnText: { color: 'black', fontSize: 11, fontWeight: '900' },
+
+    codigoBox: {
+        flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center',
+        backgroundColor: '#111', borderRadius: 14, borderWidth: 1,
+        borderColor: '#2a2a2a', padding: 14, marginTop: 12, gap: 8,
+    },
+    codigoLabel: { color: '#888', fontSize: 12, fontWeight: '600', width: '100%' },
+    codigoRow: { flexDirection: 'row', flex: 1, gap: 8 },
+    codigoInput: {
+        flex: 1, backgroundColor: '#0d0d0d', borderWidth: 1, borderColor: '#333',
+        borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
+        color: '#fff', fontSize: 14, letterSpacing: 2, fontWeight: '700',
+    },
+    codigoBtn: {
+        backgroundColor: '#63ff15', borderRadius: 10,
+        paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center',
+    },
+    codigoBtnText: { color: '#000', fontWeight: '900', fontSize: 12 },
 
     // Plan cards
     card: { backgroundColor: '#111', borderRadius: 25, padding: 20, marginBottom: 25, borderWidth: 1, borderColor: '#1e1e1e' },
