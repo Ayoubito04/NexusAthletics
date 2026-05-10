@@ -127,8 +127,11 @@ export default function Profile() {
                     </View>
                 </View>
 
-                {/* Vitrina de Trofeos */}
-                <AchievementsShowcase user={user} />
+                {/* Logros */}
+                <AchievementsShowcase
+                    user={user}
+                    onPressAll={() => navigation.navigate('Achievements')}
+                />
 
                 <View style={styles.menuSection}>
                     <Text style={styles.sectionTitle}>Mi Cuerpo (IA Optimization)</Text>

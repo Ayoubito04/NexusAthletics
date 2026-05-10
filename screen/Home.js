@@ -451,9 +451,9 @@ export default function Home() {
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.premiumHorizontalScroll}
                 >
-                    <QuickAction icon="mic-outline" label="Voz Coach" color="#00D1FF" onPress={() => navigation.navigate('VoiceCoach')} delay={1} />
-                    <QuickAction icon="diamond" label="Elite Vault" color="#FFD700" onPress={() => navigation.navigate('SavedElitePlans')} delay={2} />
-                    <QuickAction icon="trophy-outline" label="Liga Nexus" color="#a855f7" onPress={() => navigation.navigate('Ranking')} delay={3} />
+                    <QuickAction icon="diamond" label="Elite Vault" color="#FFD700" onPress={() => navigation.navigate('SavedElitePlans')} delay={1} />
+                    <QuickAction icon="trophy-outline" label="Liga Nexus" color="#a855f7" onPress={() => navigation.navigate('Ranking')} delay={2} />
+                    <QuickAction icon="medal-outline" label="Logros" color="#63ff15" onPress={() => navigation.navigate('Achievements')} delay={3} />
                 </ScrollView>
 
                 {/* SECTIONS: BENTO STYLE LISTS */}

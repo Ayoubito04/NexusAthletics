@@ -40,7 +40,6 @@ import FoodScanner from './screen/FoodScanner';
 import TrainingCalendar from './screen/TrainingCalendar';
 import FAQ from './screen/FAQ';
 import Ranking from './screen/Ranking';
-import VoiceCoach from './screen/VoiceCoach';
 import MuscleRankings from './screen/MuscleRankings';
 import WelcomePlans from './screen/WelcomePlans';
 import Notifications from './screen/Notifications';
@@ -287,7 +286,6 @@ export default function App() {
           <Stack.Screen name="TrainingCalendar" component={TrainingCalendar} />
           <Stack.Screen name="FAQ" component={FAQ} />
           <Stack.Screen name="Ranking" component={Ranking} />
-          <Stack.Screen name="VoiceCoach" component={VoiceCoach} />
           <Stack.Screen name="MuscleRankings" component={MuscleRankings} />
           <Stack.Screen name="WelcomePlans" component={WelcomePlans} />
           <Stack.Screen name="Notifications" component={Notifications} />
