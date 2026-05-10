@@ -59,6 +59,7 @@ Objetivo: ${user.objetivo || 'Mejorar'}, Nivel: ${user.nivelActividad || 'Normal
 
 const generatePlanInteractive = async (req, res) => {
     const { details, lesiones, horasSueno, nivelEstres, semanas = 4, periodi, tecnicas = [] } = req.body;
+    const diasSemana = parseInt(details?.match(/DÍAS\/SEMANA:\s*(\d+)/)?.[1] || '4');
     try {
         let user = await prisma.user.findUnique({
             where: { id: req.user.id },
@@ -161,7 +162,10 @@ Duración: ${semanas} semanas | Periodización: ${periodi || 'DUP'} | Técnicas:
   "suplementacion": [{ "nombre": "...", "dosis": "Xg", "timing": "...", "motivo": "..." }]
 }
 
-REGLAS: semana ${semanas} = Deload (vol -40%, intensidad -50%). Usa 70-85% del 1RM según fase.
+REGLAS CRÍTICAS:
+- El array "dias" de CADA semana debe tener EXACTAMENTE ${diasSemana} objetos (días de entrenamiento).
+- semana ${semanas} = Deload (vol -40%, intensidad -50%).
+- Usa 70-85% del 1RM según fase.
 imgKey debe ser el MÁS ESPECÍFICO para cada ejercicio. Lista completa:
 PECHO: press_banca, press_inclinado, press_declinado, press_mancuernas, press_inclinado_mdb, aperturas, aperturas_inclinadas, aperturas_cable, fondos, push_up, push_up_diamante, push_up_ancho, pullover
 ESPALDA: peso_muerto, peso_muerto_rumano, peso_muerto_sumo, dominadas, dominadas_supinas, remo, remo_mancuerna, remo_sentado, remo_polea, remo_tbar, jalon, jalon_neutro, face_pull, buenos_dias, encogimientos, encogimientos_mdb, australian_row
@@ -202,7 +206,7 @@ CARDIO/FLEX: cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor, 
         3. Experto en Gimnasio, Pilates, Yoga, Crossfit, Calistenia y Flexibilidad.
         4. Si busca "Perder grasa", prioriza fuerza con intervalos o circuitos.
         5. Si busca "Flexibilidad/Pilates", genera secuencias fluidas y controladas.
-        6. Genera 3 días si no se especifica lo contrario.
+        6. Genera EXACTAMENTE ${diasSemana} objetos en el array "dias".
         7. imgKey debe ser el más específico para cada ejercicio. Opciones disponibles:
         press_banca, press_inclinado, press_declinado, aperturas, fondos, push_up, press_mancuernas,
         peso_muerto, dominadas, remo, jalon, remo_sentado, face_pull, buenos_dias, remo_mancuerna,
@@ -355,6 +359,7 @@ const deleteSavedPlan = async (req, res) => {
 // Genera un mesociclo de 4 semanas personalizado usando datos reales del usuario
 const generateUltimatePlan = async (req, res) => {
     const { details, lesiones, horasSueno, nivelEstres, semanas = 4, periodi, tecnicas = [] } = req.body;
+    const diasSemana = parseInt(details?.match(/DÍAS\/SEMANA:\s*(\d+)/)?.[1] || '4');
     try {
         const user = await prisma.user.findUnique({
             where: { id: req.user.id },
@@ -481,7 +486,8 @@ muscle_up, fondos_paralelas, australian_row, pike_push, pistol_squat, burpees, s
 cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor
 5. Adapta el plan a las lesiones: ${lesiones || 'ninguna restricción'}
 6. Con estrés ${nivelEstres || 'moderado'} y ${horasSueno || '7-8h'} de sueño, ajusta el volumen apropiadamente
-7. Genera exactamente ${semanas} semanas con progresión lógica`;
+7. Genera exactamente ${semanas} semanas con progresión lógica
+8. El array "dias" de CADA semana debe tener EXACTAMENTE ${diasSemana} objetos`;
 
         const contents = [{ parts: [{ text: systemPrompt }] }];
         const response = await tryGeminiWithFallback(contents, { maxOutputTokens: 8192 });
