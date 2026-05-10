@@ -676,4 +676,26 @@ const registerShare = async (req, res) => {
     }
 };
 
-module.exports = { downloadPDF, generatePDF, generatePlanInteractive, generateUltimatePlan, savePlan, getSavedPlans, getSavedPlanById, updateSavedPlan, deleteSavedPlan, startTrial, getTrialStatus, useReferral, registerShare };
+const cancelSubscription = async (req, res) => {
+    try {
+        const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+        if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+        if (user.plan === 'Gratis') {
+            return res.status(400).json({ error: 'Ya estás en el plan gratuito' });
+        }
+
+        const updatedUser = await prisma.user.update({
+            where: { id: req.user.id },
+            data: { plan: 'Gratis' },
+        });
+
+        const { password: _, ...userWithoutPassword } = updatedUser;
+        res.json({ success: true, user: userWithoutPassword });
+    } catch (error) {
+        console.error('cancelSubscription Error:', error);
+        res.status(500).json({ error: 'Error al cancelar la suscripción' });
+    }
+};
+
+module.exports = { downloadPDF, generatePDF, generatePlanInteractive, generateUltimatePlan, savePlan, getSavedPlans, getSavedPlanById, updateSavedPlan, deleteSavedPlan, startTrial, getTrialStatus, useReferral, registerShare, cancelSubscription };

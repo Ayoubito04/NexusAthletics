@@ -152,6 +152,14 @@ export default function Profile() {
                         <Text style={styles.menuText}>Gestionar mi Plan ({user.plan})</Text>
                         <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
                     </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.menuItem}
+                        onPress={() => navigation.navigate('Facturacion')}
+                    >
+                        <Ionicons name="receipt-outline" size={22} color={colors.primary} />
+                        <Text style={styles.menuText}>Facturación</Text>
+                        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                    </TouchableOpacity>
                 </View>
 
                 {user.role === 'ADMIN' && (

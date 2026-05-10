@@ -27,4 +27,7 @@ router.get('/plans/trial-status', authenticateToken, planController.getTrialStat
 router.post('/plans/use-referral', authenticateToken, planController.useReferral);
 router.post('/plans/register-share', authenticateToken, planController.registerShare);
 
+// Billing
+router.post('/plans/cancel-subscription', authenticateToken, planController.cancelSubscription);
+
 module.exports = router;
