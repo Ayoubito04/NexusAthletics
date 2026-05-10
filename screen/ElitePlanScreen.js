@@ -120,15 +120,29 @@ export default function ElitePlanScreen({ route, navigation }) {
                 nota: ex.nota || null,
             });
 
+            // Distribución óptima de días de entrenamiento dentro de la semana
+            // Garantiza descanso adecuado entre sesiones según el volumen semanal
+            const WEEKLY_DAY_OFFSETS = {
+                1: [0],
+                2: [0, 3],
+                3: [0, 2, 4],
+                4: [0, 1, 3, 4],
+                5: [0, 1, 2, 3, 4],
+                6: [0, 1, 2, 3, 4, 5],
+            };
+            const getDayOffset = (numDays, idx) =>
+                (WEEKLY_DAY_OFFSETS[numDays] ?? [...Array(numDays).keys()])[idx] ?? idx;
+
             if (plan.esUltimate && plan.semanas) {
                 const CYCLES = 3;
                 const totalWeeks = plan.semanas.length * CYCLES;
                 for (let cycle = 0; cycle < CYCLES; cycle++) {
                     plan.semanas.forEach((semana, weekIdx) => {
                         const globalWeek = cycle * plan.semanas.length + weekIdx;
+                        const numDays = (semana.dias || []).length;
                         (semana.dias || []).forEach((diaPlan, dayIdx) => {
                             const d = new Date(startMonday);
-                            d.setDate(startMonday.getDate() + globalWeek * 7 + dayIdx);
+                            d.setDate(startMonday.getDate() + globalWeek * 7 + getDayOffset(numDays, dayIdx));
                             const dateKey = d.toISOString().split('T')[0];
                             currentRoutines[dateKey] = {
                                 title: diaPlan.titulo,
@@ -148,15 +162,17 @@ export default function ElitePlanScreen({ route, navigation }) {
                 setAgendado(true);
                 showAlert('🚀 Mesociclo en Calendario', `${totalWeeks} semanas inyectadas (3 meses). Visible en tu calendario.`, 'success');
             } else {
-                const WEEKS = 12;
+                const WEEKS = 8;
+                const numDays = (plan.dias || []).length;
                 for (let week = 0; week < WEEKS; week++) {
                     (plan.dias || []).forEach((diaPlan, index) => {
                         const d = new Date(startMonday);
-                        d.setDate(startMonday.getDate() + week * 7 + index);
+                        d.setDate(startMonday.getDate() + week * 7 + getDayOffset(numDays, index));
                         const dateKey = d.toISOString().split('T')[0];
                         currentRoutines[dateKey] = {
                             title: diaPlan.titulo,
                             isElite: true,
+                            semanaNum: week + 1,
                             planId: plan.resumen?.objetivo || 'ai-master',
                             exercises: (diaPlan.ejercicios || []).map((ex, i) => mapEx(ex, dateKey, i)),
                         };
@@ -164,7 +180,7 @@ export default function ElitePlanScreen({ route, navigation }) {
                 }
                 await AsyncStorage.setItem('assigned_routines', JSON.stringify(currentRoutines));
                 setAgendado(true);
-                showAlert('🚀 Propagación Nexus Completada', 'Tu rutina se ha inyectado para los próximos 3 meses (12 semanas).', 'success');
+                showAlert('🚀 Propagación Nexus Completada', `Tu rutina se ha inyectado para los próximos 2 meses (8 semanas).`, 'success');
             }
         } catch (error) {
             console.error('Schedule error:', error);
