@@ -183,7 +183,7 @@ export default function PlanesPago() {
     const onInvite = async () => {
         try {
             const result = await Share.share({
-                message: `¡Únete a Nexus Athletics AI y entrena con el mejor Coach de IA! 💪\n\nUsa mi código: ${user.referralCode} al registrarte y ambos obtenemos beneficios.\n\n📲 Descarga la app aquí:\nhttps://expo.dev/accounts/ayoubito04/projects/nexus-fitness/builds/2eff8215-a103-4c01-b30d-74d0d8308a7a`,
+                message: `¡Únete a Nexus Athletics AI y entrena con el mejor Coach de IA! 💪\n\nUsa mi código: ${user.referralCode} al registrarte y ambos obtenemos beneficios.\n\n📲 Descarga la app (APK Android):\nhttps://expo.dev/artifacts/eas/6NB41awp4qm8SpBJZu8pK9.apk`,
             });
             if (result?.action === Share.sharedAction && token) {
                 const res = await fetch(`${BACKEND_URL}/plans/register-share`, {
