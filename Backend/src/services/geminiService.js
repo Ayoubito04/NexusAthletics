@@ -48,16 +48,38 @@ async function generateImage(prompt) {
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY no configurada");
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${GEMINI_API_KEY}`;
-    const response = await axios.post(url, {
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
-    }, { timeout: GEMINI_TIMEOUT_MS });
+    const imageModels = [
+        'gemini-2.0-flash-preview-image-generation',
+        'gemini-2.0-flash-exp',
+        'gemini-2.0-flash',
+    ];
 
-    const parts = response.data?.candidates?.[0]?.content?.parts || [];
-    const imagePart = parts.find(p => p.inlineData?.data);
-    if (!imagePart) throw new Error('La IA no devolvió imagen');
-    return { data: imagePart.inlineData.data, mimeType: imagePart.inlineData.mimeType };
+    let lastErr;
+    for (const model of imageModels) {
+        try {
+            console.log(`[ImageGen] Intentando: ${model}`);
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+            const response = await axios.post(url, {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
+            }, { timeout: GEMINI_TIMEOUT_MS });
+
+            const parts = response.data?.candidates?.[0]?.content?.parts || [];
+            const imagePart = parts.find(p => p.inlineData?.data);
+            if (imagePart) {
+                console.log(`[ImageGen] ✓ Imagen generada con ${model}`);
+                return { data: imagePart.inlineData.data, mimeType: imagePart.inlineData.mimeType };
+            }
+            console.log(`[ImageGen] ${model} respondió sin imagen`);
+        } catch (e) {
+            lastErr = e;
+            const status = e.response?.status;
+            console.log(`[ImageGen] ✗ ${model} → ${status}: ${e.response?.data?.error?.message || e.message}`);
+            if (status === 404 || status === 400) continue;
+            throw e;
+        }
+    }
+    throw lastErr || new Error('Ningún modelo devolvió imagen');
 }
 
 module.exports = { tryGeminiWithFallback, generateImage };
