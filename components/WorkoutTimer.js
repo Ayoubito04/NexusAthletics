@@ -5,14 +5,17 @@ import {
     KeyboardAvoidingView, Platform, Image, ActivityIndicator, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Audio } from 'expo-av';
+import { Audio, Video } from 'expo-av';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getGifUrl, nameToImgKey } from '../utils/exerciseMedia';
 import Config from '../constants/Config';
 
 const GIF_CACHE_KEY = 'nexus_exercise_gifs_v1';
+const RISK_COLOR = { Bajo: '#63ff15', Medio: '#FFD700', Alto: '#ff4444' };
 const BACKEND_URL = Config.BACKEND_URL;
 
 // Descanso adaptativo según fase del mesociclo
@@ -236,6 +239,13 @@ export default function WorkoutTimer({ visible, exercises = [], workoutMeta, onC
     const [isResting, setIsResting] = useState(false);
     const [allResults, setAllResults] = useState([]);
 
+    // Form analysis sub-modal
+    const [analysisVisible, setAnalysisVisible] = useState(false);
+    const [analysisMedia, setAnalysisMedia]     = useState(null);
+    const [analysisLoading, setAnalysisLoading] = useState(false);
+    const [analysisResult, setAnalysisResult]   = useState(null);
+    const [analysisError, setAnalysisError]     = useState('');
+
     const restDuration = getRestTime(workoutMeta);
     const restProgress = useRef(new Animated.Value(0)).current;
     const restAnim = useRef(null);
@@ -265,10 +275,10 @@ export default function WorkoutTimer({ visible, exercises = [], workoutMeta, onC
     }, [exIdx, exercises]);
 
     useEffect(() => {
-        if (phase !== 'workout') { clearInterval(totalRef.current); return; }
+        if (phase !== 'workout' || analysisVisible) { clearInterval(totalRef.current); return; }
         totalRef.current = setInterval(() => setTotalSecs(s => s + 1), 1000);
         return () => clearInterval(totalRef.current);
-    }, [phase]);
+    }, [phase, analysisVisible]);
 
     useEffect(() => {
         clearInterval(restRef.current);
@@ -335,6 +345,52 @@ export default function WorkoutTimer({ visible, exercises = [], workoutMeta, onC
         } else {
             setRestSecs(restDuration);
             setIsResting(true);
+        }
+    };
+
+    const openAnalysis = () => {
+        setAnalysisMedia(null);
+        setAnalysisResult(null);
+        setAnalysisError('');
+        setAnalysisVisible(true);
+    };
+
+    const pickAnalysisMedia = async (fromCamera) => {
+        const perm = fromCamera
+            ? await ImagePicker.requestCameraPermissionsAsync()
+            : await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) return;
+        const opts = { mediaTypes: ['images', 'videos'], allowsEditing: true, quality: 0.7, videoMaxDuration: 30 };
+        const res = fromCamera
+            ? await ImagePicker.launchCameraAsync(opts)
+            : await ImagePicker.launchImageLibraryAsync(opts);
+        if (res.canceled) return;
+        const asset = res.assets[0];
+        const isVideo = asset.type === 'video';
+        setAnalysisMedia({ uri: asset.uri, mimeType: isVideo ? 'video/mp4' : (asset.mimeType || 'image/jpeg'), isVideo });
+        setAnalysisResult(null);
+        setAnalysisError('');
+    };
+
+    const runAnalysis = async () => {
+        if (!analysisMedia) return;
+        setAnalysisLoading(true);
+        setAnalysisError('');
+        try {
+            const token = await AsyncStorage.getItem('token');
+            const mediaBase64 = await FileSystem.readAsStringAsync(analysisMedia.uri, { encoding: 'base64' });
+            const res = await fetch(`${BACKEND_URL}/user/form-analysis`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ mediaBase64, mimeType: analysisMedia.mimeType, exerciseName: ex?.name }),
+            });
+            const json = await res.json();
+            if (!res.ok) { setAnalysisError(json.error || 'Error del servidor'); return; }
+            setAnalysisResult(json);
+        } catch (e) {
+            setAnalysisError(e.message);
+        } finally {
+            setAnalysisLoading(false);
         }
     };
 
@@ -432,6 +488,12 @@ export default function WorkoutTimer({ visible, exercises = [], workoutMeta, onC
                         </View>
                     </View>
 
+                    {/* Análisis de técnica */}
+                    <TouchableOpacity style={s.analyzeChip} onPress={openAnalysis} activeOpacity={0.75}>
+                        <MaterialCommunityIcons name="video-check-outline" size={12} color="#63ff15" />
+                        <Text style={s.analyzeChipText}>ANALIZAR TÉCNICA</Text>
+                    </TouchableOpacity>
+
                     {/* Hints Ultimate: peso sugerido + RIR */}
                     {isUltimate && (ex.pesoSugerido || ex.rir) && (
                         <View style={s.ultimateHints}>
@@ -499,6 +561,145 @@ export default function WorkoutTimer({ visible, exercises = [], workoutMeta, onC
                         }
                     />
                 </KeyboardAvoidingView>
+
+                {/* ── FORM ANALYSIS SUB-MODAL ── */}
+                <Modal visible={analysisVisible} animationType="slide" transparent={false} onRequestClose={() => setAnalysisVisible(false)}>
+                    <SafeAreaView style={s.container}>
+                        <View style={s.analysisHeader}>
+                            <TouchableOpacity onPress={() => setAnalysisVisible(false)} style={s.iconBtn}>
+                                <Ionicons name="arrow-back" size={22} color="#fff" />
+                            </TouchableOpacity>
+                            <View style={{ flex: 1, marginLeft: 12 }}>
+                                <Text style={s.analysisTitle}>ANÁLISIS DE TÉCNICA</Text>
+                                <Text style={s.analysisSub} numberOfLines={1}>{ex?.name}</Text>
+                            </View>
+                            <View style={s.ultimateChip}>
+                                <Text style={s.ultimateChipText}>ULTIMATE</Text>
+                            </View>
+                        </View>
+
+                        <ScrollView contentContainerStyle={s.analysisContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                            <View style={s.analysisBtns}>
+                                <TouchableOpacity style={s.analysisPickBtn} onPress={() => pickAnalysisMedia(true)}>
+                                    <LinearGradient colors={['#63ff15', '#3dcc00']} style={s.analysisPickGrad} borderRadius={14}>
+                                        <Ionicons name="camera" size={26} color="#000" />
+                                        <Text style={s.analysisPickText}>GRABAR</Text>
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={s.analysisPickBtn} onPress={() => pickAnalysisMedia(false)}>
+                                    <LinearGradient colors={['#1a1a1a', '#111']} style={s.analysisPickGrad} borderRadius={14}>
+                                        <Ionicons name="images" size={26} color="#63ff15" />
+                                        <Text style={[s.analysisPickText, { color: '#63ff15' }]}>GALERÍA</Text>
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                            </View>
+
+                            {analysisMedia && (
+                                <View style={s.analysisPreview}>
+                                    {analysisMedia.isVideo ? (
+                                        <Video source={{ uri: analysisMedia.uri }} style={s.analysisVideo} useNativeControls resizeMode="contain" />
+                                    ) : (
+                                        <View style={s.analysisImgPlaceholder}>
+                                            <Ionicons name="checkmark-circle" size={40} color="#63ff15" />
+                                            <Text style={s.analysisImgText}>Foto lista</Text>
+                                        </View>
+                                    )}
+                                    <TouchableOpacity style={s.removeMediaBtn} onPress={() => setAnalysisMedia(null)}>
+                                        <Ionicons name="close-circle" size={24} color="#ff4444" />
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+
+                            {!!analysisError && (
+                                <View style={s.analysisErrorBox}>
+                                    <Ionicons name="alert-circle" size={14} color="#ff4444" />
+                                    <Text style={s.analysisErrorText}>{analysisError}</Text>
+                                </View>
+                            )}
+
+                            <TouchableOpacity onPress={runAnalysis} disabled={analysisLoading || !analysisMedia} activeOpacity={0.8}>
+                                <LinearGradient
+                                    colors={analysisMedia && !analysisLoading ? ['#63ff15', '#3dcc00'] : ['#1a1a1a', '#111']}
+                                    style={s.runAnalysisBtn}
+                                    borderRadius={16}
+                                >
+                                    {analysisLoading
+                                        ? <ActivityIndicator color="#000" size="small" />
+                                        : <MaterialCommunityIcons name="brain" size={18} color={analysisMedia ? '#000' : '#333'} />
+                                    }
+                                    <Text style={[s.runAnalysisBtnText, { color: analysisMedia && !analysisLoading ? '#000' : '#333' }]}>
+                                        {analysisLoading ? 'ANALIZANDO...' : 'ANALIZAR'}
+                                    </Text>
+                                </LinearGradient>
+                            </TouchableOpacity>
+
+                            {analysisLoading && <Text style={s.analysisHint}>La IA evalúa tu técnica · 15-30s</Text>}
+
+                            {analysisResult && (() => {
+                                const sc = analysisResult.score;
+                                const scColor = sc >= 8 ? '#63ff15' : sc >= 6 ? '#FFD700' : '#ff4444';
+                                const riskColor = RISK_COLOR[analysisResult.nivelRiesgo] || '#63ff15';
+                                return (
+                                    <View style={s.analysisResultWrap}>
+                                        <View style={s.analysisScoreRow}>
+                                            <View style={[s.analysisScoreCircle, { borderColor: scColor }]}>
+                                                <Text style={[s.analysisScoreNum, { color: scColor }]}>{sc}</Text>
+                                                <Text style={s.analysisScoreUnit}>/10</Text>
+                                            </View>
+                                            <View style={{ flex: 1 }}>
+                                                <View style={[s.riskBadge, { backgroundColor: riskColor + '20', borderColor: riskColor + '60' }]}>
+                                                    <Text style={[s.riskBadgeText, { color: riskColor }]}>RIESGO {analysisResult.nivelRiesgo?.toUpperCase()}</Text>
+                                                </View>
+                                                <Text style={s.analysisResumen}>{analysisResult.resumen}</Text>
+                                            </View>
+                                        </View>
+
+                                        {analysisResult.errores?.length > 0 && (
+                                            <View style={s.analysisListCard}>
+                                                <Text style={[s.analysisListTitle, { color: '#ff4444' }]}>ERRORES</Text>
+                                                {analysisResult.errores.map((e, i) => (
+                                                    <View key={i} style={s.analysisListRow}>
+                                                        <View style={[s.analysisDot, { backgroundColor: '#ff4444' }]} />
+                                                        <Text style={s.analysisListText}>{e}</Text>
+                                                    </View>
+                                                ))}
+                                            </View>
+                                        )}
+
+                                        {analysisResult.correcciones?.length > 0 && (
+                                            <View style={s.analysisListCard}>
+                                                <Text style={[s.analysisListTitle, { color: '#FFD700' }]}>CORRECCIONES</Text>
+                                                {analysisResult.correcciones.map((c, i) => (
+                                                    <View key={i} style={s.analysisListRow}>
+                                                        <View style={[s.analysisDot, { backgroundColor: '#FFD700' }]} />
+                                                        <Text style={s.analysisListText}>{c}</Text>
+                                                    </View>
+                                                ))}
+                                            </View>
+                                        )}
+
+                                        {analysisResult.positivos?.length > 0 && (
+                                            <View style={s.analysisListCard}>
+                                                <Text style={[s.analysisListTitle, { color: '#63ff15' }]}>LO QUE HACES BIEN</Text>
+                                                {analysisResult.positivos.map((p, i) => (
+                                                    <View key={i} style={s.analysisListRow}>
+                                                        <View style={[s.analysisDot, { backgroundColor: '#63ff15' }]} />
+                                                        <Text style={s.analysisListText}>{p}</Text>
+                                                    </View>
+                                                ))}
+                                            </View>
+                                        )}
+
+                                        <TouchableOpacity style={s.continueWorkoutBtn} onPress={() => setAnalysisVisible(false)}>
+                                            <Ionicons name="play" size={16} color="#000" />
+                                            <Text style={s.continueWorkoutText}>CONTINUAR ENTRENAMIENTO</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                );
+                            })()}
+                        </ScrollView>
+                    </SafeAreaView>
+                </Modal>
 
                 {/* ── REST BANNER ── */}
                 {isResting && (
@@ -675,4 +876,47 @@ const s = StyleSheet.create({
     skipText: { color: '#63ff15', fontSize: 12, fontWeight: '900' },
     restBarBg: { height: 3, backgroundColor: '#000' },
     restBarFill: { height: 3, backgroundColor: '#63ff15' },
+
+    // Analyze chip (in exercise header)
+    analyzeChip: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', backgroundColor: 'rgba(99,255,21,0.07)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(99,255,21,0.2)', marginBottom: 6 },
+    analyzeChipText: { color: '#63ff15', fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+
+    // Analysis sub-modal
+    analysisHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1a1a1a' },
+    analysisTitle: { color: '#fff', fontSize: 14, fontWeight: '900', letterSpacing: 1.5 },
+    analysisSub: { color: '#63ff15', fontSize: 11, marginTop: 1 },
+    ultimateChip: { backgroundColor: '#FFD700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 7 },
+    ultimateChipText: { color: '#000', fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+    analysisContent: { padding: 16, gap: 12, paddingBottom: 40 },
+    analysisBtns: { flexDirection: 'row', gap: 12 },
+    analysisPickBtn: { flex: 1, borderRadius: 14, overflow: 'hidden' },
+    analysisPickGrad: { paddingVertical: 16, alignItems: 'center', gap: 6 },
+    analysisPickText: { color: '#000', fontSize: 11, fontWeight: '900', letterSpacing: 1 },
+    analysisPreview: { borderRadius: 12, overflow: 'hidden', backgroundColor: '#1a1a1a', height: 180, position: 'relative' },
+    analysisVideo: { width: '100%', height: '100%' },
+    analysisImgPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
+    analysisImgText: { color: '#63ff15', fontSize: 12, fontWeight: '700' },
+    removeMediaBtn: { position: 'absolute', top: 8, right: 8 },
+    analysisErrorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#ff444415', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: '#ff444440' },
+    analysisErrorText: { color: '#ff6666', fontSize: 12, flex: 1 },
+    runAnalysisBtn: { paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+    runAnalysisBtnText: { fontSize: 14, fontWeight: '900', letterSpacing: 1.5 },
+    analysisHint: { color: '#555', fontSize: 11, textAlign: 'center', marginTop: -4 },
+
+    // Analysis results
+    analysisResultWrap: { gap: 12 },
+    analysisScoreRow: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#111', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#1e1e1e' },
+    analysisScoreCircle: { width: 72, height: 72, borderRadius: 36, borderWidth: 2, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0a0a0a' },
+    analysisScoreNum: { fontSize: 24, fontWeight: '900' },
+    analysisScoreUnit: { color: '#555', fontSize: 11, fontWeight: '700', marginTop: -2 },
+    riskBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 7, borderWidth: 1, marginBottom: 6 },
+    riskBadgeText: { fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+    analysisResumen: { color: '#aaa', fontSize: 12, lineHeight: 18 },
+    analysisListCard: { backgroundColor: '#111', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#1e1e1e', gap: 8 },
+    analysisListTitle: { fontSize: 9, fontWeight: '900', letterSpacing: 1.5 },
+    analysisListRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+    analysisDot: { width: 5, height: 5, borderRadius: 3, marginTop: 6 },
+    analysisListText: { color: '#ccc', fontSize: 12, lineHeight: 18, flex: 1 },
+    continueWorkoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#63ff15', borderRadius: 14, paddingVertical: 14 },
+    continueWorkoutText: { color: '#000', fontSize: 13, fontWeight: '900', letterSpacing: 1 },
 });
