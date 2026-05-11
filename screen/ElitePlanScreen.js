@@ -133,7 +133,7 @@ export default function ElitePlanScreen({ route, navigation }) {
                 (WEEKLY_DAY_OFFSETS[numDays] ?? [...Array(numDays).keys()])[idx] ?? idx;
 
             if (plan.esUltimate && plan.semanas) {
-                const CYCLES = 3;
+                const CYCLES = 1;
                 const totalWeeks = plan.semanas.length * CYCLES;
                 for (let cycle = 0; cycle < CYCLES; cycle++) {
                     plan.semanas.forEach((semana, weekIdx) => {
@@ -159,9 +159,9 @@ export default function ElitePlanScreen({ route, navigation }) {
                 }
                 await AsyncStorage.setItem('assigned_routines', JSON.stringify(currentRoutines));
                 setAgendado(true);
-                showAlert('🚀 Mesociclo en Calendario', `${totalWeeks} semanas inyectadas (3 meses). Visible en tu calendario.`, 'success');
+                showAlert('🚀 Mesociclo en Calendario', `${totalWeeks} semanas inyectadas (1 mes). Visible en tu calendario.`, 'success');
             } else {
-                const WEEKS = 8;
+                const WEEKS = 4;
                 const numDays = (plan.dias || []).length;
                 for (let week = 0; week < WEEKS; week++) {
                     (plan.dias || []).forEach((diaPlan, index) => {
@@ -179,7 +179,7 @@ export default function ElitePlanScreen({ route, navigation }) {
                 }
                 await AsyncStorage.setItem('assigned_routines', JSON.stringify(currentRoutines));
                 setAgendado(true);
-                showAlert('🚀 Propagación Nexus Completada', `Tu rutina se ha inyectado para los próximos 2 meses (8 semanas).`, 'success');
+                showAlert('🚀 Propagación Nexus Completada', `Tu rutina se ha inyectado para el próximo mes (4 semanas).`, 'success');
             }
         } catch (error) {
             console.error('Schedule error:', error);

@@ -60,6 +60,12 @@ Objetivo: ${user.objetivo || 'Mejorar'}, Nivel: ${user.nivelActividad || 'Normal
 const generatePlanInteractive = async (req, res) => {
     const { details, lesiones, horasSueno, nivelEstres, semanas = 4, periodi, tecnicas = [] } = req.body;
     const diasSemana = parseInt(details?.match(/DÍAS\/SEMANA:\s*(\d+)/)?.[1] || '4');
+    const durHMatch = details?.match(/(\d+(?:[.,]\d+)?)\s*(hora|horas)/i);
+    const durMMatch = details?.match(/(\d+)\s*(min|minutos)/i);
+    let duracionMin = 60;
+    if (durHMatch) duracionMin = Math.round(parseFloat(durHMatch[1].replace(',', '.')) * 60);
+    else if (durMMatch) duracionMin = parseInt(durMMatch[1]);
+    const maxEjercicios = Math.min(15, Math.max(6, Math.floor(duracionMin / 10)));
     try {
         let user = await prisma.user.findUnique({
             where: { id: req.user.id },
@@ -162,7 +168,7 @@ Duración: ${semanas} semanas | Periodización: ${periodi || 'DUP'} | Técnicas:
 
 REGLAS CRÍTICAS:
 - El array "dias" de CADA semana debe tener EXACTAMENTE ${diasSemana} objetos (días de entrenamiento).
-- Máximo 5 ejercicios por día. JSON compacto, sin calentamiento ni vueltaCalma.
+- Genera entre 6 y ${maxEjercicios} ejercicios por día según la duración solicitada (no más de ${maxEjercicios}). JSON compacto, sin calentamiento ni vueltaCalma.
 - semana ${semanas} = Deload (vol -40%, intensidad -50%).
 - Usa 70-85% del 1RM según fase.
 imgKey debe ser el MÁS ESPECÍFICO para cada ejercicio. Lista completa:
@@ -206,7 +212,8 @@ CARDIO/FLEX: cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor, 
         4. Si busca "Perder grasa", prioriza fuerza con intervalos o circuitos.
         5. Si busca "Flexibilidad/Pilates", genera secuencias fluidas y controladas.
         6. Genera EXACTAMENTE ${diasSemana} objetos en el array "dias".
-        7. imgKey debe ser el más específico para cada ejercicio. Opciones disponibles:
+        7. Genera entre 6 y ${maxEjercicios} ejercicios por día según la duración solicitada (no más de ${maxEjercicios}).
+        8. imgKey debe ser el más específico para cada ejercicio. Opciones disponibles:
         press_banca, press_inclinado, press_declinado, aperturas, fondos, push_up, press_mancuernas,
         peso_muerto, dominadas, remo, jalon, remo_sentado, face_pull, buenos_dias, remo_mancuerna,
         press_hombros, press_militar, elevaciones_laterales, elevaciones_frontales, vuelo_posterior,
@@ -359,6 +366,12 @@ const deleteSavedPlan = async (req, res) => {
 const generateUltimatePlan = async (req, res) => {
     const { details, lesiones, horasSueno, nivelEstres, semanas = 4, periodi, tecnicas = [] } = req.body;
     const diasSemana = parseInt(details?.match(/DÍAS\/SEMANA:\s*(\d+)/)?.[1] || '4');
+    const durHMatchU = details?.match(/(\d+(?:[.,]\d+)?)\s*(hora|horas)/i);
+    const durMMatchU = details?.match(/(\d+)\s*(min|minutos)/i);
+    let duracionMinU = 60;
+    if (durHMatchU) duracionMinU = Math.round(parseFloat(durHMatchU[1].replace(',', '.')) * 60);
+    else if (durMMatchU) duracionMinU = parseInt(durMMatchU[1]);
+    const maxEjerciciosU = Math.min(15, Math.max(6, Math.floor(duracionMinU / 10)));
     try {
         const user = await prisma.user.findUnique({
             where: { id: req.user.id },
@@ -459,7 +472,7 @@ cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor
 6. Con estrés ${nivelEstres || 'moderado'} y ${horasSueno || '7-8h'} de sueño, ajusta el volumen apropiadamente
 7. Genera exactamente ${semanas} semanas con progresión lógica
 8. El array "dias" de CADA semana debe tener EXACTAMENTE ${diasSemana} objetos
-9. Máximo 5 ejercicios por día. Respuesta compacta, sin campos opcionales extra`;
+9. Genera entre 6 y ${maxEjerciciosU} ejercicios por día según la duración solicitada (no más de ${maxEjerciciosU}). Respuesta compacta, sin campos opcionales extra`;
 
         const contents = [{ parts: [{ text: systemPrompt }] }];
         const response = await tryGeminiWithFallback(contents, { maxOutputTokens: 8192 });
