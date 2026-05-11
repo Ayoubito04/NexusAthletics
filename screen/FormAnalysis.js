@@ -63,7 +63,7 @@ export default function FormAnalysis() {
         try {
             const token = await AsyncStorage.getItem('token');
             const mediaBase64 = await FileSystem.readAsStringAsync(media.uri, {
-                encoding: FileSystem.EncodingType.Base64,
+                encoding: 'base64',
             });
 
             const res = await fetch(`${BACKEND_URL}/user/form-analysis`, {
