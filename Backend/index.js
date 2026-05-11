@@ -48,7 +48,7 @@ app.use(morgan(morganFormat, {
 app.use(globalLimiter);
 
 // Body parsing
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 
 // Database + Auto-migrate nuevas tablas
 async function startServer() {

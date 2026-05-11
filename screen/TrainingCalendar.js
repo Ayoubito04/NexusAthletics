@@ -723,6 +723,30 @@ export default function TrainingCalendar({ navigation }) {
 
                 {viewMode === 'month' ? renderMonthView() : renderWeekView()}
 
+                <TouchableOpacity
+                    style={styles.formAnalysisBtn}
+                    onPress={() => navigation.navigate('FormAnalysis')}
+                    activeOpacity={0.8}
+                >
+                    <LinearGradient
+                        colors={['#1a0a2e', '#0d1a0a']}
+                        style={styles.formAnalysisBtnGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                    >
+                        <View style={styles.formAnalysisBtnLeft}>
+                            <MaterialCommunityIcons name="video-check" size={26} color="#63ff15" />
+                            <View style={{ marginLeft: 12 }}>
+                                <Text style={styles.formAnalysisBtnTitle}>ANÁLISIS DE TÉCNICA</Text>
+                                <Text style={styles.formAnalysisBtnSub}>IA evalúa tu forma · Plan Ultimate</Text>
+                            </View>
+                        </View>
+                        <View style={styles.formAnalysisChevron}>
+                            <Ionicons name="chevron-forward" size={20} color="#63ff15" />
+                        </View>
+                    </LinearGradient>
+                </TouchableOpacity>
+
                 <BlurView intensity={20} tint="dark" style={styles.guideCardBlur}>
                     <View style={styles.guideCard}>
                         <Text style={styles.guideT}>GESTOR NEXUS ELITE</Text>
@@ -1037,6 +1061,12 @@ const styles = StyleSheet.create({
     noRoutineText: { color: '#52525B', fontSize: 13, fontStyle: 'italic' },
     weekActions: { flexDirection: 'row', alignItems: 'center', gap: 15 },
     playBtn: { marginRight: 5 },
+    formAnalysisBtn: { marginTop: 24, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(99,255,21,0.25)' },
+    formAnalysisBtnGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16, paddingHorizontal: 18 },
+    formAnalysisBtnLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+    formAnalysisBtnTitle: { color: '#fff', fontWeight: '900', fontSize: 14, letterSpacing: 1 },
+    formAnalysisBtnSub: { color: '#63ff15', fontSize: 11, fontWeight: '600', marginTop: 2, opacity: 0.8 },
+    formAnalysisChevron: { backgroundColor: 'rgba(99,255,21,0.12)', borderRadius: 10, padding: 4 },
     guideCardBlur: { marginTop: 40, borderRadius: 25, overflow: 'hidden' },
     guideCard: {
         backgroundColor: 'rgba(10,10,10,0.6)',

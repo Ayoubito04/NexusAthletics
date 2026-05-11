@@ -46,6 +46,7 @@ import Notifications from './screen/Notifications';
 import UserRanking from './screen/UserRanking';
 import Facturacion from './screen/Facturacion';
 import DigitalTwin from './screen/DigitalTwin';
+import FormAnalysis from './screen/FormAnalysis';
 
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -293,6 +294,7 @@ export default function App() {
           <Stack.Screen name="UserRanking" component={UserRanking} />
           <Stack.Screen name="Facturacion" component={Facturacion} />
           <Stack.Screen name="DigitalTwin" component={DigitalTwin} />
+          <Stack.Screen name="FormAnalysis" component={FormAnalysis} />
         </Stack.Navigator>
       </NavigationContainer>
     </StripeProvider>
