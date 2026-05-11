@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
-const { generateDigitalTwin } = require('../controllers/digitalTwinController');
+const { generateDigitalTwin, generateDigitalTwinImage } = require('../controllers/digitalTwinController');
 const { authenticateToken } = require('../middlewares/authMiddleware');
 
 router.post('/biometrics', authenticateToken, userController.updateBiometrics);
@@ -14,5 +14,6 @@ router.put('/avatar', authenticateToken, userController.updateAvatar);
 router.put('/change-password', authenticateToken, userController.changePassword);
 router.get('/ranking', authenticateToken, userController.getRanking);
 router.post('/digital-twin', authenticateToken, generateDigitalTwin);
+router.post('/digital-twin/image', authenticateToken, generateDigitalTwinImage);
 
 module.exports = router;
