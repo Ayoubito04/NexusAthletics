@@ -219,8 +219,9 @@ export default function PlanesPago() {
     // ─── Datos derivados ────────────────────────────────────────────────────
     const invites      = trialStatus?.invites ?? (user?.invitacionesExitosas || 0);
     const pricing      = getNextDiscountInfo(invites);
-    const hasDiscount  = invites > 0;
-    const proPrice     = pricing.currentPrice;
+    // Descuento SOLO si el usuario aplicó un código manualmente en esta sesión
+    const hasDiscount  = codigoAplicado;
+    const proPrice     = codigoAplicado ? pricing.currentPrice : PRO_BASE_PRICE;
     const isInTrial    = trialStatus?.trialActive;
     const trialExpired = trialStatus?.trialExpired;
     const daysLeft     = trialStatus?.daysLeft;
@@ -312,127 +313,15 @@ export default function PlanesPago() {
                     </View>
                 )}
 
-                {/* ── Programa de invitados ── */}
+                {/* ── Código de descuento ── */}
                 {user && (
                     <View style={styles.promoCard}>
-                        <Text style={styles.promoTitle}>🎁 Invita y Ahorra</Text>
+                        <Text style={styles.promoTitle}>🎁 Código de Descuento</Text>
                         <Text style={styles.promoText}>
-                            Cada amigo que se registre con tu código reduce el precio del Plan Pro.{'\n'}
-                            ¡Consigue <Text style={{ color: '#63ff15', fontWeight: '900' }}>{MAX_DISCOUNT_INVITES} invitaciones</Text> y llévate un <Text style={{ color: '#63ff15', fontWeight: '900' }}>50% de DESCUENTO</Text>!
+                            Comparte tu código con amigos y ellos podrán obtener un descuento al suscribirse al Plan Pro.
                         </Text>
 
-                        {/* Price Ladder */}
-                        <View style={styles.priceLadder}>
-                            <View style={styles.priceLadderHeader}>
-                                <Text style={styles.priceLadderLabel}>PRECIO ACTUAL</Text>
-                                <View style={styles.priceDisplay}>
-                                    <Text style={styles.priceCurrent}>{pricing.currentPrice.toFixed(2)}€</Text>
-                                    <Text style={styles.priceMonth}>/mes</Text>
-                                    {pricing.maxReached && (
-                                        <View style={styles.maxBadge}>
-                                            <Text style={styles.maxBadgeText}>MAX 50%</Text>
-                                        </View>
-                                    )}
-                                </View>
-                            </View>
-
-                            {!pricing.maxReached && (
-                                <>
-                                    {/* Savings bar */}
-                                    <View style={styles.savingsBar}>
-                                        <View style={[styles.savingsFill, { width: `${pricing.savedPercent}%` }]} />
-                                    </View>
-                                    <View style={styles.savingsInfo}>
-                                        <Text style={styles.savingsText}>
-                                            Ahorrado: <Text style={{ color: '#63ff15', fontWeight: '800' }}>{pricing.savedAmount.toFixed(2)}€</Text>
-                                            ({pricing.savedPercent}%)
-                                        </Text>
-                                        <Text style={styles.savingsText}>
-                                            Base: <Text style={{ color: '#888' }}>{PRO_BASE_PRICE.toFixed(2)}€</Text>
-                                        </Text>
-                                    </View>
-
-                                    {/* Price ladder steps */}
-                                    <View style={styles.ladderSteps}>
-                                        {Array.from({ length: MAX_DISCOUNT_INVITES + 1 }, (_, i) => i).map(step => {
-                                            const stepPrice = getProgressivePrice(step);
-                                            const isReached = step <= invites;
-                                            const isNext = step === invites + 1;
-                                            return (
-                                                <View
-                                                    key={step}
-                                                    style={[
-                                                        styles.ladderStep,
-                                                        isReached && styles.ladderStepReached,
-                                                        isNext && styles.ladderStepNext,
-                                                    ]}
-                                                >
-                                                    <View style={styles.ladderStepLeft}>
-                                                        <View style={[
-                                                            styles.ladderDot,
-                                                            isReached && styles.ladderDotReached,
-                                                            isNext && styles.ladderDotNext,
-                                                        ]}>
-                                                            {isReached && (
-                                                                <Ionicons name="checkmark" size={10} color="#000" />
-                                                            )}
-                                                        </View>
-                                                        <Text style={[
-                                                            styles.ladderStepLabel,
-                                                            isReached && styles.ladderStepLabelReached,
-                                                        ]}>
-                                                            {step}/{MAX_DISCOUNT_INVITES} inv.
-                                                        </Text>
-                                                    </View>
-                                                    <Text style={[
-                                                        styles.ladderStepPrice,
-                                                        isReached && styles.ladderStepPriceReached,
-                                                        isNext && { color: '#63ff15' },
-                                                    ]}>
-                                                        {`${stepPrice.toFixed(2)}€`}
-                                                    </Text>
-                                                </View>
-                                            );
-                                        })}
-                                    </View>
-
-                                    {invites < MAX_DISCOUNT_INVITES && (
-                                        <View style={styles.nextDiscountBanner}>
-                                            <Ionicons name="trending-down-outline" size={16} color="#63ff15" />
-                                            <Text style={styles.nextDiscountText}>
-                                                {MAX_DISCOUNT_INVITES - invites} invitación(es) más para llegar al 50% de descuento
-                                            </Text>
-                                        </View>
-                                    )}
-                                </>
-                            )}
-
-                            {pricing.maxReached && (
-                                <View style={styles.freeBanner}>
-                                    <Ionicons name="trophy" size={24} color="#FFD700" />
-                                    <Text style={styles.freeBannerText}>
-                                        ¡Felicidades! Ya alcanzaste el descuento máximo del 50% en Plan Pro.
-                                    </Text>
-                                </View>
-                            )}
-                        </View>
-
-                        {/* Progreso de invitaciones */}
-                        <View style={styles.inviteProgress}>
-                            {Array.from({ length: MAX_DISCOUNT_INVITES }).map((_, i) => (
-                                <View key={i} style={[styles.inviteDot, i < invites && styles.inviteDotFull]}>
-                                    <Ionicons
-                                        name={i < invites ? 'person' : 'person-outline'}
-                                        size={12}
-                                        color={i < invites ? '#000' : '#444'}
-                                    />
-                                </View>
-                            ))}
-                            <Text style={styles.inviteCount}>
-                                {invites}/{MAX_DISCOUNT_INVITES} amigos
-                            </Text>
-                        </View>
-
+                        {/* Tu código para compartir */}
                         <View style={styles.referralBox}>
                             <View style={styles.refCodeContainer}>
                                 <Text style={styles.refLabel}>TU CÓDIGO</Text>
@@ -444,7 +333,7 @@ export default function PlanesPago() {
                             </TouchableOpacity>
                         </View>
 
-                        {/* ── Aplicar código de descuento ── */}
+                        {/* Aplicar código recibido */}
                         {!codigoAplicado ? (
                             <View style={styles.codigoBox}>
                                 <Text style={styles.codigoLabel}>¿Tienes un código de descuento?</Text>
@@ -471,9 +360,12 @@ export default function PlanesPago() {
                                 </View>
                             </View>
                         ) : (
-                            <View style={[styles.codigoBox, { borderColor: '#63ff15' }]}>
+                            <View style={[styles.codigoBox, { borderColor: '#63ff15', flexDirection: 'row', alignItems: 'center' }]}>
                                 <Ionicons name="checkmark-circle" size={18} color="#63ff15" />
-                                <Text style={{ color: '#63ff15', fontWeight: '700', marginLeft: 8 }}>Código aplicado correctamente</Text>
+                                <View style={{ marginLeft: 10 }}>
+                                    <Text style={{ color: '#63ff15', fontWeight: '800' }}>Descuento aplicado</Text>
+                                    <Text style={{ color: '#63ff15', fontSize: 20, fontWeight: '900' }}>{proPrice.toFixed(2)}€<Text style={{ fontSize: 12 }}>/mes</Text></Text>
+                                </View>
                             </View>
                         )}
                     </View>

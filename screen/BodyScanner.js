@@ -551,6 +551,57 @@ export default function BodyScanner() {
                             </LinearGradient>
                         )}
 
+                        {/* ── FÍSICO FUTURO IA ── */}
+                        {userPlan === 'Ultimate' ? (
+                            <TouchableOpacity
+                                style={dtStyles.unlockBtn}
+                                onPress={() => navigation.navigate('DigitalTwin')}
+                            >
+                                <LinearGradient colors={['#FFD700', '#b8860b']} style={dtStyles.unlockGrad}>
+                                    <Ionicons name="body-outline" size={24} color="#000" />
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={dtStyles.unlockTitle}>VER MI FÍSICO FUTURO</Text>
+                                        <Text style={dtStyles.unlockSub}>Digital Twin IA · cómo quedarás en 3 meses</Text>
+                                    </View>
+                                    <Ionicons name="arrow-forward" size={20} color="#000" />
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        ) : (
+                            <View style={dtStyles.lockedCard}>
+                                {/* Imagen pixelada / bloqueada */}
+                                <View style={dtStyles.lockedImageBox}>
+                                    <LinearGradient colors={['#1a1a1a', '#0d0d0d']} style={StyleSheet.absoluteFill} borderRadius={14} />
+                                    {/* Silueta abstracta */}
+                                    <View style={dtStyles.silHead} />
+                                    <View style={dtStyles.silTorso} />
+                                    <View style={dtStyles.silLegs} />
+                                    {/* Capa pixelada */}
+                                    <View style={dtStyles.pixelOverlay}>
+                                        {Array.from({ length: 48 }).map((_, i) => (
+                                            <View key={i} style={[dtStyles.pixel, { opacity: 0.3 + Math.random() * 0.4 }]} />
+                                        ))}
+                                    </View>
+                                    {/* Lock overlay */}
+                                    <View style={dtStyles.lockOverlay}>
+                                        <Ionicons name="lock-closed" size={28} color="rgba(255,255,255,0.7)" />
+                                        <Text style={dtStyles.lockTitle}>FÍSICO FUTURO IA</Text>
+                                        <Text style={dtStyles.lockSub}>Descubre cómo quedarás en{'\n'}3 meses con constancia total</Text>
+                                    </View>
+                                </View>
+                                <View style={dtStyles.ultimateRow}>
+                                    <Ionicons name="school" size={13} color="#FFD700" />
+                                    <Text style={dtStyles.ultimateLabel}>EXCLUSIVO PLAN ULTIMATE</Text>
+                                </View>
+                                <TouchableOpacity
+                                    style={dtStyles.upgradeBtn}
+                                    onPress={() => navigation.navigate('PlanesPago')}
+                                >
+                                    <Text style={dtStyles.upgradeBtnText}>DESBLOQUEAR CON ULTIMATE</Text>
+                                    <Ionicons name="arrow-forward" size={15} color="#000" />
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
                         {/* ── Botones finales ── */}
                         <TouchableOpacity
                             style={[styles.rankingBtn, { backgroundColor: cfg.color }]}
@@ -664,4 +715,27 @@ const styles = StyleSheet.create({
 
     privacy: { flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', marginTop: 28 },
     privacyText: { color: '#333', fontSize: 9, fontWeight: '900' },
+});
+
+const dtStyles = StyleSheet.create({
+    unlockBtn:   { borderRadius: 16, overflow: 'hidden', marginBottom: 4 },
+    unlockGrad:  { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 18 },
+    unlockTitle: { color: '#000', fontSize: 14, fontWeight: '900', letterSpacing: 0.5 },
+    unlockSub:   { color: 'rgba(0,0,0,0.6)', fontSize: 11, marginTop: 1 },
+
+    lockedCard:    { backgroundColor: '#111', borderRadius: 18, borderWidth: 1, borderColor: '#FFD70030', overflow: 'hidden', marginBottom: 4 },
+    lockedImageBox: { height: 200, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+    silHead:     { width: 38, height: 38, borderRadius: 19, backgroundColor: '#2a2a2a', position: 'absolute', top: 16 },
+    silTorso:    { width: 64, height: 70, borderRadius: 12, backgroundColor: '#222', position: 'absolute', top: 62 },
+    silLegs:     { width: 52, height: 60, borderRadius: 10, backgroundColor: '#1e1e1e', position: 'absolute', top: 130 },
+    pixelOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, flexDirection: 'row', flexWrap: 'wrap' },
+    pixel:       { width: '12.5%', height: '16.6%', backgroundColor: '#111' },
+    lockOverlay: { position: 'absolute', alignItems: 'center', gap: 6, paddingHorizontal: 20 },
+    lockTitle:   { color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '900', letterSpacing: 1 },
+    lockSub:     { color: 'rgba(255,255,255,0.45)', fontSize: 11, textAlign: 'center', lineHeight: 17 },
+
+    ultimateRow:  { flexDirection: 'row', alignItems: 'center', gap: 6, padding: 12, paddingBottom: 4 },
+    ultimateLabel:{ color: '#FFD700', fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+    upgradeBtn:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#FFD700', margin: 12, marginTop: 6, borderRadius: 12, paddingVertical: 14 },
+    upgradeBtnText: { color: '#000', fontSize: 13, fontWeight: '900', letterSpacing: 0.5 },
 });

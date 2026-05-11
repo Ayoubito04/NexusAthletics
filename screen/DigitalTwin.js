@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-    View, Text, StyleSheet, TouchableOpacity, ScrollView,
+    View, Text, StyleSheet, TouchableOpacity,
     ActivityIndicator, Animated, Dimensions, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,98 +14,13 @@ import Config from '../constants/Config';
 const BACKEND_URL = Config.BACKEND_URL;
 const { width } = Dimensions.get('window');
 
-// ─── Heatmap color by % gain ─────────────────────────────────────────────────
-function heatColors(pct) {
-    if (pct >= 25) return ['#63ff15', '#2a8000'];
-    if (pct >= 18) return ['#FFD700', '#996600'];
-    if (pct >= 11) return ['#ff8c00', '#7a3a00'];
-    if (pct >= 5)  return ['#ff4444', '#8a0000'];
-    return ['#2a2a2a', '#1a1a1a'];
-}
-
-// ─── Heatmap body visual ─────────────────────────────────────────────────────
-function BodyHeatmap({ changes = {}, view }) {
-    const m = changes;
-
-    const Zone = ({ muscle, style, label, showLabel }) => {
-        const pct = m[muscle] || 0;
-        return (
-            <View style={[bStyles.zone, style]}>
-                <LinearGradient colors={heatColors(pct)} style={StyleSheet.absoluteFill} borderRadius={style?.borderRadius ?? 10} />
-                {showLabel && pct >= 5 && (
-                    <Text style={bStyles.zoneLabel}>+{pct}%</Text>
-                )}
-            </View>
-        );
-    };
-
-    if (view === 'front') return (
-        <View style={bStyles.body}>
-            {/* Head */}
-            <View style={bStyles.head} />
-            {/* Shoulders row */}
-            <View style={bStyles.row}>
-                <Zone muscle="hombros" style={bStyles.shoulder} showLabel />
-                <View style={bStyles.neck} />
-                <Zone muscle="hombros" style={bStyles.shoulder} />
-            </View>
-            {/* Chest + biceps row */}
-            <View style={bStyles.row}>
-                <Zone muscle="biceps" style={bStyles.arm} showLabel />
-                <Zone muscle="pecho" style={bStyles.chest} showLabel />
-                <Zone muscle="biceps" style={bStyles.arm} />
-            </View>
-            {/* Forearms + abs row */}
-            <View style={bStyles.row}>
-                <Zone muscle="triceps" style={bStyles.forearm} />
-                <Zone muscle="abdomen" style={bStyles.abs} showLabel />
-                <Zone muscle="triceps" style={bStyles.forearm} showLabel />
-            </View>
-            {/* Legs */}
-            <View style={bStyles.row}>
-                <Zone muscle="piernas" style={bStyles.leg} showLabel />
-                <View style={{ width: 14 }} />
-                <Zone muscle="piernas" style={bStyles.leg} />
-            </View>
-            {/* Calves */}
-            <View style={bStyles.row}>
-                <Zone muscle="piernas" style={bStyles.calf} />
-                <View style={{ width: 14 }} />
-                <Zone muscle="piernas" style={bStyles.calf} />
-            </View>
-        </View>
-    );
-
-    return (
-        <View style={bStyles.body}>
-            <View style={bStyles.head} />
-            <View style={bStyles.row}>
-                <Zone muscle="hombros" style={bStyles.shoulder} showLabel />
-                <View style={bStyles.neck} />
-                <Zone muscle="hombros" style={bStyles.shoulder} />
-            </View>
-            <View style={bStyles.row}>
-                <Zone muscle="triceps" style={bStyles.arm} showLabel />
-                <Zone muscle="espalda" style={[bStyles.chest, { height: 60 }]} showLabel />
-                <Zone muscle="triceps" style={bStyles.arm} />
-            </View>
-            <View style={bStyles.row}>
-                <Zone muscle="biceps" style={bStyles.forearm} />
-                <Zone muscle="espalda" style={[bStyles.abs, { height: 50 }]} />
-                <Zone muscle="biceps" style={bStyles.forearm} showLabel />
-            </View>
-            <View style={bStyles.row}>
-                <Zone muscle="piernas" style={bStyles.leg} showLabel />
-                <View style={{ width: 14 }} />
-                <Zone muscle="piernas" style={bStyles.leg} />
-            </View>
-            <View style={bStyles.row}>
-                <Zone muscle="piernas" style={bStyles.calf} />
-                <View style={{ width: 14 }} />
-                <Zone muscle="piernas" style={bStyles.calf} />
-            </View>
-        </View>
-    );
+// ─── Muscle change color ──────────────────────────────────────────────────────
+function changeColor(pct) {
+    if (pct >= 25) return '#63ff15';
+    if (pct >= 18) return '#FFD700';
+    if (pct >= 11) return '#ff8c00';
+    if (pct >= 5)  return '#ff4444';
+    return '#333';
 }
 
 // ─── Animated score ring ──────────────────────────────────────────────────────
@@ -137,26 +52,12 @@ function ScoreRing({ score, nivel }) {
     );
 }
 
-// ─── Legend item ──────────────────────────────────────────────────────────────
-function LegendItem({ pct, label }) {
-    return (
-        <View style={styles.legendRow}>
-            <LinearGradient colors={heatColors(pct)} style={styles.legendDot} borderRadius={4} />
-            <Text style={styles.legendText}>{pct >= 5 ? `+${pct}%` : '~'}</Text>
-            <Text style={styles.legendMuscle}>{label}</Text>
-        </View>
-    );
-}
-
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 export default function DigitalTwin() {
     const navigation = useNavigation();
     const [loading, setLoading] = useState(false);
     const [data, setData]       = useState(null);
     const [horizon, setHorizon] = useState('3'); // '3' | '12'
-    const [bodyView, setBodyView] = useState('front');
-    const [ghostMode, setGhostMode] = useState(false);
-    const [scanHistory, setScanHistory] = useState([]);
     const [alert, setAlert] = useState({ visible: false, title: '', message: '', type: 'info', onConfirm: null });
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -173,7 +74,6 @@ export default function DigitalTwin() {
             const token   = await AsyncStorage.getItem('token');
             const history = await AsyncStorage.getItem('body_scan_history');
             const scans   = history ? JSON.parse(history) : [];
-            setScanHistory(scans);
 
             const latestScan = scans.length > 0 ? scans[0] : null;
 
@@ -200,24 +100,7 @@ export default function DigitalTwin() {
     const changes = proj?.cambiosMasculares || data?.proyeccion3Meses?.cambiosMasculares || {};
     const genetic = data?.geneticPotential;
 
-    // Ghost comparison: diff between latest scan and oldest scan
-    const ghostDiff = ghostMode && scanHistory.length >= 2
-        ? (() => {
-            const latest = scanHistory[0]?.ranking_muscular || {};
-            const oldest = scanHistory[scanHistory.length - 1]?.ranking_muscular || {};
-            return Object.keys(latest).reduce((acc, k) => {
-                acc[k] = (latest[k] || 0) - (oldest[k] || 0);
-                return acc;
-            }, {});
-          })()
-        : null;
-
-    const displayChanges = ghostDiff || changes;
-
-    const renderMuscleLabel = (key) => ({
-        pecho: 'Pecho', espalda: 'Espalda', hombros: 'Hombros',
-        biceps: 'Bíceps', triceps: 'Tríceps', piernas: 'Piernas', abdomen: 'Core',
-    }[key] || key);
+    const MUSCLE_LABELS = { pecho: 'Pecho', espalda: 'Espalda', hombros: 'Hombros', biceps: 'Bíceps', triceps: 'Tríceps', piernas: 'Piernas', abdomen: 'Core' };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -346,65 +229,26 @@ export default function DigitalTwin() {
                         </View>
                     )}
 
-                    {/* ── Body Heatmap ── */}
-                    <View style={styles.card}>
-                        <View style={styles.heatmapHeader}>
-                            <Text style={styles.cardTitle}>MAPA DE EVOLUCIÓN MUSCULAR</Text>
-                            {scanHistory.length >= 2 && (
-                                <TouchableOpacity
-                                    style={[styles.ghostToggle, ghostMode && styles.ghostToggleOn]}
-                                    onPress={() => setGhostMode(g => !g)}
-                                >
-                                    <MaterialCommunityIcons name="ghost" size={14} color={ghostMode ? '#000' : '#A259FF'} />
-                                    <Text style={[styles.ghostText, ghostMode && { color: '#000' }]}>GHOST</Text>
-                                </TouchableOpacity>
-                            )}
+                    {/* ── Muscle changes ── */}
+                    {Object.keys(changes).length > 0 && (
+                        <View style={styles.card}>
+                            <Text style={styles.cardTitle}>CAMBIOS MUSCULARES PROYECTADOS</Text>
+                            {Object.entries(changes).map(([k, pct]) => {
+                                const color = changeColor(pct);
+                                return (
+                                    <View key={k} style={{ marginBottom: 10 }}>
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                                            <Text style={{ color: '#bbb', fontSize: 12, fontWeight: '700' }}>{MUSCLE_LABELS[k] || k}</Text>
+                                            <Text style={{ color, fontSize: 12, fontWeight: '900' }}>{pct >= 5 ? `+${pct}%` : 'sin cambio'}</Text>
+                                        </View>
+                                        <View style={{ height: 5, backgroundColor: '#1a1a1a', borderRadius: 3, overflow: 'hidden' }}>
+                                            <View style={{ width: `${Math.min(pct * 2, 100)}%`, height: '100%', backgroundColor: color, borderRadius: 3 }} />
+                                        </View>
+                                    </View>
+                                );
+                            })}
                         </View>
-
-                        {ghostMode && (
-                            <Text style={styles.ghostCaption}>
-                                Comparando tu primer escaneo vs el más reciente
-                            </Text>
-                        )}
-
-                        {/* Front / Back tabs */}
-                        <View style={[styles.tabRow, { marginBottom: 16 }]}>
-                            {['front', 'back'].map(v => (
-                                <TouchableOpacity
-                                    key={v}
-                                    style={[styles.tab, bodyView === v && styles.tabActive]}
-                                    onPress={() => setBodyView(v)}
-                                >
-                                    <Text style={[styles.tabText, bodyView === v && styles.tabTextActive]}>
-                                        {v === 'front' ? 'FRONTAL' : 'POSTERIOR'}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-
-                        <View style={styles.heatmapContainer}>
-                            {/* Body diagram */}
-                            <BodyHeatmap changes={displayChanges} view={bodyView} />
-
-                            {/* Muscle legend */}
-                            <View style={styles.legend}>
-                                {Object.entries(displayChanges).map(([k, v]) => (
-                                    <LegendItem key={k} pct={v} label={renderMuscleLabel(k)} />
-                                ))}
-                            </View>
-                        </View>
-
-                        {/* Color scale */}
-                        <View style={styles.scaleRow}>
-                            <Text style={styles.scaleText}>Sin cambio</Text>
-                            <LinearGradient
-                                colors={['#2a2a2a', '#ff4444', '#ff8c00', '#FFD700', '#63ff15']}
-                                style={styles.scaleBar}
-                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                            />
-                            <Text style={styles.scaleText}>Máximo</Text>
-                        </View>
-                    </View>
+                    )}
 
                     {/* ── AI Narrative ── */}
                     {proj?.descripcion && (
@@ -466,21 +310,6 @@ export default function DigitalTwin() {
     );
 }
 
-// ─── Body styles ──────────────────────────────────────────────────────────────
-const bStyles = StyleSheet.create({
-    body:      { alignItems: 'center', gap: 4, paddingVertical: 8 },
-    head:      { width: 36, height: 36, borderRadius: 18, backgroundColor: '#222', marginBottom: 2 },
-    neck:      { width: 20, height: 24, backgroundColor: '#1a1a1a', borderRadius: 4 },
-    row:       { flexDirection: 'row', alignItems: 'flex-start', gap: 4 },
-    shoulder:  { width: 44, height: 28, borderRadius: 14 },
-    chest:     { width: 64, height: 48, borderRadius: 10 },
-    arm:       { width: 28, height: 48, borderRadius: 10 },
-    forearm:   { width: 24, height: 36, borderRadius: 8 },
-    abs:       { width: 64, height: 36, borderRadius: 8 },
-    leg:       { width: 44, height: 60, borderRadius: 14 },
-    calf:      { width: 34, height: 40, borderRadius: 14 },
-    zoneLabel: { color: '#fff', fontSize: 8, fontWeight: '800', textAlign: 'center', marginTop: 4 },
-});
 
 // ─── Score ring styles ────────────────────────────────────────────────────────
 const sStyles = StyleSheet.create({
@@ -531,23 +360,6 @@ const styles = StyleSheet.create({
     statLabel: { color: '#444', fontSize: 10, fontWeight: '700', letterSpacing: 1 },
     statValue: { fontSize: 22, fontWeight: '900' },
     statDelta: { color: '#555', fontSize: 11 },
-
-    heatmapHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0 },
-    ghostToggle:   { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#1a0a2a', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: '#A259FF55' },
-    ghostToggleOn: { backgroundColor: '#A259FF' },
-    ghostText:     { color: '#A259FF', fontSize: 10, fontWeight: '800' },
-    ghostCaption:  { color: '#666', fontSize: 11, marginBottom: 8, fontStyle: 'italic' },
-
-    heatmapContainer: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-    legend: { flex: 1, gap: 7, paddingLeft: 16, justifyContent: 'center' },
-    legendRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    legendDot: { width: 20, height: 12 },
-    legendText: { color: '#63ff15', fontSize: 11, fontWeight: '800', width: 36 },
-    legendMuscle: { color: '#aaa', fontSize: 11 },
-
-    scaleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14 },
-    scaleBar: { flex: 1, height: 6, borderRadius: 3 },
-    scaleText: { color: '#444', fontSize: 9, fontWeight: '600' },
 
     narrativeCard:   { backgroundColor: '#0d1a0d', borderRadius: 18, padding: 18, borderWidth: 1, borderColor: '#63ff1530', overflow: 'hidden' },
     narrativeHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },

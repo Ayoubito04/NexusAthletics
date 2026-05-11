@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, Dimensions, FlatList, Animated, Platform } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, Dimensions } from 'react-native';
 import NexusAlert from '../components/NexusAlert';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,7 +18,6 @@ const GIF_CACHE_KEY = 'nexus_exercise_gifs_v1';
 
 export default function ElitePlanScreen({ route, navigation }) {
     const { plan } = route.params;
-    const [activeIndex, setActiveIndex] = useState(0);
     const [guardado, setGuardado] = useState(false);
     const [agendado, setAgendado] = useState(false);
     const [semanaActiva, setSemanaActiva] = useState(0);
@@ -399,50 +398,56 @@ export default function ElitePlanScreen({ route, navigation }) {
         );
     }
 
-    const renderSlide = ({ item }) => {
-        if (item.type === 'summary') {
-            return (
-                <View style={[styles.slide, { backgroundColor: '#050505' }]}>
-                    <LinearGradient colors={['#63ff1520', 'transparent']} style={styles.gradBg} />
-                    <View style={styles.slideHeader}>
-                        <Text style={styles.slideLabel}>PRESENTACIÓN ÉLITE</Text>
-                        <Text style={styles.slideTitle}>{plan.resumen.objetivo.toUpperCase()}</Text>
-                    </View>
+    // ─── Render PRO (ScrollView, igual que Ultimate) ────────────────────────
+    return (
+        <SafeAreaView style={styles.container}>
+            <View style={styles.topNav}>
+                <TouchableOpacity onPress={() => navigation.goBack()}><Ionicons name="close" size={30} color="white" /></TouchableOpacity>
+                <Text style={styles.navTitle}>NEXUS <Text style={{ color: '#63ff15' }}>PRO</Text></Text>
+                <View style={{ width: 30 }} />
+            </View>
 
-                    <View style={styles.summaryCard}>
-                        <Ionicons name="flash" size={40} color="#63ff15" style={{ marginBottom: 10 }} />
-                        <Text style={styles.summaryText}>{plan.resumen.estrategia}</Text>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+                {/* Resumen */}
+                <LinearGradient colors={['#63ff1515', 'transparent']} style={{ padding: 20 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                        <Text style={{ fontSize: 18 }}>⚡</Text>
+                        <Text style={[styles.slideLabel, { color: '#63ff15' }]}>PLAN PRO · {plan.resumen?.duracion}</Text>
                     </View>
-
+                    <Text style={[styles.slideTitle, { fontSize: 24, marginBottom: 12 }]}>{plan.resumen?.objetivo?.toUpperCase()}</Text>
+                    <View style={[styles.summaryCard, { borderLeftColor: '#63ff15' }]}>
+                        <Text style={styles.summaryText}>{plan.resumen?.estrategia}</Text>
+                    </View>
                     <View style={styles.macroGrid}>
-                        {Object.entries(plan.resumen.macros).map(([key, val]) => (
-                            <View key={key} style={styles.macroItem}>
-                                <Text style={styles.macroVal}>{val}</Text>
-                                <Text style={styles.macroKey}>{key.toUpperCase()}</Text>
+                        {Object.entries(plan.resumen?.macros || {}).map(([k, v]) => (
+                            <View key={k} style={styles.macroItem}>
+                                <Text style={[styles.macroVal, { color: '#63ff15' }]}>{v}</Text>
+                                <Text style={styles.macroKey}>{k.toUpperCase()}</Text>
                             </View>
                         ))}
                     </View>
+                </LinearGradient>
 
-                    <TouchableOpacity style={styles.startBtn} onPress={() => setActiveIndex(1)}>
-                        <Text style={styles.startBtnText}>EXPLORAR RUTINA SEMANAL</Text>
-                        <Ionicons name="arrow-forward" size={20} color="black" />
-                    </TouchableOpacity>
-                </View>
-            );
-        }
+                {/* Días */}
+                {(plan.dias || []).map((dia, di) => (
+                    <View key={di} style={{ marginHorizontal: 20, marginBottom: 20 }}>
+                        <View style={styles.dayBanner}>
+                            <Text style={styles.dayNumber}>DÍA {dia.dia}</Text>
+                            <Text style={styles.dayTitle}>{dia.titulo}</Text>
+                        </View>
 
-        if (item.type === 'day') {
-            return (
-                <View style={styles.slide}>
-                    <View style={styles.dayBanner}>
-                        <Text style={styles.dayNumber}>DÍA {item.dia}</Text>
-                        <Text style={styles.dayTitle}>{item.titulo}</Text>
-                    </View>
+                        {dia.calentamiento?.length > 0 && (
+                            <View style={{ backgroundColor: '#0d1f0d', borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(99,255,21,0.15)' }}>
+                                <Text style={{ color: '#63ff15', fontSize: 12, fontWeight: '800', letterSpacing: 1, marginBottom: 8 }}>🔥 CALENTAMIENTO</Text>
+                                {dia.calentamiento.map((c, ci) => (
+                                    <Text key={ci} style={{ color: '#bbb', fontSize: 14, lineHeight: 20, marginBottom: 4 }}>• {c}</Text>
+                                ))}
+                            </View>
+                        )}
 
-                    <ScrollView style={styles.exerciseScroll} showsVerticalScrollIndicator={false}>
                         <View style={styles.exGrid}>
-                            {item.ejercicios.map((ex, idx) => (
-                                <View key={idx} style={styles.exGridCard}>
+                            {(dia.ejercicios || []).map((ex, ei) => (
+                                <View key={ei} style={styles.exGridCard}>
                                     <Image
                                         source={{ uri: apiGifs[ex.imgKey] ? `${BACKEND_URL}/exercises/gif/${apiGifs[ex.imgKey]}` : (EXERCISE_IMAGES[ex.imgKey] || EXERCISE_IMAGES.default) }}
                                         style={styles.exGridImage}
@@ -463,83 +468,42 @@ export default function ElitePlanScreen({ route, navigation }) {
                                         {ex.pesoSugerido && (
                                             <Text style={{ color: '#a855f7', fontSize: 12, fontWeight: '800', marginTop: 4 }}>{ex.pesoSugerido}</Text>
                                         )}
+                                        {ex.tecnica && <Text style={{ color: '#f59e0b', fontSize: 11, marginTop: 3 }}>⚡ {ex.tecnica}</Text>}
                                     </View>
                                 </View>
                             ))}
                         </View>
-                        <View style={{ height: 100 }} />
-                    </ScrollView>
-                </View>
-            );
-        }
 
-        if (item.type === 'nutrition') {
-            return (
-                <View style={[styles.slide, { backgroundColor: '#0a0a0a' }]}>
-                    <View style={styles.slideHeader}>
-                        <Text style={styles.slideLabel}>ACCIONES</Text>
-                        <Text style={styles.slideTitle}>SINCRO MAESTRA</Text>
+                        {dia.vueltaCalma?.length > 0 && (
+                            <View style={{ backgroundColor: '#0d0d1f', borderRadius: 14, padding: 14, marginTop: 10, borderWidth: 1, borderColor: 'rgba(168,85,247,0.15)' }}>
+                                <Text style={{ color: '#a855f7', fontSize: 12, fontWeight: '800', letterSpacing: 1, marginBottom: 8 }}>🧘 VUELTA A LA CALMA</Text>
+                                {dia.vueltaCalma.map((c, ci) => (
+                                    <Text key={ci} style={{ color: '#bbb', fontSize: 14, lineHeight: 20, marginBottom: 4 }}>• {c}</Text>
+                                ))}
+                            </View>
+                        )}
                     </View>
-
-                    <ScrollView style={{ flex: 1 }}>
-                        <TouchableOpacity style={styles.syncBtnMain} onPress={handleScheduleToCalendar}>
-                            <LinearGradient colors={['#63ff15', '#4ad912']} style={styles.syncBtnGrad}>
-                                <Ionicons name="calendar" size={28} color="black" />
-                                <View>
-                                    <Text style={styles.syncBtnT}>PROGRAMAR EN CALENDARIO</Text>
-                                    <Text style={styles.syncBtnS}>Repetir esta rutina los próximos 2 meses</Text>
-                                </View>
-                            </LinearGradient>
-                        </TouchableOpacity>
-
-                        <View style={styles.infoBox}>
-                            <Ionicons name="information-circle-outline" size={20} color="#63ff15" />
-                            <Text style={styles.infoText}>Esto inyectará el ciclo semanal automáticamente en cada semana futura.</Text>
-                        </View>
-
-                        <TouchableOpacity style={styles.saveBtnSec} onPress={handleSavePlan}>
-                            <Ionicons name={guardado ? "checkmark-circle" : "cloud-upload-outline"} size={20} color="#63ff15" />
-                            <Text style={styles.saveBtnSecText}>{guardado ? "GUARDADO EN VAULT" : "GUARDAR PLAN EN NUBE"}</Text>
-                        </TouchableOpacity>
-                    </ScrollView>
-                </View>
-            );
-        }
-    };
-
-    const slides = [{ type: 'summary' }, ...plan.dias.map(d => ({ ...d, type: 'day' })), { type: 'nutrition' }];
-
-    return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.topNav}>
-                <TouchableOpacity onPress={() => navigation.goBack()}><Ionicons name="close" size={30} color="white" /></TouchableOpacity>
-                <Text style={styles.navTitle}>NEXUS <Text style={{ color: '#63ff15' }}>ELITE</Text></Text>
-                <View style={{ width: 30 }} />
-            </View>
-
-            <FlatList
-                data={slides}
-                renderItem={renderSlide}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                keyExtractor={(_, index) => index.toString()}
-                onScroll={(e) => setActiveIndex(Math.round(e.nativeEvent.contentOffset.x / width))}
-            />
-
-            <View style={styles.indicatorContainer}>
-                {slides.map((_, i) => (
-                    <View key={i} style={[styles.indicator, activeIndex === i && styles.indicatorActive]} />
                 ))}
-            </View>
 
-            <NexusAlert
-                visible={alert.visible}
-                title={alert.title}
-                message={alert.message}
-                type={alert.type}
-                onConfirm={alert.onConfirm}
-            />
+                {/* Acciones */}
+                <View style={{ marginHorizontal: 20, gap: 12 }}>
+                    <TouchableOpacity style={styles.syncBtnMain} onPress={handleScheduleToCalendar}>
+                        <LinearGradient colors={['#63ff15', '#38c000']} style={styles.syncBtnGrad}>
+                            <Ionicons name="calendar" size={26} color="black" />
+                            <View>
+                                <Text style={styles.syncBtnT}>PROGRAMAR EN CALENDARIO</Text>
+                                <Text style={styles.syncBtnS}>Repetir rutina los próximos 2 meses</Text>
+                            </View>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.saveBtnSec} onPress={handleSavePlan}>
+                        <Ionicons name={guardado ? 'checkmark-circle' : 'cloud-upload-outline'} size={20} color="#63ff15" />
+                        <Text style={styles.saveBtnSecText}>{guardado ? 'GUARDADO EN VAULT' : 'GUARDAR PLAN EN NUBE'}</Text>
+                    </TouchableOpacity>
+                </View>
+            </ScrollView>
+
+            <NexusAlert visible={alert.visible} title={alert.title} message={alert.message} type={alert.type} onConfirm={alert.onConfirm} />
         </SafeAreaView>
     );
 }
