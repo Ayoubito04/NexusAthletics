@@ -45,41 +45,22 @@ async function tryGeminiWithFallback(contents, generationConfig = {}) {
 }
 
 async function generateImage(prompt) {
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY no configurada");
+    const HF_KEY = process.env.HUGGINGFACE_API_KEY;
+    if (!HF_KEY) throw new Error("HUGGINGFACE_API_KEY no configurada");
 
-    const imageModels = [
-        'gemini-2.0-flash-preview-image-generation',
-        'gemini-2.0-flash-exp',
-        'gemini-2.0-flash',
-    ];
-
-    let lastErr;
-    for (const model of imageModels) {
-        try {
-            console.log(`[ImageGen] Intentando: ${model}`);
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
-            const response = await axios.post(url, {
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
-            }, { timeout: GEMINI_TIMEOUT_MS });
-
-            const parts = response.data?.candidates?.[0]?.content?.parts || [];
-            const imagePart = parts.find(p => p.inlineData?.data);
-            if (imagePart) {
-                console.log(`[ImageGen] ✓ Imagen generada con ${model}`);
-                return { data: imagePart.inlineData.data, mimeType: imagePart.inlineData.mimeType };
-            }
-            console.log(`[ImageGen] ${model} respondió sin imagen`);
-        } catch (e) {
-            lastErr = e;
-            const status = e.response?.status;
-            console.log(`[ImageGen] ✗ ${model} → ${status}: ${e.response?.data?.error?.message || e.message}`);
-            if (status === 404 || status === 400) continue;
-            throw e;
+    console.log('[ImageGen] Generando con HuggingFace FLUX.1-schnell...');
+    const response = await axios.post(
+        'https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell',
+        { inputs: prompt },
+        {
+            headers: { Authorization: `Bearer ${HF_KEY}`, 'Content-Type': 'application/json' },
+            responseType: 'arraybuffer',
+            timeout: 60000,
         }
-    }
-    throw lastErr || new Error('Ningún modelo devolvió imagen');
+    );
+    const base64 = Buffer.from(response.data).toString('base64');
+    console.log('[ImageGen] ✓ Imagen generada');
+    return { data: base64, mimeType: 'image/jpeg' };
 }
 
 module.exports = { tryGeminiWithFallback, generateImage };
