@@ -30,4 +30,7 @@ router.post('/plans/register-share', authenticateToken, planController.registerS
 // Billing
 router.post('/plans/cancel-subscription', authenticateToken, planController.cancelSubscription);
 
+// Plan update after payment
+router.post('/update-plan', authenticateToken, planController.updatePlan);
+
 module.exports = router;

@@ -139,7 +139,8 @@ export default function PlanesPago() {
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                 body: JSON.stringify({ plan }),
             });
-            const updatedUser = await res.json();
+            const data = await res.json();
+            const updatedUser = data.user || data;
             await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
             setUser(updatedUser);
             showAlert('Éxito', `✨ Ahora estás en el plan ${updatedUser.plan}`, 'success', () => navigation.navigate('Home'));

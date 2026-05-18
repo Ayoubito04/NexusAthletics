@@ -711,4 +711,23 @@ const cancelSubscription = async (req, res) => {
     }
 };
 
-module.exports = { downloadPDF, generatePDF, generatePlanInteractive, generateUltimatePlan, savePlan, getSavedPlans, getSavedPlanById, updateSavedPlan, deleteSavedPlan, startTrial, getTrialStatus, useReferral, registerShare, cancelSubscription };
+const updatePlan = async (req, res) => {
+    const { plan } = req.body;
+    const validPlans = ['Gratis', 'Pro', 'Ultimate'];
+    if (!plan || !validPlans.includes(plan)) {
+        return res.status(400).json({ error: 'Plan no válido' });
+    }
+    try {
+        const updatedUser = await prisma.user.update({
+            where: { id: req.user.id },
+            data: { plan },
+        });
+        const { password: _, ...userWithoutPassword } = updatedUser;
+        res.json({ success: true, user: userWithoutPassword });
+    } catch (error) {
+        console.error('updatePlan Error:', error);
+        res.status(500).json({ error: 'Error al actualizar el plan' });
+    }
+};
+
+module.exports = { downloadPDF, generatePDF, generatePlanInteractive, generateUltimatePlan, savePlan, getSavedPlans, getSavedPlanById, updateSavedPlan, deleteSavedPlan, startTrial, getTrialStatus, useReferral, registerShare, cancelSubscription, updatePlan };
