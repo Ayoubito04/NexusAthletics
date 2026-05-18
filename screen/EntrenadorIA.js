@@ -1048,9 +1048,27 @@ export default function EntrenadorIA() {
                                 ))}
                             </View>
 
-                            <Text style={styles.labelPlan}>Equipamiento Disponible</Text>
+                            <Text style={styles.labelPlan}>Lugar y Equipamiento</Text>
+                            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+                                {[
+                                    { label: '🏋️ Gimnasio', value: 'Gimnasio Completo' },
+                                    { label: '🏠 En Casa', value: 'Solo Peso Corporal' },
+                                ].map(({ label, value }) => (
+                                    <TouchableOpacity
+                                        key={value}
+                                        style={[
+                                            styles.optBtn,
+                                            { flex: 1, paddingVertical: 12 },
+                                            equipamiento === value && styles.optBtnSelected,
+                                        ]}
+                                        onPress={() => setEquipamiento(value)}
+                                    >
+                                        <Text style={[styles.optText, { fontSize: 13 }, equipamiento === value && styles.optTextSelected]}>{label}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
                             <View style={styles.optionsGrid}>
-                                {['Sin Restricción', 'Gimnasio Completo', 'Mancuernas en Casa', 'Solo Peso Corporal', 'Bandas Elásticas', 'Barras / Dominadas', 'Exterior / Parque'].map(opt => (
+                                {['Sin Restricción', 'Mancuernas en Casa', 'Bandas Elásticas', 'Barras / Dominadas', 'Exterior / Parque'].map(opt => (
                                     <TouchableOpacity
                                         key={opt}
                                         style={[styles.optBtn, equipamiento === opt && styles.optBtnSelected]}

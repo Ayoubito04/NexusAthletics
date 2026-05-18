@@ -116,6 +116,22 @@ export const EXERCISE_IMAGES = {
     "estiramiento_isquios":    `${F}/2021/06/Single-Leg-Stretch.gif`,
     "estiramiento_cuadriceps": `${F}/2021/06/Single-Leg-Stretch.gif`,
     "estiramiento_pecho":      `${F}/2021/06/Cat-Stretch.gif`,
+    // ── CASA / SIN EQUIPAMIENTO ──
+    "flexiones":               `${F}/2021/02/Push-Up.gif`,
+    "fondos_silla":            `${F}/2021/02/Parallel-Bar-Dip.gif`,
+    "sentadilla_sin_peso":     `${F}/2021/02/Goblet-Squat.gif`,
+    "sentadilla_sumo_sin_peso":`${F}/2021/02/Goblet-Squat.gif`,
+    "glute_bridge":            `${F}/2021/02/Barbell-Hip-Thrust.gif`,
+    "hip_circles":             `${F}/2021/06/Single-Leg-Stretch.gif`,
+    "triceps_silla":           `${F}/2021/02/Parallel-Bar-Dip.gif`,
+    "remo_bandas":             `${F}/2021/02/Bent-Over-Barbell-Row.gif`,
+    "curl_bandas":             `${F}/2021/02/Dumbbell-Curl.gif`,
+    "press_bandas":            `${F}/2021/06/Dumbbell-Shoulder-Press.gif`,
+    "curl_bandas_biceps":      `${F}/2021/02/Dumbbell-Curl.gif`,
+    "jumping_jacks":           `${F}/2021/06/Jumping-Jacks.gif`,
+    "wall_sit":                `${F}/2021/02/Goblet-Squat.gif`,
+    "inchworm":                `${F}/2021/06/Superman.gif`,
+    "bear_crawl":              `${F}/2021/06/Mountain-Climber.gif`,
     "default":                 `${F}/2021/02/Barbell-Bench-Press.gif`,
 };
 
@@ -192,6 +208,17 @@ export function nameToImgKey(name) {
     if (n.includes('mountain') || n.includes('escalador')) return 'mountain_climber';
     if (n.includes('burpee')) return 'burpees';
     if (n.includes('rueda') || n.includes('ab wheel')) return 'rueda_abdominal';
+    if (n.includes('flexion') || n.includes('flexiones')) return 'flexiones';
+    if (n.includes('fondos') && n.includes('silla')) return 'fondos_silla';
+    if (n.includes('triceps') && n.includes('silla')) return 'triceps_silla';
+    if (n.includes('glute bridge') || n.includes('puente gluteo') || n.includes('puente de glut')) return 'glute_bridge';
+    if (n.includes('wall sit') || n.includes('sentadilla pared')) return 'wall_sit';
+    if (n.includes('jumping jack')) return 'jumping_jacks';
+    if (n.includes('inchworm')) return 'inchworm';
+    if (n.includes('bear crawl') || n.includes('oso')) return 'bear_crawl';
+    if (n.includes('remo') && n.includes('banda')) return 'remo_bandas';
+    if (n.includes('curl') && n.includes('banda')) return 'curl_bandas';
+    if (n.includes('press') && n.includes('banda')) return 'press_bandas';
 
     return null;
 }

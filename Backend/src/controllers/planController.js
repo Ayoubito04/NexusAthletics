@@ -180,7 +180,10 @@ TRICEPS: extension_triceps, triceps_frances, patada_triceps, fondos_triceps, ext
 PIERNAS: sentadilla, sentadilla_goblet, sentadilla_bulgara, sentadilla_hack, sentadilla_front, zancadas, zancadas_caminando, zancadas_inversas, prensa, extension_cuadriceps, curl_femoral, curl_sentado, hip_thrust, hip_thrust_mdb, gemelos, gemelos_sentado, step_up, pistol_squat, good_morning
 CORE: pilates_core, plank_lateral, abdominales, crunch_cable, russian_twist, leg_raise, leg_raise_colgado, superman, mountain_climber, dead_bug, rueda_abdominal, pallof_press, bird_dog
 CALISTENIA: muscle_up, fondos_paralelas, pike_push, archer_push, l_sit, dragon_flag, burpees, salto_caja, salto_cuerda, sprint
-CARDIO/FLEX: cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor, foam_roller, estiramiento_isquios, estiramiento_cuadriceps, estiramiento_pecho`;
+CARDIO/FLEX: cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor, foam_roller, estiramiento_isquios, estiramiento_cuadriceps, estiramiento_pecho
+CASA/SIN EQUIPAMIENTO: flexiones, fondos_silla, sentadilla_sin_peso, glute_bridge, triceps_silla, remo_bandas, curl_bandas, press_bandas, jumping_jacks, wall_sit, inchworm, bear_crawl
+
+REGLA ENTRENAMIENTO EN CASA: Si EQUIPAMIENTO contiene "Solo Peso Corporal", "Mancuernas en Casa", "Bandas Elásticas" o "Exterior / Parque", usa EXCLUSIVAMENTE ejercicios sin máquinas (evita: press_banca, prensa, extension_cuadriceps con máquina, curl_femoral máquina, jalon, cable, etc). Prioriza imgKeys de CALISTENIA y CASA/SIN EQUIPAMIENTO. Si hay mancuernas disponibles puedes añadir curls, press_mancuernas, remo_mancuerna, elevaciones_laterales, sentadilla_goblet, hip_thrust_mdb.`;
 
         } else {
             // ── Pro: plan semanal estándar ──
@@ -214,14 +217,16 @@ CARDIO/FLEX: cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor, 
         6. Genera EXACTAMENTE ${diasSemana} objetos en el array "dias".
         7. Genera entre 6 y ${maxEjercicios} ejercicios por día según la duración solicitada (no más de ${maxEjercicios}).
         8. imgKey debe ser el más específico para cada ejercicio. Opciones disponibles:
-        press_banca, press_inclinado, press_declinado, aperturas, fondos, push_up, press_mancuernas,
+        GIMNASIO: press_banca, press_inclinado, press_declinado, aperturas, fondos, push_up, press_mancuernas,
         peso_muerto, dominadas, remo, jalon, remo_sentado, face_pull, buenos_dias, remo_mancuerna,
         press_hombros, press_militar, elevaciones_laterales, elevaciones_frontales, vuelo_posterior,
         curls, curl_martillo, curl_concentrado, curl_barra, extension_triceps, triceps_frances, patada_triceps,
         sentadilla, sentadilla_goblet, zancadas, prensa, extension_cuadriceps, curl_femoral, hip_thrust, gemelos, peso_muerto_rumano, sentadilla_bulgara,
         pilates_core, abdominales, russian_twist, leg_raise, superman, mountain_climber,
         muscle_up, fondos_paralelas, australian_row, pike_push, pistol_squat, burpees, salto_caja,
-        cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor`;
+        cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor
+        CASA/SIN EQUIPAMIENTO: flexiones, fondos_silla, sentadilla_sin_peso, glute_bridge, triceps_silla, remo_bandas, curl_bandas, press_bandas, jumping_jacks, wall_sit, inchworm, bear_crawl, push_up_diamante, push_up_ancho, pike_push, archer_push, mountain_climber, burpees, salto_cuerda, sprint
+        9. REGLA ENTRENAMIENTO EN CASA: Si EQUIPAMIENTO contiene "Solo Peso Corporal", "Mancuernas en Casa", "Bandas Elásticas" o "Exterior / Parque", usa EXCLUSIVAMENTE ejercicios sin máquinas. Evita: press_banca, prensa, extension_cuadriceps máquina, curl_femoral máquina, jalon, cable, sentadilla con barra. Usa imgKeys de CASA/SIN EQUIPAMIENTO. Con mancuernas añade: curls, press_mancuernas, remo_mancuerna, elevaciones_laterales, sentadilla_goblet, hip_thrust_mdb.`;
         }
 
         const contents = [{ parts: [{ text: systemPrompt }] }];
