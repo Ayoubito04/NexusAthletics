@@ -234,8 +234,10 @@ REGLA ENTRENAMIENTO EN CASA: Si EQUIPAMIENTO contiene "Solo Peso Corporal", "Man
 
         let planJson;
         try {
-            let cleanText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            cleanText = cleanText.replace(/```json/gi, '').replace(/```/g, '').trim();
+            // Gemini 2.5 Pro thinking mode: parts[0] tiene thought:true, parts[1] tiene el JSON real
+            const allParts = response.data?.candidates?.[0]?.content?.parts || [];
+            const jsonPart = allParts.find(p => !p.thought && p.text) || allParts[allParts.length - 1] || {};
+            let cleanText = (jsonPart.text || '').replace(/```json/gi, '').replace(/```/g, '').trim();
             // Extraer sólo el bloque JSON
             const start = cleanText.indexOf('{');
             const end = cleanText.lastIndexOf('}');
@@ -486,8 +488,10 @@ cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor
 
         let planJson;
         try {
-            let cleanText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            cleanText = cleanText.replace(/```json/gi, '').replace(/```/g, '').trim();
+            // Gemini 2.5 Pro thinking mode: parts[0] tiene thought:true, parts[1] tiene el JSON real
+            const allPartsU = response.data?.candidates?.[0]?.content?.parts || [];
+            const jsonPartU = allPartsU.find(p => !p.thought && p.text) || allPartsU[allPartsU.length - 1] || {};
+            let cleanText = (jsonPartU.text || '').replace(/```json/gi, '').replace(/```/g, '').trim();
 
             // Extraer sólo el bloque JSON (desde { hasta el último })
             const start = cleanText.indexOf('{');
