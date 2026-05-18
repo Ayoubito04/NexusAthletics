@@ -82,6 +82,46 @@ async function tryGeminiForPlans(contents, generationConfig = {}) {
     throw new Error('Servicio de IA temporalmente no disponible. Inténtalo de nuevo en unos minutos.');
 }
 
+async function tryClaudeForPlans(promptText) {
+    const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY no configurada");
+
+    const Anthropic = require('@anthropic-ai/sdk');
+    const AnthropicClient = Anthropic.default || Anthropic;
+    const client = new AnthropicClient({ apiKey: ANTHROPIC_API_KEY, timeout: 90000 });
+
+    const models = [
+        { name: 'claude-sonnet-4-6', tokens: 16000 },
+        { name: 'claude-haiku-4-5',  tokens: 16000 },
+    ];
+
+    let lastError;
+    for (const { name, tokens } of models) {
+        console.log(`[Nexus Plans Claude] Intentando: ${name}`);
+        try {
+            const response = await client.messages.create({
+                model: name,
+                max_tokens: tokens,
+                messages: [{ role: 'user', content: promptText }],
+            });
+            console.log(`[Nexus Plans Claude] ✓ Éxito con ${name} | stop_reason: ${response.stop_reason}`);
+            return response;
+        } catch (error) {
+            lastError = error;
+            const status = error.status;
+            const msg = error.message || '';
+            console.log(`[Nexus Plans Claude] ✗ ${name} → ${status || 'error'}: ${msg.slice(0, 120)}`);
+            const shouldRetry = status === 529 || status === 503 || status === 500 || status === 429 || status === 404;
+            if (shouldRetry) {
+                if (status === 429) await new Promise(r => setTimeout(r, 2000));
+                continue;
+            }
+            throw error;
+        }
+    }
+    throw lastError || new Error('Servicio de IA temporalmente no disponible.');
+}
+
 async function generateImage(prompt) {
     const HF_KEY = process.env.HUGGINGFACE_API_KEY;
     if (!HF_KEY) throw new Error("HUGGINGFACE_API_KEY no configurada");
@@ -101,4 +141,4 @@ async function generateImage(prompt) {
     return { data: base64, mimeType: 'image/jpeg' };
 }
 
-module.exports = { tryGeminiWithFallback, tryGeminiForPlans, generateImage };
+module.exports = { tryGeminiWithFallback, tryGeminiForPlans, tryClaudeForPlans, generateImage };
