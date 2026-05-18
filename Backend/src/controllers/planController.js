@@ -251,7 +251,10 @@ REGLA ENTRENAMIENTO EN CASA: Si EQUIPAMIENTO contiene "Solo Peso Corporal", "Man
             if (opens  > closes)  cleanText += '}'.repeat(opens  - closes);
             planJson = JSON.parse(cleanText);
         } catch (e) {
+            const rawParts = response.data?.candidates?.[0]?.content?.parts || [];
             console.error("Error parsing AI JSON:", e.message);
+            console.error("Parts count:", rawParts.length, "| thought flags:", rawParts.map(p => !!p.thought));
+            console.error("Raw text (500c):", rawParts.map(p => p.text || '').join('').slice(0, 500));
             throw new Error("La IA no devolvió un formato válido. Inténtalo de nuevo.");
         }
 
@@ -508,7 +511,10 @@ cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor
 
             planJson = JSON.parse(cleanText);
         } catch (e) {
+            const rawPartsU = response.data?.candidates?.[0]?.content?.parts || [];
             console.error('[Ultimate] Error parsing JSON:', e.message);
+            console.error('[Ultimate] Parts count:', rawPartsU.length, '| thought flags:', rawPartsU.map(p => !!p.thought));
+            console.error('[Ultimate] Raw text (500c):', rawPartsU.map(p => p.text || '').join('').slice(0, 500));
             throw new Error('La IA no generó un formato compatible. Reintenta.');
         }
 
