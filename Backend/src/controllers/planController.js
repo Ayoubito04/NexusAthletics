@@ -1,7 +1,7 @@
 const { prisma } = require('../config/prisma');
 const { generateElitePDF } = require('../services/pdfService');
 
-const { tryGeminiWithFallback } = require('../services/geminiService');
+const { tryGeminiWithFallback, tryGeminiForPlans } = require('../services/geminiService');
 
 const downloadPDF = async (req, res) => {
     try {
@@ -230,7 +230,7 @@ REGLA ENTRENAMIENTO EN CASA: Si EQUIPAMIENTO contiene "Solo Peso Corporal", "Man
         }
 
         const contents = [{ parts: [{ text: systemPrompt }] }];
-        const response = await tryGeminiWithFallback(contents, { maxOutputTokens: 8192 });
+        const response = await tryGeminiForPlans(contents);
 
         let planJson;
         try {
@@ -376,7 +376,8 @@ const generateUltimatePlan = async (req, res) => {
     let duracionMinU = 60;
     if (durHMatchU) duracionMinU = Math.round(parseFloat(durHMatchU[1].replace(',', '.')) * 60);
     else if (durMMatchU) duracionMinU = parseInt(durMMatchU[1]);
-    const maxEjerciciosU = Math.min(15, Math.max(6, Math.floor(duracionMinU / 10)));
+    const semanasPlanU = parseInt(semanas) || 4;
+    const maxEjerciciosU = Math.min(15, Math.max(6, Math.floor(duracionMinU / 10)), Math.max(6, Math.floor(6000 / (diasSemana * semanasPlanU * 25))));
     try {
         const user = await prisma.user.findUnique({
             where: { id: req.user.id },
@@ -480,7 +481,7 @@ cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor
 9. Genera entre 6 y ${maxEjerciciosU} ejercicios por día según la duración solicitada (no más de ${maxEjerciciosU}). Respuesta compacta, sin campos opcionales extra`;
 
         const contents = [{ parts: [{ text: systemPrompt }] }];
-        const response = await tryGeminiWithFallback(contents, { maxOutputTokens: 8192 });
+        const response = await tryGeminiForPlans(contents);
 
         let planJson;
         try {
