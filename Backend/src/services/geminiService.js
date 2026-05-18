@@ -88,23 +88,26 @@ async function tryClaudeForPlans(promptText) {
 
     const Anthropic = require('@anthropic-ai/sdk');
     const AnthropicClient = Anthropic.default || Anthropic;
-    const client = new AnthropicClient({ apiKey: ANTHROPIC_API_KEY, timeout: 90000 });
+    // Sin timeout global — streaming mantiene la conexión viva mientras llegan tokens
+    const client = new AnthropicClient({ apiKey: ANTHROPIC_API_KEY });
 
     const models = [
-        { name: 'claude-haiku-4-5',  tokens: 16000 },
         { name: 'claude-sonnet-4-6', tokens: 16000 },
+        { name: 'claude-haiku-4-5',  tokens: 8000 },
     ];
 
     let lastError;
     for (const { name, tokens } of models) {
         console.log(`[Nexus Plans Claude] Intentando: ${name}`);
         try {
-            const response = await client.messages.create({
+            // Streaming evita timeout en respuestas largas (tokens fluyen continuamente)
+            const stream = client.messages.stream({
                 model: name,
                 max_tokens: tokens,
                 messages: [{ role: 'user', content: promptText }],
             });
-            console.log(`[Nexus Plans Claude] ✓ Éxito con ${name} | stop_reason: ${response.stop_reason}`);
+            const response = await stream.finalMessage();
+            console.log(`[Nexus Plans Claude] ✓ Éxito con ${name} | stop_reason: ${response.stop_reason} | output_tokens: ${response.usage?.output_tokens}`);
             return response;
         } catch (error) {
             lastError = error;
