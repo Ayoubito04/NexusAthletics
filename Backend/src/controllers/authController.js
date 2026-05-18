@@ -87,18 +87,16 @@ const register = async (req, res) => {
             }
         });
 
-        // Si viene un código de referido, incrementamos las invitaciones del referidor
+        // Si viene un código de referido, lo guardamos para que el usuario lo aplique
+        // manualmente en la app. El descuento NO se aplica aquí, sino cuando el usuario
+        // inserte el código en PlanesPago (endpoint /plans/use-referral).
         if (referralCode) {
             try {
                 const referrer = await prisma.user.findUnique({
                     where: { referralCode: referralCode.trim().toUpperCase() }
                 });
                 if (referrer && referrer.id !== user.id) {
-                    await prisma.user.update({
-                        where: { id: referrer.id },
-                        data: { invitacionesExitosas: { increment: 1 } }
-                    });
-                    console.log(`✅ Referido exitoso: ${referrer.email} invitó a ${email}`);
+                    console.log(`📋 Código referido registrado: ${referrer.email} → ${email} (pendiente de activar)`);
                 }
             } catch (refErr) {
                 console.error("Error al procesar referido:", refErr);

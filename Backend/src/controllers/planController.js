@@ -621,6 +621,15 @@ const useReferral = async (req, res) => {
             return res.status(400).json({ error: "No puedes usar tu propio código de referido" });
         }
 
+        // Comprobar si ya usó un código antes (columna añadida via SQL en index.js)
+        const [userRow] = await prisma.$queryRawUnsafe(
+            `SELECT "referralCodeUsed" FROM "User" WHERE id = $1`,
+            user.id
+        );
+        if (userRow?.referralCodeUsed) {
+            return res.status(400).json({ error: "Ya has aplicado un código de descuento anteriormente" });
+        }
+
         const referrer = await prisma.user.findUnique({
             where: { referralCode: referralCode.trim().toUpperCase() }
         });
@@ -635,11 +644,17 @@ const useReferral = async (req, res) => {
             data: { invitacionesExitosas: { increment: 1 } }
         });
 
-        // Beneficio para quien aplica el código (descuento propio)
+        // Beneficio para quien aplica el código + marcar como usado
         const updatedUser = await prisma.user.update({
             where: { id: req.user.id },
             data: { invitacionesExitosas: { increment: 1 } }
         });
+
+        await prisma.$executeRawUnsafe(
+            `UPDATE "User" SET "referralCodeUsed" = $1 WHERE id = $2`,
+            referralCode.trim().toUpperCase(),
+            user.id
+        );
 
         const { password: _, ...userWithoutPassword } = updatedUser;
         const pricing = getProgressivePrice(updatedUser.invitacionesExitosas);
