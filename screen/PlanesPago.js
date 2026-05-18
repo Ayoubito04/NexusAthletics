@@ -325,6 +325,27 @@ export default function PlanesPago() {
                     </View>
                 )}
 
+                {/* ── Banner referidos ── */}
+                <LinearGradient
+                    colors={['rgba(99,255,21,0.13)', 'rgba(99,255,21,0.04)']}
+                    style={styles.referralBanner}
+                >
+                    <View style={styles.referralBannerLeft}>
+                        <Text style={styles.referralBannerEmoji}>🎁</Text>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.referralBannerTitle}>¡Invita y ahorra hasta un 50%!</Text>
+                            <Text style={styles.referralBannerDesc}>
+                                Invita a <Text style={{ color: '#63ff15', fontWeight: '900' }}>3 amigos</Text> con tu código y consigue un <Text style={{ color: '#63ff15', fontWeight: '900' }}>50% de descuento</Text> en tu próxima renovación del Plan Pro.
+                            </Text>
+                            <View style={styles.referralSteps}>
+                                <Text style={styles.referralStep}>1 amigo → <Text style={{ color: '#63ff15' }}>–17%</Text></Text>
+                                <Text style={styles.referralStep}>2 amigos → <Text style={{ color: '#63ff15' }}>–33%</Text></Text>
+                                <Text style={styles.referralStep}>3 amigos → <Text style={{ color: '#63ff15' }}>–50% 🔥</Text></Text>
+                            </View>
+                        </View>
+                    </View>
+                </LinearGradient>
+
                 {/* ── Tarjetas de planes ── */}
                 {planes.map((p) => {
                     const isCurrentPlan = user?.plan === p.key;
@@ -758,5 +779,47 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         letterSpacing: 1,
         marginBottom: 2,
+    },
+    referralBanner: {
+        borderRadius: 18,
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.25)',
+        padding: 16,
+        marginBottom: 16,
+    },
+    referralBannerLeft: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    referralBannerEmoji: {
+        fontSize: 28,
+        marginTop: 2,
+    },
+    referralBannerTitle: {
+        color: '#fff',
+        fontSize: 15,
+        fontWeight: '900',
+        marginBottom: 6,
+        letterSpacing: 0.3,
+    },
+    referralBannerDesc: {
+        color: '#aaa',
+        fontSize: 13,
+        lineHeight: 19,
+        marginBottom: 10,
+    },
+    referralSteps: {
+        flexDirection: 'row',
+        gap: 10,
+        flexWrap: 'wrap',
+    },
+    referralStep: {
+        color: '#777',
+        fontSize: 12,
+        fontWeight: '700',
+        backgroundColor: 'rgba(99,255,21,0.07)',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
     },
 });

@@ -44,7 +44,7 @@ export default function Facturacion() {
     const handleCancelar = () => {
         showAlert(
             '⚠️ Cancelar Suscripción',
-            `¿Seguro que quieres cancelar el Plan ${user?.plan}? Perderás acceso inmediato a todas las funciones premium y pasarás al Plan Básico.`,
+            `¿Seguro que quieres cancelar el Plan ${user?.plan}?\n\nPerderás acceso inmediato a todas las funciones premium y pasarás al Plan Básico.\n\n🚫 Sin devoluciones: los pagos ya realizados no son reembolsables.`,
             'warning',
             confirmCancel,
             () => {},
