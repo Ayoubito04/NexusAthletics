@@ -45,41 +45,33 @@ async function tryGeminiWithFallback(contents, generationConfig = {}) {
     throw new Error('Servicio de IA temporalmente no disponible. Inténtalo de nuevo en unos minutos.');
 }
 
-// Para generación de planes: usa gemini-2.5-pro con thinking desactivado + 32k tokens
+// Para generación de planes: gemini-2.5-pro (thinking mode nativo) + 32k tokens
 async function tryGeminiForPlans(contents, generationConfig = {}) {
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY no configurada");
 
-    // thinkingBudget:0 desactiva el thinking mode de 2.5 Pro → todos los tokens van al JSON
+    // gemini-2.5-pro requiere thinking mode activo (no se puede desactivar con budget=0)
+    // El fix de parts[0].thought=true en planController maneja el output con thinking
     const models = [
-        'gemini-2.5-pro-preview-05-06',
-        'gemini-2.5-pro',
-        'gemini-2.5-pro-exp-03-25',
-        'gemini-1.5-pro',
-        'gemini-2.0-flash',
+        { name: 'gemini-2.5-pro',       tokens: 32768 },
+        { name: 'gemini-2.5-flash',      tokens: 16384 },
+        { name: 'gemini-2.0-flash',      tokens: 8192  },
     ];
-    const config = {
-        maxOutputTokens: 32768,
-        temperature: 0.7,
-        thinkingConfig: { thinkingBudget: 0 },
-        ...generationConfig,
-    };
 
-    for (const model of models) {
-        console.log(`[Nexus Plans] Intentando: ${model}`);
+    for (const { name, tokens } of models) {
+        console.log(`[Nexus Plans] Intentando: ${name} (maxTokens=${tokens})`);
         try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
-            // Para modelos no-2.5, quitamos thinkingConfig que causa error 400
-            const safeConfig = model.includes('2.5') ? config : { maxOutputTokens: 8192, temperature: 0.7, ...generationConfig };
-            const response = await axios.post(url, { contents, generationConfig: safeConfig }, { timeout: GEMINI_PLAN_TIMEOUT_MS });
-            console.log(`[Nexus Plans] ✓ Éxito con ${model}`);
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${name}:generateContent?key=${GEMINI_API_KEY}`;
+            const cfg = { maxOutputTokens: tokens, temperature: 0.7, ...generationConfig };
+            const response = await axios.post(url, { contents, generationConfig: cfg }, { timeout: GEMINI_PLAN_TIMEOUT_MS });
+            console.log(`[Nexus Plans] ✓ Éxito con ${name}`);
             return response;
         } catch (error) {
             const status = error.response?.status;
             const msg = error.response?.data?.error?.message || error.message || '';
-            console.log(`[Nexus Plans] ✗ ${model} → ${status || 'timeout'}: ${msg.slice(0, 120)}`);
+            console.log(`[Nexus Plans] ✗ ${name} → ${status || 'timeout'}: ${msg.slice(0, 120)}`);
 
-            const shouldRetry = msg.includes('quota') || msg.includes('Quota') || status === 503 || status === 500 || status === 429 || status === 404 || status === 400 || error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT';
+            const shouldRetry = msg.includes('quota') || msg.includes('Quota') || status === 503 || status === 500 || status === 429 || status === 404 || error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT';
             if (shouldRetry) {
                 if (status === 429) await new Promise(r => setTimeout(r, 2000));
                 continue;
