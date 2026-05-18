@@ -87,34 +87,14 @@ export default function PlanesPago() {
         } catch (_) {}
     };
 
-    // Activa el trial directamente sin pasar por Checkout (0€ real)
-    const handleActivateTrial = async () => {
+    const handleActivateTrial = () => {
         if (!user || !token) return;
-        setLoadingTrial(true);
-        try {
-            const res = await fetch(`${BACKEND_URL}/plans/start-trial`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            });
-            const data = await res.json();
-            if (data.success) {
-                await AsyncStorage.setItem('user', JSON.stringify(data.user));
-                setUser(data.user);
-                await fetchTrialStatus(token);
-                showAlert(
-                    '🎉 ¡Mes Gratis Activado!',
-                    'Tienes 30 días de Plan Pro completamente gratis. Invita a 3 amigos para conseguir un 50% de descuento cuando renueves.',
-                    'success',
-                    () => navigation.navigate('Home')
-                );
-            } else {
-                showAlert('Error', data.error || 'No se pudo activar el trial', 'error');
-            }
-        } catch (_) {
-            showAlert('Error', 'Error de conexión', 'error');
-        } finally {
-            setLoadingTrial(false);
-        }
+        navigation.navigate('Checkout', {
+            plan: 'Plan Pro',
+            price: '0.00€',
+            isTrial: true,
+            originalPrice: PRO_BASE_PRICE.toFixed(2) + '€',
+        });
     };
 
     const handleSelectPlan = async (planNombre, precio) => {

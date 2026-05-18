@@ -51,16 +51,22 @@ export default function Checkout() {
                     throw new Error("Respuesta no válida del servidor.");
                 }
 
-                const { clientSecret, error } = data;
+                const { clientSecret, error, isSetupIntent } = data;
                 if (error) throw new Error(error);
 
-                const { error: initError } = await initPaymentSheet({
-                    paymentIntentClientSecret: clientSecret,
+                const sheetParams = {
                     merchantDisplayName: 'Nexus Athletics AI',
                     appearance: {
                         colors: { primary: '#63ff15', background: '#0a0a0a', componentBackground: '#111111', text: '#ffffff' }
                     }
-                });
+                };
+                if (isSetupIntent) {
+                    sheetParams.setupIntentClientSecret = clientSecret;
+                } else {
+                    sheetParams.paymentIntentClientSecret = clientSecret;
+                }
+
+                const { error: initError } = await initPaymentSheet(sheetParams);
 
                 if (initError) throw new Error(initError.message);
 
@@ -184,11 +190,15 @@ export default function Checkout() {
                 {(method === 'stripe' || method === 'mastercard') ? (
                     <View style={styles.secureBanner}>
                         <Ionicons name="shield-checkmark" size={40} color="#63ff15" />
-                        <Text style={styles.secureBannerTitle}>Pago Seguro vía {method === 'stripe' ? 'Stripe' : 'MasterCard'}</Text>
+                        <Text style={styles.secureBannerTitle}>
+                            {isTrial ? 'Verificación de Tarjeta' : `Pago Seguro vía ${method === 'stripe' ? 'Stripe' : 'MasterCard'}`}
+                        </Text>
                         <Text style={styles.secureBannerDesc}>
-                            {method === 'stripe'
-                                ? "Al pulsar el botón inferior, se abrirá la pasarela segura de Stripe para completar tu suscripción."
-                                : "Tu tarjeta MasterCard será procesada de forma segura a través de encriptación bancaria de alta gama."}
+                            {isTrial
+                                ? "Solo necesitamos verificar tu tarjeta. No se realizará ningún cargo. Podrás cancelar en cualquier momento antes de que termine el mes gratis."
+                                : method === 'stripe'
+                                    ? "Al pulsar el botón inferior, se abrirá la pasarela segura de Stripe para completar tu suscripción."
+                                    : "Tu tarjeta MasterCard será procesada de forma segura a través de encriptación bancaria de alta gama."}
                         </Text>
                     </View>
                 ) : (
@@ -207,7 +217,7 @@ export default function Checkout() {
                         <ActivityIndicator color="black" />
                     ) : (
                         <>
-                            <Text style={styles.payBtnText}>CONTINUAR CON EL PAGO</Text>
+                            <Text style={styles.payBtnText}>{isTrial ? 'ACTIVAR MES GRATIS' : 'CONTINUAR CON EL PAGO'}</Text>
                             <Ionicons name="arrow-forward" size={20} color="black" style={{ marginLeft: 10 }} />
                         </>
                     )}

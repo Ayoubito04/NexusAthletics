@@ -45,20 +45,23 @@ const processStripe = async (req, res) => {
 const createPaymentIntent = async (req, res) => {
     const { amount, plan, isTrial } = req.body;
     try {
-        // Si es prueba gratuita, hacemos un cargo simbólico de 0.50€ para verificar tarjeta
-        const finalAmount = isTrial ? 0.50 : amount;
+        if (isTrial) {
+            // Trial: guardar tarjeta sin cobrar nada (SetupIntent)
+            const setupIntent = await stripe.setupIntents.create({
+                automatic_payment_methods: { enabled: true },
+                metadata: { userId: String(req.user.id), plan, isTrial: 'true' }
+            });
+            return res.json({ clientSecret: setupIntent.client_secret, isSetupIntent: true });
+        }
+
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(finalAmount * 100),
+            amount: Math.round(amount * 100),
             currency: 'eur',
             automatic_payment_methods: { enabled: true },
-            metadata: {
-                userId: req.user.id,
-                plan,
-                isTrial: isTrial ? 'true' : 'false'
-            }
+            metadata: { userId: String(req.user.id), plan, isTrial: 'false' }
         });
 
-        res.json({ clientSecret: paymentIntent.client_secret });
+        res.json({ clientSecret: paymentIntent.client_secret, isSetupIntent: false });
     } catch (error) {
         console.error("Stripe Error:", error);
         res.status(500).json({ error: error.message });
