@@ -1,7 +1,7 @@
 const { prisma } = require('../config/prisma');
 const { generateElitePDF } = require('../services/pdfService');
 
-const { tryGeminiWithFallback, tryClaudeForPlans } = require('../services/geminiService');
+const { tryGeminiWithFallback, tryGeminiForPlans } = require('../services/geminiService');
 
 const downloadPDF = async (req, res) => {
     try {
@@ -229,19 +229,29 @@ REGLA ENTRENAMIENTO EN CASA: Si EQUIPAMIENTO contiene "Solo Peso Corporal", "Man
         9. REGLA ENTRENAMIENTO EN CASA: Si EQUIPAMIENTO contiene "Solo Peso Corporal", "Mancuernas en Casa", "Bandas Elásticas" o "Exterior / Parque", usa EXCLUSIVAMENTE ejercicios sin máquinas. Evita: press_banca, prensa, extension_cuadriceps máquina, curl_femoral máquina, jalon, cable, sentadilla con barra. Usa imgKeys de CASA/SIN EQUIPAMIENTO. Con mancuernas añade: curls, press_mancuernas, remo_mancuerna, elevaciones_laterales, sentadilla_goblet, hip_thrust_mdb.`;
         }
 
-        const response = await tryClaudeForPlans(systemPrompt);
+        const contents = [{ parts: [{ text: systemPrompt }] }];
+        const response = await tryGeminiForPlans(contents);
 
         let planJson;
         try {
-            let cleanText = (response.content.find(b => b.type === 'text')?.text || '')
-                .replace(/```json/gi, '').replace(/```/g, '').trim();
+            const allParts = response.data?.candidates?.[0]?.content?.parts || [];
+            const jsonPart = allParts.find(p => !p.thought && p.text) || allParts[allParts.length - 1] || {};
+            let cleanText = (jsonPart.text || '').replace(/```json/gi, '').replace(/```/g, '').trim();
             const start = cleanText.indexOf('{');
             const end = cleanText.lastIndexOf('}');
             if (start !== -1 && end !== -1) cleanText = cleanText.slice(start, end + 1);
+            const openBr  = (cleanText.match(/\[/g) || []).length;
+            const closeBr = (cleanText.match(/\]/g) || []).length;
+            const opens   = (cleanText.match(/\{/g) || []).length;
+            const closes  = (cleanText.match(/\}/g) || []).length;
+            if (openBr > closeBr) cleanText += ']'.repeat(openBr - closeBr);
+            if (opens  > closes)  cleanText += '}'.repeat(opens  - closes);
             planJson = JSON.parse(cleanText);
         } catch (e) {
-            console.error("Error parsing Claude JSON:", e.message);
-            console.error("Raw text (500c):", response.content.find(b => b.type === 'text')?.text?.slice(0, 500));
+            const rawParts = response.data?.candidates?.[0]?.content?.parts || [];
+            console.error("Error parsing AI JSON:", e.message);
+            console.error("Parts count:", rawParts.length, "| thought flags:", rawParts.map(p => !!p.thought));
+            console.error("Raw text (500c):", rawParts.map(p => p.text || '').join('').slice(0, 500));
             throw new Error("La IA no devolvió un formato válido. Inténtalo de nuevo.");
         }
 
@@ -473,19 +483,29 @@ cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor
 8. El array "dias" de CADA semana debe tener EXACTAMENTE ${diasSemana} objetos
 9. Genera EXACTAMENTE ${maxEjerciciosU} ejercicios por día (ajustado a la duración: 30min→4, 45min→5, 60min→6, 90min→9, 2h→12). Respuesta compacta, sin campos opcionales extra`;
 
-        const response = await tryClaudeForPlans(systemPrompt);
+        const contents = [{ parts: [{ text: systemPrompt }] }];
+        const response = await tryGeminiForPlans(contents);
 
         let planJson;
         try {
-            let cleanText = (response.content.find(b => b.type === 'text')?.text || '')
-                .replace(/```json/gi, '').replace(/```/g, '').trim();
+            const allPartsU = response.data?.candidates?.[0]?.content?.parts || [];
+            const jsonPartU = allPartsU.find(p => !p.thought && p.text) || allPartsU[allPartsU.length - 1] || {};
+            let cleanText = (jsonPartU.text || '').replace(/```json/gi, '').replace(/```/g, '').trim();
             const start = cleanText.indexOf('{');
             const end = cleanText.lastIndexOf('}');
             if (start !== -1 && end !== -1) cleanText = cleanText.slice(start, end + 1);
+            const opens  = (cleanText.match(/\{/g) || []).length;
+            const closes = (cleanText.match(/\}/g) || []).length;
+            const openBr  = (cleanText.match(/\[/g) || []).length;
+            const closeBr = (cleanText.match(/\]/g) || []).length;
+            if (openBr > closeBr)  cleanText += ']'.repeat(openBr - closeBr);
+            if (opens  > closes)   cleanText += '}'.repeat(opens - closes);
             planJson = JSON.parse(cleanText);
         } catch (e) {
-            console.error('[Ultimate] Error parsing Claude JSON:', e.message);
-            console.error('[Ultimate] Raw text (500c):', response.content.find(b => b.type === 'text')?.text?.slice(0, 500));
+            const rawPartsU = response.data?.candidates?.[0]?.content?.parts || [];
+            console.error('[Ultimate] Error parsing JSON:', e.message);
+            console.error('[Ultimate] Parts count:', rawPartsU.length, '| thought flags:', rawPartsU.map(p => !!p.thought));
+            console.error('[Ultimate] Raw text (500c):', rawPartsU.map(p => p.text || '').join('').slice(0, 500));
             throw new Error('La IA no generó un formato compatible. Reintenta.');
         }
 
