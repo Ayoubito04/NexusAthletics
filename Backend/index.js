@@ -118,9 +118,6 @@ async function startServer() {
             ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "exerciseData" JSONB;
             ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "isPR" BOOLEAN NOT NULL DEFAULT false;
         `);
-        await prisma.$executeRawUnsafe(`
-            ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "referralCodeUsed" TEXT;
-        `);
         console.log('✅ Tablas WorkoutSession, MuscleStrength verificadas y Post actualizado');
     } catch (e) {
         console.error('⚠️ Auto-migrate warning:', e.message);
