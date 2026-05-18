@@ -155,6 +155,34 @@ export default function Register() {
         }
     }
 
+    const syncWithBackend = async (supabaseAccessToken) => {
+        try {
+            const response = await fetch(`${BACKEND_URL}/auth/supabase-sync`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accessToken: supabaseAccessToken })
+            });
+            const data = await response.json();
+            if (!response.ok || !data.token) {
+                showAlert('Error de Autenticación', data.error || 'No se pudo completar el registro.', 'error');
+                setIsLoading(false);
+                return;
+            }
+            const userData = { ...data.user, plan: data.user.plan || 'Gratis' };
+            await AsyncStorage.setItem('user', JSON.stringify(userData));
+            await AsyncStorage.setItem('token', data.token);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            if (data.isNewUser || !data.user.peso || !data.user.altura) {
+                navigation.navigate('WelcomePlans');
+            } else {
+                navigation.replace('MainTabs');
+            }
+        } catch (error) {
+            showAlert('Error de Conexión', 'No se pudo conectar con el servidor.', 'error');
+            setIsLoading(false);
+        }
+    };
+
     const handleSocialAuth = async (provider, token, tokenType = 'accessToken') => {
         try {
             setIsLoading(true);
@@ -294,7 +322,7 @@ export default function Register() {
                                 throw sessionError;
                             }
                         }
-                        handleSocialAuth(provider.toLowerCase(), access_token);
+                        syncWithBackend(access_token);
                     }
                 }
                 setIsLoading(false);
