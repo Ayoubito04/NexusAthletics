@@ -183,36 +183,9 @@ export default function PlanesPago() {
 
     const onInvite = async () => {
         try {
-            const result = await Share.share({
+            await Share.share({
                 message: `¡Únete a Nexus Athletics AI y entrena con el mejor Coach de IA! 💪\n\nUsa mi código: ${user.referralCode} al registrarte y ambos obtenemos beneficios.\n\n📲 Descarga la app (APK Android):\nhttps://expo.dev/artifacts/eas/6NB41awp4qm8SpBJZu8pK9.apk`,
             });
-            if (result?.action === Share.sharedAction && token) {
-                const res = await fetch(`${BACKEND_URL}/plans/register-share`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data?.user) {
-                        await AsyncStorage.setItem('user', JSON.stringify(data.user));
-                        setUser(data.user);
-                    }
-                    if (data?.invites !== undefined) {
-                        setTrialStatus(prev => ({
-                            ...(prev || {}),
-                            invites: data.invites,
-                            pricing: data.pricing,
-                            renewPrice: data.renewPrice,
-                            hasDiscount: data.hasDiscount,
-                            hasMaxDiscount: data.hasMaxDiscount,
-                        }));
-                    }
-                    showAlert('Compartido', 'Se aplicó progreso de descuento por compartir.', 'success');
-                }
-            }
         } catch (_) {}
     };
 
