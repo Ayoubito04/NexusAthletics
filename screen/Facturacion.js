@@ -11,7 +11,7 @@ import { colors } from '../theme';
 
 const BACKEND_URL = Config.BACKEND_URL;
 
-const PLAN_COLORS = { Gratis: '#888', Pro: '#63ff15', Ultimate: '#ff4d4d' };
+const PLAN_COLORS = { Gratis: '#888888', Pro: '#63ff15', Ultimate: '#ff4d4d' };
 const PLAN_ICONS  = { Gratis: 'leaf-outline', Pro: 'flask-outline', Ultimate: 'school-outline' };
 const PLAN_PRICE  = { Gratis: '0,00 €', Pro: 'desde 2,50 €/mes', Ultimate: '9,99 €/mes' };
 
@@ -87,7 +87,7 @@ export default function Facturacion() {
         );
     }
 
-    const planColor = PLAN_COLORS[user.plan] || '#888';
+    const planColor = PLAN_COLORS[user.plan] || '#888888';
     const planIcon  = PLAN_ICONS[user.plan]  || 'card-outline';
     const planPrice = PLAN_PRICE[user.plan]  || '—';
     const isPaid    = user.plan === 'Pro' || user.plan === 'Ultimate';

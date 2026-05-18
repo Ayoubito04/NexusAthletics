@@ -700,7 +700,7 @@ const cancelSubscription = async (req, res) => {
 
         const updatedUser = await prisma.user.update({
             where: { id: req.user.id },
-            data: { plan: 'Gratis' },
+            data: { plan: 'Gratis', haUsadoTrial: true },
         });
 
         const { password: _, ...userWithoutPassword } = updatedUser;
