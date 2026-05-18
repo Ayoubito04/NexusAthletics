@@ -91,8 +91,8 @@ async function tryClaudeForPlans(promptText) {
     const client = new AnthropicClient({ apiKey: ANTHROPIC_API_KEY, timeout: 90000 });
 
     const models = [
-        { name: 'claude-haiku-4-5',  tokens: 8192 },
-        { name: 'claude-sonnet-4-6', tokens: 8192 },
+        { name: 'claude-haiku-4-5',  tokens: 16000 },
+        { name: 'claude-sonnet-4-6', tokens: 16000 },
     ];
 
     let lastError;
