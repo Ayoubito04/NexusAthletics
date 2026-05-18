@@ -74,6 +74,7 @@ function TabNavigator() {
         tabBarItemStyle: {
           paddingTop: 2,
         },
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
           backgroundColor: 'transparent',
           position: 'absolute',
@@ -87,6 +88,8 @@ function TabNavigator() {
           borderColor: 'rgba(99,255,21,0.16)',
           ...shadows.tabBar,
           overflow: 'hidden',
+          elevation: 20,
+          zIndex: 999,
         },
         tabBarBackground: () => (
           <View style={{ flex: 1 }}>
@@ -215,7 +218,7 @@ export default function App() {
 
   return (
     <StripeProvider
-      publishableKey="pk_test_51SxCv7KV7EtlOjzAPkr9kxPg19zo18IXDudvJVZtWszzdMPth6jVFcWJGCSC4UljrAk5Sp1gcMchHUjhNNBnvHgu00xElYfcej"
+      publishableKey="pk_live_51SxCur3T8zYFpQJlxQCx79IL6Kj5Ioby9BuJEWOkWz4ZbKfNSXh7XeDi3bO7Ww8q2FTEOC4ralvwqtFDD6gRcaDC00MwOAK2Tf"
       merchantIdentifier="merchant.com.nexusathletics"
     >
       <NavigationContainer>
