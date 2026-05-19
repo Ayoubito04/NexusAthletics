@@ -65,7 +65,7 @@ const generatePlanInteractive = async (req, res) => {
     let duracionMin = 60;
     if (durHMatch) duracionMin = Math.round(parseFloat(durHMatch[1].replace(',', '.')) * 60);
     else if (durMMatch) duracionMin = parseInt(durMMatch[1]);
-    const maxEjercicios = duracionMin >= 120 ? 12 : duracionMin >= 90 ? 9 : duracionMin >= 60 ? 6 : duracionMin >= 45 ? 5 : 4;
+    const maxEjercicios = duracionMin >= 120 ? 9 : duracionMin >= 90 ? 7 : duracionMin >= 60 ? 5 : 4;
     try {
         let user = await prisma.user.findUnique({
             where: { id: req.user.id },
@@ -168,7 +168,7 @@ Duración: ${semanas} semanas | Periodización: ${periodi || 'DUP'} | Técnicas:
 
 REGLAS CRÍTICAS:
 - El array "dias" de CADA semana debe tener EXACTAMENTE ${diasSemana} objetos (días de entrenamiento).
-- Genera EXACTAMENTE ${maxEjercicios} ejercicios por día (ajustado a la duración: 30min→4, 45min→5, 60min→6, 90min→9, 2h→12). JSON compacto, sin calentamiento ni vueltaCalma.
+- Genera EXACTAMENTE ${maxEjercicios} ejercicios por día (ajustado a la duración: 30-45min→4, 60min→5, 90min→7, 2h→9). JSON compacto, sin calentamiento ni vueltaCalma.
 - semana ${semanas} = Deload (vol -40%, intensidad -50%).
 - Usa 70-85% del 1RM según fase.
 imgKey debe ser el MÁS ESPECÍFICO para cada ejercicio. Lista completa:
@@ -215,7 +215,7 @@ REGLA ENTRENAMIENTO EN CASA: Si EQUIPAMIENTO contiene "Solo Peso Corporal", "Man
         4. Si busca "Perder grasa", prioriza fuerza con intervalos o circuitos.
         5. Si busca "Flexibilidad/Pilates", genera secuencias fluidas y controladas.
         6. Genera EXACTAMENTE ${diasSemana} objetos en el array "dias".
-        7. Genera EXACTAMENTE ${maxEjercicios} ejercicios por día (ajustado a la duración: 30min→4, 45min→5, 60min→6, 90min→9, 2h→12).
+        7. Genera EXACTAMENTE ${maxEjercicios} ejercicios por día (ajustado a la duración: 30-45min→4, 60min→5, 90min→7, 2h→9).
         8. imgKey debe ser el más específico para cada ejercicio. Opciones disponibles:
         GIMNASIO: press_banca, press_inclinado, press_declinado, aperturas, fondos, push_up, press_mancuernas,
         peso_muerto, dominadas, remo, jalon, remo_sentado, face_pull, buenos_dias, remo_mancuerna,
@@ -379,7 +379,7 @@ const generateUltimatePlan = async (req, res) => {
     if (durHMatchU) duracionMinU = Math.round(parseFloat(durHMatchU[1].replace(',', '.')) * 60);
     else if (durMMatchU) duracionMinU = parseInt(durMMatchU[1]);
     const semanasPlanU = parseInt(semanas) || 4;
-    const baseU = duracionMinU >= 120 ? 12 : duracionMinU >= 90 ? 9 : duracionMinU >= 60 ? 6 : duracionMinU >= 45 ? 5 : 4;
+    const baseU = duracionMinU >= 120 ? 9 : duracionMinU >= 90 ? 7 : duracionMinU >= 60 ? 5 : 4;
     const maxEjerciciosU = Math.min(baseU, Math.max(4, Math.floor(6000 / (diasSemana * semanasPlanU * 25))));
     try {
         const user = await prisma.user.findUnique({
@@ -481,7 +481,7 @@ cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor
 6. Con estrés ${nivelEstres || 'moderado'} y ${horasSueno || '7-8h'} de sueño, ajusta el volumen apropiadamente
 7. Genera exactamente ${semanas} semanas con progresión lógica
 8. El array "dias" de CADA semana debe tener EXACTAMENTE ${diasSemana} objetos
-9. Genera EXACTAMENTE ${maxEjerciciosU} ejercicios por día (ajustado a la duración: 30min→4, 45min→5, 60min→6, 90min→9, 2h→12). Respuesta compacta, sin campos opcionales extra`;
+9. Genera EXACTAMENTE ${maxEjerciciosU} ejercicios por día (ajustado a la duración: 30-45min→4, 60min→5, 90min→7, 2h→9). Respuesta compacta, sin campos opcionales extra`;
 
         const contents = [{ parts: [{ text: systemPrompt }] }];
         const response = await tryGeminiForPlans(contents);
