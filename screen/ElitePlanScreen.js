@@ -188,7 +188,7 @@ export default function ElitePlanScreen({ route, navigation }) {
     };
 
     // ─── Render ULTIMATE ────────────────────────────────────────────────────
-    if (plan.esUltimate && plan.semanas) {
+    if (plan.semanas && plan.semanas.length > 0) {
         const semana = plan.semanas[semanaActiva] || plan.semanas[0];
         const FASE_COLORS = {
             'Acumulación': ['#3b82f6','#1d4ed8'],
