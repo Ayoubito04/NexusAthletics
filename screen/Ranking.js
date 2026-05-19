@@ -196,7 +196,7 @@ export default function Ranking() {
     useEffect(() => {
         if (mainTab !== 'estetica') loadRanking();
         else setLoading(false);
-    }, [mainTab, muscleTab]);
+    }, [mainTab]);
 
     const loadRanking = useCallback(async () => {
         setLoading(true);
