@@ -40,20 +40,10 @@ const MUSCLE_LABELS = {
     hombros:'Hombros', piernas:'Piernas', abdomen:'Abdomen', gluteos:'Glúteos', core:'Core',
 };
 
-const MUSCLE_TABS = [
-    { id:'global',   label:'Global',   icon:'trophy' },
-    { id:'Pecho',    label:'Pecho',    icon:'human' },
-    { id:'Espalda',  label:'Espalda',  icon:'human-handsup' },
-    { id:'Piernas',  label:'Piernas',  icon:'run-fast' },
-    { id:'Hombros',  label:'Hombros',  icon:'weight-lifter' },
-    { id:'Brazos',   label:'Brazos',   icon:'arm-flex' },
-    { id:'Core',     label:'Core',     icon:'human-male' },
-];
 
 const MAIN_TABS = [
     { id:'liga',     label:'Liga XP',  icon:'lightning-bolt',   unit:'XP',  accent:'#63ff15' },
     { id:'fuerza',   label:'Fuerza',   icon:'dumbbell',          unit:'kg',  accent:'#ef4444' },
-    { id:'social',   label:'Social',   icon:'heart',             unit:'pts', accent:'#ec4899' },
     { id:'estetica', label:'Estética', icon:'human-male-height', unit:'pts', accent:'#FFD700' },
 ];
 
@@ -189,7 +179,6 @@ export default function Ranking() {
     const navigation  = useNavigation();
     const route       = useRoute();
     const [mainTab, setMainTab]         = useState(route.params?.tab || 'liga');
-    const [muscleTab, setMuscleTab]     = useState('global');
     const [ranking, setRanking]         = useState([]);
     const [loading, setLoading]         = useState(true);
     const [refreshing, setRefreshing]   = useState(false);
@@ -214,15 +203,9 @@ export default function Ranking() {
         listAnim.setValue(0);
         try {
             const token = await AsyncStorage.getItem('token');
-            let url;
-            if (mainTab === 'fuerza') {
-                url = muscleTab === 'global'
-                    ? `${BACKEND_URL}/strength/ranking`
-                    : `${BACKEND_URL}/strength/ranking?muscle=${encodeURIComponent(muscleTab)}`;
-            } else {
-                const cat = mainTab === 'liga' ? 'xp' : 'social';
-                url = `${BACKEND_URL}/ranking/users?category=${cat}`;
-            }
+            const url = mainTab === 'fuerza'
+                ? `${BACKEND_URL}/strength/ranking`
+                : `${BACKEND_URL}/ranking/users?category=xp`;
             const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
             if (res.ok) {
                 setRanking(await res.json());
@@ -230,7 +213,7 @@ export default function Ranking() {
             }
         } catch (e) { console.error('Ranking error:', e); }
         finally { setLoading(false); setRefreshing(false); }
-    }, [mainTab, muscleTab]);
+    }, [mainTab]);
 
     const onRefresh = () => { setRefreshing(true); loadRanking(); };
 
@@ -239,7 +222,7 @@ export default function Ranking() {
     const tab     = MAIN_TABS.find(t => t.id === mainTab);
 
     const getScore = item => {
-        if (mainTab === 'fuerza') return muscleTab === 'global' ? (item.totalScore ?? 0) : (item.bestOneRM ?? 0);
+        if (mainTab === 'fuerza') return item.totalScore ?? 0;
         return item.score ?? item.totalScore ?? 0;
     };
 
@@ -439,28 +422,6 @@ export default function Ranking() {
                 })}
             </View>
 
-            {/* ── FUERZA MUSCLE SUB-TABS ── */}
-            {mainTab === 'fuerza' && (
-                <ScrollView
-                    horizontal showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.subTabsContent}
-                    style={styles.subTabsScroll}
-                >
-                    {MUSCLE_TABS.map(t => {
-                        const active = muscleTab === t.id;
-                        return (
-                            <TouchableOpacity
-                                key={t.id}
-                                style={[styles.subTab, active && styles.subTabActive]}
-                                onPress={() => setMuscleTab(t.id)}
-                            >
-                                <MaterialCommunityIcons name={t.icon} size={12} color={active ? '#ef4444' : '#444'} />
-                                <Text style={[styles.subTabText, active && { color: '#ef4444' }]}>{t.label}</Text>
-                            </TouchableOpacity>
-                        );
-                    })}
-                </ScrollView>
-            )}
 
             {/* ── LIGA LEGEND ── */}
             {mainTab === 'liga' && (
@@ -514,7 +475,6 @@ export default function Ranking() {
                             <Text style={styles.emptyTitle}>Sin datos aún</Text>
                             <Text style={styles.emptySub}>
                                 {mainTab==='fuerza' ? 'Completa entrenamientos para aparecer.' :
-                                 mainTab==='social'  ? 'Publica en la comunidad para ganar puntos.' :
                                  'Completa sesiones para ganar XP.'}
                             </Text>
                         </View>
