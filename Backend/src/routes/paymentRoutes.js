@@ -8,5 +8,9 @@ const { paymentLimiter } = require('../middlewares/security');
 router.post('/paypal', authenticateToken, paymentLimiter, paymentController.processPayPal);
 router.post('/stripe', authenticateToken, paymentLimiter, paymentController.processStripe);
 router.post('/create-intent', authenticateToken, paymentLimiter, paymentController.createPaymentIntent);
+router.post('/paypal-create', authenticateToken, paymentLimiter, paymentController.createPayPalOrder);
+router.post('/paypal-capture', authenticateToken, paymentLimiter, paymentController.capturePayPalOrder);
+router.get('/paypal-return', paymentController.paypalReturn);
+router.get('/paypal-cancel', paymentController.paypalCancel);
 
 module.exports = router;

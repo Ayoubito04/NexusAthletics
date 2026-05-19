@@ -40,6 +40,30 @@ const verifyOrder = async (orderId) => {
     }
 };
 
-module.exports = {
-    verifyOrder,
+const createOrder = async (amount, currency = 'EUR') => {
+    const accessToken = await getAccessToken();
+    const backendUrl = process.env.BACKEND_URL || 'https://nexusathletics.onrender.com';
+    const response = await axios.post(`${PAYPAL_API}/v2/checkout/orders`, {
+        intent: 'CAPTURE',
+        purchase_units: [{ amount: { currency_code: currency, value: amount.toFixed(2) } }],
+        application_context: {
+            return_url: `${backendUrl}/payments/paypal-return`,
+            cancel_url: `${backendUrl}/payments/paypal-cancel`,
+            user_action: 'PAY_NOW',
+            brand_name: 'Nexus Athletics',
+        }
+    }, { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } });
+    return response.data;
 };
+
+const captureOrder = async (orderId) => {
+    const accessToken = await getAccessToken();
+    const response = await axios.post(
+        `${PAYPAL_API}/v2/checkout/orders/${orderId}/capture`,
+        {},
+        { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
+    );
+    return response.data;
+};
+
+module.exports = { verifyOrder, createOrder, captureOrder };

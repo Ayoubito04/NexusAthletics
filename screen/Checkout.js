@@ -7,6 +7,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import Config from '../constants/Config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NexusAlert from '../components/NexusAlert';
+import * as WebBrowser from 'expo-web-browser';
 
 const BACKEND_URL = Config.BACKEND_URL;
 
@@ -80,15 +81,51 @@ export default function Checkout() {
                     return;
                 }
             } else if (method === 'paypal') {
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                // 1. Crear orden real en PayPal
+                const orderRes = await fetch(`${BACKEND_URL}/payments/paypal-create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ amount, plan })
+                });
+                const orderData = await orderRes.json();
+                if (orderData.error) throw new Error(orderData.error);
+
+                // 2. Abrir PayPal en browser integrado
+                const result = await WebBrowser.openAuthSessionAsync(
+                    orderData.approveLink,
+                    'nexus-fitness://paypal'
+                );
+
+                if (result.type !== 'success') {
+                    setIsLoading(false);
+                    return; // Usuario canceló
+                }
+
+                // 3. Extraer orderID del return URL (PayPal añade ?token=orderID)
+                const params = {};
+                (result.url.split('?')[1] || '').split('&').forEach(p => {
+                    const [k, v] = p.split('=');
+                    if (k) params[k] = decodeURIComponent(v || '');
+                });
+                const paypalOrderId = params.token || orderData.orderID;
+
+                // 4. Capturar el pago en el backend
+                const captureRes = await fetch(`${BACKEND_URL}/payments/paypal-capture`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ orderID: paypalOrderId, plan: plan.includes('Ultimate') ? 'Ultimate' : 'Pro' })
+                });
+                const captureData = await captureRes.json();
+                if (!captureData.success) throw new Error(captureData.error || 'Error al capturar pago PayPal');
+
+                await AsyncStorage.setItem('user', JSON.stringify(captureData.user));
+                setIsLoading(false);
+                setIsSuccess(true);
+                return;
             }
 
-            const endpoint = isTrial ? '/plans/start-trial' : (method === 'paypal' ? '/payments/paypal-success' : '/update-plan');
-            const body = isTrial
-                ? {}
-                : (method === 'paypal'
-                    ? { plan, orderID: `PAY-NEXUS-${Math.random().toString(36).substr(2, 9).toUpperCase()}` }
-                    : { plan: plan.includes('Ultimate') ? 'Ultimate' : 'Pro' });
+            const endpoint = isTrial ? '/plans/start-trial' : '/update-plan';
+            const body = isTrial ? {} : { plan: plan.includes('Ultimate') ? 'Ultimate' : 'Pro' };
 
             const updateRes = await fetch(`${BACKEND_URL}${endpoint}`, {
                 method: 'POST',

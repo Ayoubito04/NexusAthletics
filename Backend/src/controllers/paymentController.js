@@ -1,5 +1,6 @@
 const { prisma } = require('../config/prisma');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { createOrder, captureOrder } = require('../services/paypalService');
 
 const processPayPal = async (req, res) => {
     const { amount, plan, orderId } = req.body;
@@ -68,4 +69,47 @@ const createPaymentIntent = async (req, res) => {
     }
 };
 
-module.exports = { processPayPal, processStripe, createPaymentIntent };
+const createPayPalOrder = async (req, res) => {
+    const { amount, plan } = req.body;
+    try {
+        const order = await createOrder(parseFloat(amount));
+        const approveLink = order.links?.find(l => l.rel === 'payer-action')?.href
+            || order.links?.find(l => l.rel === 'approve')?.href;
+        if (!approveLink) throw new Error('PayPal no devolvió enlace de aprobación');
+        res.json({ orderID: order.id, approveLink });
+    } catch (error) {
+        console.error('PayPal create error:', error.message);
+        res.status(500).json({ error: 'Error creando orden PayPal: ' + error.message });
+    }
+};
+
+const capturePayPalOrder = async (req, res) => {
+    const { orderID, plan } = req.body;
+    try {
+        const capture = await captureOrder(orderID);
+        if (capture.status === 'COMPLETED') {
+            const user = await prisma.user.update({
+                where: { id: req.user.id },
+                data: { plan }
+            });
+            const { password: _, ...userWithoutPassword } = user;
+            res.json({ success: true, user: userWithoutPassword });
+        } else {
+            res.status(400).json({ error: `Pago en estado: ${capture.status}` });
+        }
+    } catch (error) {
+        console.error('PayPal capture error:', error.message);
+        res.status(500).json({ error: 'Error capturando pago PayPal: ' + error.message });
+    }
+};
+
+const paypalReturn = (req, res) => {
+    const { token, PayerID } = req.query;
+    res.redirect(`nexus-fitness://paypal?token=${token}&PayerID=${PayerID}`);
+};
+
+const paypalCancel = (req, res) => {
+    res.redirect(`nexus-fitness://paypal?cancelled=true`);
+};
+
+module.exports = { processPayPal, processStripe, createPaymentIntent, createPayPalOrder, capturePayPalOrder, paypalReturn, paypalCancel };
