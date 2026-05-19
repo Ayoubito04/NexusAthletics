@@ -114,10 +114,8 @@ async function startServer() {
                 CONSTRAINT "MuscleStrength_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
             );
         `);
-        await prisma.$executeRawUnsafe(`
-            ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "exerciseData" JSONB;
-            ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "isPR" BOOLEAN NOT NULL DEFAULT false;
-        `);
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "exerciseData" JSONB`);
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "isPR" BOOLEAN NOT NULL DEFAULT false`);
         console.log('✅ Tablas WorkoutSession, MuscleStrength verificadas y Post actualizado');
     } catch (e) {
         console.error('⚠️ Auto-migrate warning:', e.message);
