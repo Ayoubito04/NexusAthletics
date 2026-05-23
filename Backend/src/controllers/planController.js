@@ -68,6 +68,7 @@ const generatePlanInteractive = async (req, res) => {
     else if (durMMatch) duracionMin = parseInt(durMMatch[1]);
     // Ejercicios por sesión según duración — responseMimeType garantiza JSON válido
     const maxEjercicios = duracionMin >= 120 ? 6 : duracionMin >= 90 ? 5 : 4;
+    const maxEjerciciosU = duracionMin >= 120 ? 10 : duracionMin >= 90 ? 8 : 6;
     try {
         let user = await prisma.user.findUnique({
             where: { id: req.user.id },
@@ -102,89 +103,56 @@ const generatePlanInteractive = async (req, res) => {
         let systemPrompt;
 
         if (user.plan === 'Ultimate') {
-            // ── Ultimate: mesociclo completo con datos reales ──
+            // ── Ultimate: formato Pro + rir/pesoSugerido/analisis ──
             const fuerzaCtx = user.muscleStrengths.length > 0
                 ? user.muscleStrengths.map(m =>
-                    `${m.muscle}: 1RM=${m.bestOneRM}kg, Volumen=${Math.round(m.totalVolume)}kg, Sesiones=${m.sessions}`
+                    `${m.muscle}: 1RM=${m.bestOneRM}kg`
                   ).join(' | ')
-                : 'Sin datos de fuerza registrados todavía';
-
-            const volReciente = user.workoutSessions.slice(0, 5)
-                .map(s => `${new Date(s.date).toLocaleDateString('es-ES')}: ${Math.round(s.totalVolume)}kg, ${s.duration || '?'}min`)
-                .join(' | ') || 'Sin sesiones recientes';
+                : 'Sin datos de fuerza';
 
             const sorted = [...user.muscleStrengths].sort((a, b) => b.bestOneRM - a.bestOneRM);
-            const masFlojo = sorted.at(-1)?.muscle || 'desconocido';
-            const masFuerte = sorted[0]?.muscle || 'desconocido';
+            const masFlojo = sorted.at(-1)?.muscle || 'ninguno';
+            const masFuerte = sorted[0]?.muscle || 'ninguno';
 
-            systemPrompt = `Eres el sistema de generación de planes más avanzado del mundo. RESPONDE SOLO CON JSON VÁLIDO. SIN TEXTO ADICIONAL.
+            systemPrompt = `Eres un motor de planes élite. RESPONDE SOLO CON JSON VÁLIDO Y COMPACTO. SIN TEXTO EXTRA.
 
-=== PERFIL DEL ATLETA ===
-Nombre: ${user.nombre} | Edad: ${user.edad || '?'} | Peso: ${user.peso || '?'}kg | Altura: ${user.altura || '?'}cm
-Objetivo: ${user.objetivo || '?'} | Nivel: ${user.nivelActividad || '?'}
+ATLETA: ${user.nombre} | ${user.edad || '?'}a | ${user.peso || '?'}kg | ${user.altura || '?'}cm | ${user.objetivo || '?'} | ${user.nivelActividad || '?'}
 Sueño: ${horasSueno || '7-8h'} | Estrés: ${nivelEstres || 'Moderado'} | Lesiones: ${lesiones || 'Ninguna'}
-
-=== DATOS REALES DE FUERZA ===
-${fuerzaCtx}
-Músculo más fuerte: ${masFuerte} | Más débil: ${masFlojo}
-
-=== HISTORIAL RECIENTE ===
-${volReciente}
-
-=== CONFIGURACIÓN ===
+Fuerza: ${fuerzaCtx} | Más fuerte: ${masFuerte} | Más débil: ${masFlojo}
 Solicitud: ${details}
-Duración: ${semanas} semanas | Periodización: ${periodi || 'DUP'} | Técnicas: ${tecnicas.length > 0 ? tecnicas.join(', ') : 'las más apropiadas'}
+Periodización: ${periodi || 'DUP'} | Técnicas: ${tecnicas.length > 0 ? tecnicas.join(', ') : 'apropiadas'}
 
-=== JSON REQUERIDO ===
+JSON REQUERIDO (textos MUY CORTOS, máximo 12 palabras por campo de texto):
 {
-  "esUltimate": true,
   "resumen": {
-    "objetivo": "título",
-    "estrategia": "enfoque científico 1-2 frases",
-    "duracion": "${semanas} semanas",
-    "frecuencia": "X días/semana",
-    "macros": { "Proteina": "Xg", "Carbos": "Xg", "Grasas": "Xg", "Calorias": "Xkcal" },
-    "nutricionTiming": { "preWorkout": "...", "postWorkout": "...", "antesDormir": "..." }
+    "objetivo": "3-5 palabras",
+    "estrategia": "1 frase corta",
+    "macros": { "Proteina": "Xg", "Carbos": "Xg", "Grasas": "Xg", "Calorias": "Xkcal" }
   },
   "analisis": {
-    "puntosFuertes": ["basado en datos reales"],
-    "puntosMejora": ["basado en datos reales"],
-    "ajustes": "cómo el plan corrige desequilibrios"
+    "puntosFuertes": ["max 2 items, 4 palabras cada uno"],
+    "puntosMejora": ["max 2 items, 4 palabras cada uno"],
+    "ajustes": "1 frase corta"
   },
-  "semanas": [
+  "dias": [
     {
-      "semana": 1, "tipo": "Acumulación", "rpe": "7", "rir": "3",
-      "dias": [
-        {
-          "dia": 1, "titulo": "nombre",
-          "ejercicios": [
-            { "nombre": "...", "series": "4", "reps": "10-12", "rir": "2", "pesoSugerido": "Xkg", "imgKey": "press_banca" }
-          ]
-        }
+      "dia": 1, "titulo": "nombre corto",
+      "ejercicios": [
+        { "nombre": "Ejercicio", "series": "4", "reps": "10-12", "rir": "2", "pesoSugerido": "Xkg", "imgKey": "press_banca" }
       ]
     }
   ],
-  "suplementacion": [{ "nombre": "...", "dosis": "Xg", "timing": "...", "motivo": "..." }]
+  "suplementacion": [{ "nombre": "...", "dosis": "Xg", "timing": "post-entreno" }]
 }
 
-REGLAS CRÍTICAS:
-- El array "dias" de CADA semana debe tener EXACTAMENTE ${diasSemana} objetos (días de entrenamiento).
-- Genera EXACTAMENTE ${maxEjercicios} ejercicios por día (ajustado a la duración: 30-45min→4, 60min→5, 90min→7, 2h→9). JSON compacto, sin calentamiento ni vueltaCalma.
-- semana ${semanas} = Deload (vol -40%, intensidad -50%).
-- Usa 70-85% del 1RM según fase.
-imgKey debe ser el MÁS ESPECÍFICO para cada ejercicio. Lista completa:
-PECHO: press_banca, press_inclinado, press_declinado, press_mancuernas, press_inclinado_mdb, aperturas, aperturas_inclinadas, aperturas_cable, fondos, push_up, push_up_diamante, push_up_ancho, pullover
-ESPALDA: peso_muerto, peso_muerto_rumano, peso_muerto_sumo, dominadas, dominadas_supinas, remo, remo_mancuerna, remo_sentado, remo_polea, remo_tbar, jalon, jalon_neutro, face_pull, buenos_dias, encogimientos, encogimientos_mdb, australian_row
-HOMBROS: press_hombros, press_militar, press_arnold, press_sentado, elevaciones_laterales, elevaciones_frontales, vuelo_posterior, elevacion_cable
-BICEPS: curls, curl_barra, curl_martillo, curl_concentrado, curl_predicador, curl_cable, curl_inclinado, curl_martillo_cable
-TRICEPS: extension_triceps, triceps_frances, patada_triceps, fondos_triceps, extension_polea, press_cerrado, extension_mancuerna
-PIERNAS: sentadilla, sentadilla_goblet, sentadilla_bulgara, sentadilla_hack, sentadilla_front, zancadas, zancadas_caminando, zancadas_inversas, prensa, extension_cuadriceps, curl_femoral, curl_sentado, hip_thrust, hip_thrust_mdb, gemelos, gemelos_sentado, step_up, pistol_squat, good_morning
-CORE: pilates_core, plank_lateral, abdominales, crunch_cable, russian_twist, leg_raise, leg_raise_colgado, superman, mountain_climber, dead_bug, rueda_abdominal, pallof_press, bird_dog
-CALISTENIA: muscle_up, fondos_paralelas, pike_push, archer_push, l_sit, dragon_flag, burpees, salto_caja, salto_cuerda, sprint
-CARDIO/FLEX: cardio_burn, yoga_stretch, flex_stretch, yoga_warrior, hip_flexor, foam_roller, estiramiento_isquios, estiramiento_cuadriceps, estiramiento_pecho
-CASA/SIN EQUIPAMIENTO: flexiones, fondos_silla, sentadilla_sin_peso, glute_bridge, triceps_silla, remo_bandas, curl_bandas, press_bandas, jumping_jacks, wall_sit, inchworm, bear_crawl
-
-REGLA ENTRENAMIENTO EN CASA: Si EQUIPAMIENTO contiene "Solo Peso Corporal", "Mancuernas en Casa", "Bandas Elásticas" o "Exterior / Parque", usa EXCLUSIVAMENTE ejercicios sin máquinas (evita: press_banca, prensa, extension_cuadriceps con máquina, curl_femoral máquina, jalon, cable, etc). Prioriza imgKeys de CALISTENIA y CASA/SIN EQUIPAMIENTO. Si hay mancuernas disponibles puedes añadir curls, press_mancuernas, remo_mancuerna, elevaciones_laterales, sentadilla_goblet, hip_thrust_mdb.`;
+REGLAS:
+- "dias" debe tener EXACTAMENTE ${diasSemana} objetos.
+- Exactamente ${maxEjerciciosU} ejercicios por día, todos con rir y pesoSugerido.
+- Usa 70-85% del 1RM real para pesoSugerido. Si no hay datos, estima según nivel/peso.
+- Máximo 3 items en suplementacion. Sin campo "motivo".
+- TEXTOS CORTOS: objetivo≤5 palabras, estrategia≤12 palabras, titulo≤4 palabras.
+- imgKey opciones: press_banca, press_inclinado, press_declinado, press_mancuernas, aperturas, fondos, push_up, push_up_diamante, pullover, peso_muerto, peso_muerto_rumano, dominadas, remo, remo_mancuerna, remo_sentado, jalon, face_pull, buenos_dias, encogimientos, press_hombros, press_militar, press_arnold, elevaciones_laterales, elevaciones_frontales, vuelo_posterior, curls, curl_barra, curl_martillo, curl_concentrado, curl_predicador, extension_triceps, triceps_frances, patada_triceps, fondos_triceps, press_cerrado, sentadilla, sentadilla_goblet, sentadilla_bulgara, sentadilla_hack, zancadas, zancadas_caminando, prensa, extension_cuadriceps, curl_femoral, hip_thrust, hip_thrust_mdb, gemelos, gemelos_sentado, step_up, abdominales, russian_twist, leg_raise, plank_lateral, mountain_climber, cardio_burn, yoga_stretch, flex_stretch, muscle_up, fondos_paralelas, burpees, salto_caja, flexiones, glute_bridge
+- CASA: si equipamiento sin máquinas, usa solo: flexiones, fondos_silla, sentadilla_sin_peso, glute_bridge, curl_bandas, press_bandas, mountain_climber, burpees, push_up_diamante, pike_push, bear_crawl, salto_cuerda`;
 
         } else {
             // ── Pro: plan semanal estándar ──
