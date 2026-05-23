@@ -22,7 +22,7 @@ const PLAN_STEPS = [
     'Preparando tu plan maestro...',
 ];
 
-const PlanGeneratingScreen = ({ isUltimate }) => {
+const PlanGeneratingScreen = ({ isUltimate, onCancel }) => {
     const [stepIdx, setStepIdx] = useState(0);
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const barAnim = useRef(new Animated.Value(0)).current;
@@ -208,6 +208,22 @@ const PlanGeneratingScreen = ({ isUltimate }) => {
                 ))}
             </View>
 
+            {/* Cancel button */}
+            <TouchableOpacity
+                onPress={onCancel}
+                style={{
+                    position: 'absolute', bottom: 40,
+                    paddingHorizontal: 32, paddingVertical: 12,
+                    borderRadius: 24, borderWidth: 1,
+                    borderColor: '#2a2a2a',
+                    backgroundColor: 'rgba(255,255,255,0.04)',
+                }}
+            >
+                <Text style={{ color: '#444', fontSize: 13, fontWeight: '700', letterSpacing: 1 }}>
+                    CANCELAR
+                </Text>
+            </TouchableOpacity>
+
             {/* Bottom progress bar */}
             <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, backgroundColor: '#111' }}>
                 <Animated.View style={{
@@ -225,6 +241,7 @@ export default function NexusIA() {
     const [user, setUser] = useState(null);
     const [generandoPlan, setGenerandoPlan] = useState(false);
     const [modalOnboarding, setModalOnboarding] = useState(false);
+    const abortControllerRef = useRef(null);
 
     // Plan config
     const [objetivoPlan, setObjetivoPlan] = useState('Ganar Músculo');
@@ -304,6 +321,8 @@ export default function NexusIA() {
             return;
         }
         const token = await AsyncStorage.getItem('token');
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
         setGenerandoPlan(true);
         try {
             const body = isUltimate
@@ -321,6 +340,7 @@ export default function NexusIA() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(body),
+                signal: controller.signal,
             });
 
             if (!response.ok) {
@@ -332,8 +352,14 @@ export default function NexusIA() {
             setGenerandoPlan(false);
             navigation.navigate('ElitePlanScreen', { plan: planData });
         } catch (error) {
+            if (error.name === 'AbortError') {
+                setGenerandoPlan(false);
+                return;
+            }
             showAlert("Error", error.message || "No se pudo generar la presentación interactiva.", "error");
             setGenerandoPlan(false);
+        } finally {
+            abortControllerRef.current = null;
         }
     };
 
@@ -412,8 +438,11 @@ export default function NexusIA() {
 
             {/* Generating overlay */}
             {generandoPlan && (
-                <View style={StyleSheet.absoluteFill}>
-                    <PlanGeneratingScreen isUltimate={isUltimate} />
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: '#050508' }]}>
+                    <PlanGeneratingScreen
+                        isUltimate={isUltimate}
+                        onCancel={() => abortControllerRef.current?.abort()}
+                    />
                 </View>
             )}
 
