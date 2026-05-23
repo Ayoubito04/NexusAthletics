@@ -1,11 +1,16 @@
 const axios = require('axios');
 
-const PAYPAL_API = process.env.NODE_ENV === 'production'
+const PAYPAL_API = process.env.PAYPAL_MODE === 'live'
     ? 'https://api-m.paypal.com'
     : 'https://api-m.sandbox.paypal.com';
 
 const getAccessToken = async () => {
-    const auth = Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_SECRET}`).toString('base64');
+    const clientId = process.env.PAYPAL_CLIENT_ID;
+    const secret = process.env.PAYPAL_SECRET;
+    console.log('[PayPal] Mode:', process.env.PAYPAL_MODE || 'sandbox (default)');
+    console.log('[PayPal] API URL:', PAYPAL_API);
+    console.log('[PayPal] Client ID presente:', !!clientId, '| Secret presente:', !!secret);
+    const auth = Buffer.from(`${clientId}:${secret}`).toString('base64');
     try {
         const response = await axios.post(`${PAYPAL_API}/v1/oauth2/token`, 'grant_type=client_credentials', {
             headers: {
@@ -15,7 +20,7 @@ const getAccessToken = async () => {
         });
         return response.data.access_token;
     } catch (error) {
-        console.error('Error obteniendo PayPal access token:', error.message);
+        console.error('[PayPal] Error auth:', error.response?.status, JSON.stringify(error.response?.data));
         throw error;
     }
 };
