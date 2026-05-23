@@ -390,10 +390,21 @@ const socialLogin = async (req, res) => {
 
 const getMe = async (req, res) => {
     try {
-        const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+        const user = await prisma.user.findUnique({
+            where: { id: req.user.id },
+            include: {
+                _count: {
+                    select: {
+                        sentFriendRequests: { where: { status: 'ACEPTADA' } },
+                        receivedFriendRequests: { where: { status: 'ACEPTADA' } },
+                    }
+                }
+            }
+        });
         if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
-        const { password: _, ...userWithoutPassword } = user;
-        res.json(userWithoutPassword);
+        const { password: _, _count, ...userWithoutPassword } = user;
+        const friendsCount = (_count?.sentFriendRequests || 0) + (_count?.receivedFriendRequests || 0);
+        res.json({ ...userWithoutPassword, friendsCount });
     } catch (error) {
         res.status(500).json({ error: "Error al obtener perfil" });
     }
