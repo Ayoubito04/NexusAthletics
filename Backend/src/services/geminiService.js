@@ -62,7 +62,14 @@ async function tryGeminiForPlans(contents, generationConfig = {}) {
         console.log(`[Nexus Plans] Intentando: ${name} (maxTokens=${tokens})`);
         try {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${name}:generateContent?key=${GEMINI_API_KEY}`;
-            const cfg = { maxOutputTokens: tokens, temperature: 0.7, ...generationConfig };
+            // responseMimeType fuerza JSON válido — si llega al límite de tokens el modelo
+            // cierra el JSON correctamente en vez de truncar a mitad de una cadena
+            const cfg = {
+                maxOutputTokens: tokens,
+                temperature: 0.7,
+                responseMimeType: 'application/json',
+                ...generationConfig
+            };
             const response = await axios.post(url, { contents, generationConfig: cfg }, { timeout: GEMINI_PLAN_TIMEOUT_MS });
             console.log(`[Nexus Plans] ✓ Éxito con ${name}`);
             return response;
