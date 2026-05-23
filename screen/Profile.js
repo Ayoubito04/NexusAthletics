@@ -174,7 +174,7 @@ export default function Profile() {
                         <View style={styles.heroStats}>
                             <TouchableOpacity
                                 style={styles.heroStat}
-                                onPress={() => navigation.navigate('Social')}
+                                onPress={() => navigation.navigate('MainTabs', { screen: 'Comunidad' })}
                             >
                                 <Text style={[styles.heroStatVal, { color: '#63ff15' }]}>{user.friendsCount ?? 0}</Text>
                                 <Text style={styles.heroStatLab}>Amigos</Text>
