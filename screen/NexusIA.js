@@ -242,6 +242,7 @@ export default function NexusIA() {
     const [generandoPlan, setGenerandoPlan] = useState(false);
     const [modalOnboarding, setModalOnboarding] = useState(false);
     const abortControllerRef = useRef(null);
+    const generateAfterOnboardingRef = useRef(false);
 
     // Plan config
     const [objetivoPlan, setObjetivoPlan] = useState('Ganar Músculo');
@@ -283,6 +284,13 @@ export default function NexusIA() {
         AsyncStorage.getItem('user').then(u => { if (u) setUser(JSON.parse(u)); });
     }, []);
 
+    useEffect(() => {
+        if (!modalOnboarding && generateAfterOnboardingRef.current) {
+            generateAfterOnboardingRef.current = false;
+            handleGenerarPlanVisual();
+        }
+    }, [modalOnboarding]);
+
     const profileIsIncomplete = () => !user?.peso || !user?.altura || !user?.edad;
 
     const isUltimate = user?.plan === 'Ultimate';
@@ -303,6 +311,7 @@ export default function NexusIA() {
                 const updated = await res.json();
                 setUser(updated);
                 await AsyncStorage.setItem('user', JSON.stringify(updated));
+                generateAfterOnboardingRef.current = true;
             }
         } catch (_) {}
         setModalOnboarding(false);
