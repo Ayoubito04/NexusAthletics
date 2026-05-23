@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Modal, Animated, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Animated, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -240,9 +240,7 @@ export default function NexusIA() {
 
     const [user, setUser] = useState(null);
     const [generandoPlan, setGenerandoPlan] = useState(false);
-    const [modalOnboarding, setModalOnboarding] = useState(false);
     const abortControllerRef = useRef(null);
-    const generateAfterOnboardingRef = useRef(false);
 
     // Plan config
     const [objetivoPlan, setObjetivoPlan] = useState('Ganar Músculo');
@@ -262,12 +260,6 @@ export default function NexusIA() {
     const [nivelEstres, setNivelEstres] = useState('Moderado');
     const [lesiones, setLesiones] = useState('');
 
-    // Onboarding
-    const [obPeso, setObPeso] = useState('');
-    const [obAltura, setObAltura] = useState('');
-    const [obEdad, setObEdad] = useState('');
-    const [obGenero, setObGenero] = useState('Hombre');
-
     // Alert
     const [alert, setAlert] = useState({ visible: false, title: '', message: '', type: 'info', onConfirm: null, onCancel: null, confirmText: 'OK', cancelText: 'Cancelar' });
 
@@ -284,49 +276,11 @@ export default function NexusIA() {
         AsyncStorage.getItem('user').then(u => { if (u) setUser(JSON.parse(u)); });
     }, []);
 
-    useEffect(() => {
-        if (!modalOnboarding && generateAfterOnboardingRef.current) {
-            generateAfterOnboardingRef.current = false;
-            handleGenerarPlanVisual();
-        }
-    }, [modalOnboarding]);
-
-    const profileIsIncomplete = () => !user?.peso || !user?.altura || !user?.edad;
-
     const isUltimate = user?.plan === 'Ultimate';
-
-    const handleSaveOnboarding = async () => {
-        if (!obPeso || !obAltura || !obEdad) {
-            showAlert("Faltan datos", "Por favor rellena todos los campos.", "error");
-            return;
-        }
-        try {
-            const token = await AsyncStorage.getItem('token');
-            const res = await fetch(`${BACKEND_URL}/user/profile`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ peso: parseFloat(obPeso), altura: parseFloat(obAltura), edad: parseInt(obEdad), genero: obGenero }),
-            });
-            if (res.ok) {
-                const updated = await res.json();
-                setUser(updated);
-                await AsyncStorage.setItem('user', JSON.stringify(updated));
-                generateAfterOnboardingRef.current = true;
-            }
-        } catch (_) {}
-        setModalOnboarding(false);
-    };
 
     const handleGenerarPlanVisual = async () => {
         if (!user || user.plan === 'Gratis') {
             showAlert("Mejora tu plan", "La generación de planes Élite es exclusiva para usuarios Pro y Ultimate.", "info", () => navigation.navigate('PlanesPago'));
-            return;
-        }
-        if (profileIsIncomplete()) {
-            setObPeso(user?.peso?.toString() || '');
-            setObAltura(user?.altura?.toString() || '');
-            setObEdad(user?.edad?.toString() || '');
-            setModalOnboarding(true);
             return;
         }
         const token = await AsyncStorage.getItem('token');
@@ -375,13 +329,6 @@ export default function NexusIA() {
     const descargarRutinaPDF = async () => {
         if (!user || user.plan === 'Gratis') {
             showAlert("Mejora tu plan", "La generación de rutinas en PDF es exclusiva para usuarios Pro y Ultimate.", "info", () => navigation.navigate('PlanesPago'));
-            return;
-        }
-        if (profileIsIncomplete()) {
-            setObPeso(user?.peso?.toString() || '');
-            setObAltura(user?.altura?.toString() || '');
-            setObEdad(user?.edad?.toString() || '');
-            setModalOnboarding(true);
             return;
         }
         const token = await AsyncStorage.getItem('token');
@@ -680,46 +627,6 @@ export default function NexusIA() {
 
                 <View style={{ height: 60 }} />
             </ScrollView>
-
-            {/* Onboarding Modal */}
-            <Modal animationType="slide" transparent visible={modalOnboarding} onRequestClose={() => setModalOnboarding(false)}>
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-                    <View style={styles.modalOverlay}>
-                        <View style={[styles.modalContent, { maxHeight: '85%' }]}>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                                <Text style={styles.modalTitle}>Cuéntame sobre ti</Text>
-                                <TouchableOpacity onPress={() => setModalOnboarding(false)}>
-                                    <Ionicons name="close" size={28} color="white" />
-                                </TouchableOpacity>
-                            </View>
-                            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 20 }}>
-                                <Text style={{ color: '#888', fontSize: 13, marginBottom: 20, lineHeight: 20 }}>
-                                    Necesito conocerte un poco mejor para personalizar tu plan al máximo. Solo tarda 10 segundos.
-                                </Text>
-                                <Text style={styles.labelPlan}>Tu peso (kg)</Text>
-                                <TextInput style={styles.input} value={obPeso} onChangeText={setObPeso} placeholder="Ej: 75" placeholderTextColor="#444" keyboardType="numeric" />
-                                <Text style={styles.labelPlan}>Tu altura (cm)</Text>
-                                <TextInput style={styles.input} value={obAltura} onChangeText={setObAltura} placeholder="Ej: 178" placeholderTextColor="#444" keyboardType="numeric" />
-                                <Text style={styles.labelPlan}>Tu edad</Text>
-                                <TextInput style={styles.input} value={obEdad} onChangeText={setObEdad} placeholder="Ej: 25" placeholderTextColor="#444" keyboardType="numeric" />
-                                <Text style={styles.labelPlan}>Sexo</Text>
-                                <View style={styles.optionsGrid}>
-                                    {['Hombre', 'Mujer', 'Otro'].map(g => (
-                                        <TouchableOpacity key={g} style={[styles.optBtn, obGenero === g && styles.optBtnSelected]} onPress={() => setObGenero(g)}>
-                                            <Text style={[styles.optText, obGenero === g && styles.optTextSelected]}>{g}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                                <TouchableOpacity onPress={handleSaveOnboarding} style={{ marginTop: 24, borderRadius: 16, overflow: 'hidden' }}>
-                                    <LinearGradient colors={['#63ff15', '#4ad912']} style={{ padding: 18, alignItems: 'center' }}>
-                                        <Text style={{ color: '#000', fontWeight: '900', fontSize: 15, letterSpacing: 1 }}>CONTINUAR AL PLAN</Text>
-                                    </LinearGradient>
-                                </TouchableOpacity>
-                            </ScrollView>
-                        </View>
-                    </View>
-                </KeyboardAvoidingView>
-            </Modal>
 
             <NexusAlert
                 visible={alert.visible}
