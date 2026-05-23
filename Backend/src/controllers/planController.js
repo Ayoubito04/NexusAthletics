@@ -138,17 +138,24 @@ JSON REQUERIDO (textos MUY CORTOS, máximo 12 palabras por campo de texto):
     {
       "dia": 1, "titulo": "nombre corto",
       "ejercicios": [
-        { "nombre": "Ejercicio", "series": "4", "reps": "10-12", "rir": "2", "pesoSugerido": "Xkg", "imgKey": "press_banca" }
+        { "nombre": "Ejercicio", "series": "4", "reps": "10-12", "rir": "2", "tempo": "3-1-2", "pesoSugerido": "Xkg", "imgKey": "press_banca" }
       ]
     }
+  ],
+  "progresion": [
+    { "semana": 2, "nota": "max 12 palabras" },
+    { "semana": 3, "nota": "max 12 palabras" },
+    { "semana": 4, "nota": "Deload: reduce volumen 30%, mantén intensidad" }
   ],
   "suplementacion": [{ "nombre": "...", "dosis": "Xg", "timing": "post-entreno" }]
 }
 
 REGLAS:
 - "dias" debe tener EXACTAMENTE ${diasSemana} objetos.
-- Exactamente ${maxEjerciciosU} ejercicios por día, todos con rir y pesoSugerido.
+- Exactamente ${maxEjerciciosU} ejercicios por día, todos con rir, tempo y pesoSugerido.
 - Usa 70-85% del 1RM real para pesoSugerido. Si no hay datos, estima según nivel/peso.
+- tempo formato "X-Y-Z": X=excéntrica(s), Y=pausa(s), Z=concéntrica(s). Ej: "3-1-2", "4-0-1". Para explosivos: "1-0-X".
+- progresion SIEMPRE 3 items (semanas 2, 3 y 4). Semana 4 siempre deload. Cada nota máx 12 palabras.
 - Máximo 3 items en suplementacion. Sin campo "motivo".
 - TEXTOS CORTOS: objetivo≤5 palabras, estrategia≤12 palabras, titulo≤4 palabras.
 - imgKey opciones: press_banca, press_inclinado, press_declinado, press_mancuernas, aperturas, fondos, push_up, push_up_diamante, pullover, peso_muerto, peso_muerto_rumano, dominadas, remo, remo_mancuerna, remo_sentado, jalon, face_pull, buenos_dias, encogimientos, press_hombros, press_militar, press_arnold, elevaciones_laterales, elevaciones_frontales, vuelo_posterior, curls, curl_barra, curl_martillo, curl_concentrado, curl_predicador, extension_triceps, triceps_frances, patada_triceps, fondos_triceps, press_cerrado, sentadilla, sentadilla_goblet, sentadilla_bulgara, sentadilla_hack, zancadas, zancadas_caminando, prensa, extension_cuadriceps, curl_femoral, hip_thrust, hip_thrust_mdb, gemelos, gemelos_sentado, step_up, abdominales, russian_twist, leg_raise, plank_lateral, mountain_climber, cardio_burn, yoga_stretch, flex_stretch, muscle_up, fondos_paralelas, burpees, salto_caja, flexiones, glute_bridge
