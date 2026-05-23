@@ -24,158 +24,198 @@ const PLAN_STEPS = [
 
 const PlanGeneratingScreen = ({ isUltimate }) => {
     const [stepIdx, setStepIdx] = useState(0);
-    const fadeAnim = useRef(new Animated.Value(1)).current;
+    const fadeAnim = useRef(new Animated.Value(0)).current;
     const barAnim = useRef(new Animated.Value(0)).current;
-    const pulse1 = useRef(new Animated.Value(1)).current;
-    const pulse2 = useRef(new Animated.Value(1)).current;
-    const pulse3 = useRef(new Animated.Value(1)).current;
-    const glowAnim = useRef(new Animated.Value(0.4)).current;
     const rotateAnim = useRef(new Animated.Value(0)).current;
+    const rotateAnim2 = useRef(new Animated.Value(0)).current;
+    const glowAnim = useRef(new Animated.Value(0.4)).current;
+    const scaleAnim = useRef(new Animated.Value(0.96)).current;
+    const mountAnim = useRef(new Animated.Value(0)).current;
 
     const color = isUltimate ? '#FFD700' : '#63ff15';
 
     useEffect(() => {
+        // Mount fade-in
+        Animated.timing(mountAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+        Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+
+        // Progress bar (linear, not looped)
         Animated.timing(barAnim, {
-            toValue: 1,
-            duration: PLAN_STEPS.length * 4000,
-            useNativeDriver: false,
+            toValue: 1, duration: PLAN_STEPS.length * 4000, useNativeDriver: false,
         }).start();
 
+        // Step cycling
         const interval = setInterval(() => {
             Animated.sequence([
-                Animated.timing(fadeAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
-                Animated.timing(fadeAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+                Animated.timing(fadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+                Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
             ]).start();
             setStepIdx(i => (i + 1) % PLAN_STEPS.length);
         }, 3500);
 
-        const createPulse = (anim, delay) => {
-            Animated.loop(
-                Animated.sequence([
-                    Animated.delay(delay),
-                    Animated.timing(anim, { toValue: 1.4, duration: 1200, useNativeDriver: true }),
-                    Animated.timing(anim, { toValue: 1, duration: 1200, useNativeDriver: true }),
-                ])
-            ).start();
-        };
-        createPulse(pulse1, 0);
-        createPulse(pulse2, 400);
-        createPulse(pulse3, 800);
+        // Fast rotating arc
+        Animated.loop(
+            Animated.timing(rotateAnim, { toValue: 1, duration: 1600, useNativeDriver: true })
+        ).start();
 
+        // Slow counter-rotating arc
+        Animated.loop(
+            Animated.timing(rotateAnim2, { toValue: 1, duration: 4000, useNativeDriver: true })
+        ).start();
+
+        // Inner glow breathe
         Animated.loop(
             Animated.sequence([
-                Animated.timing(glowAnim, { toValue: 1, duration: 1000, useNativeDriver: false }),
-                Animated.timing(glowAnim, { toValue: 0.3, duration: 1000, useNativeDriver: false }),
+                Animated.timing(glowAnim, { toValue: 1, duration: 1400, useNativeDriver: false }),
+                Animated.timing(glowAnim, { toValue: 0.25, duration: 1400, useNativeDriver: false }),
             ])
         ).start();
 
+        // Subtle scale breathe for bg glow
         Animated.loop(
-            Animated.timing(rotateAnim, { toValue: 1, duration: 4000, useNativeDriver: true })
+            Animated.sequence([
+                Animated.timing(scaleAnim, { toValue: 1.05, duration: 2200, useNativeDriver: true }),
+                Animated.timing(scaleAnim, { toValue: 0.96, duration: 2200, useNativeDriver: true }),
+            ])
         ).start();
 
         return () => clearInterval(interval);
     }, []);
 
     const barWidth = barAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
-    const rotate = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+    const rotate1 = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+    const rotate2 = rotateAnim2.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-360deg'] });
+    const percent = Math.round((stepIdx / PLAN_STEPS.length) * 100);
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#050508', alignItems: 'center', justifyContent: 'center' }}>
-            {/* Corner decorations */}
-            <View style={{ position: 'absolute', top: 48, left: 24, width: 28, height: 28, borderTopWidth: 2, borderLeftWidth: 2, borderColor: color, opacity: 0.5 }} />
-            <View style={{ position: 'absolute', top: 48, right: 24, width: 28, height: 28, borderTopWidth: 2, borderRightWidth: 2, borderColor: color, opacity: 0.5 }} />
-            <View style={{ position: 'absolute', bottom: 56, left: 24, width: 28, height: 28, borderBottomWidth: 2, borderLeftWidth: 2, borderColor: color, opacity: 0.5 }} />
-            <View style={{ position: 'absolute', bottom: 56, right: 24, width: 28, height: 28, borderBottomWidth: 2, borderRightWidth: 2, borderColor: color, opacity: 0.5 }} />
+        <Animated.View style={{ flex: 1, backgroundColor: '#050508', alignItems: 'center', justifyContent: 'center', opacity: mountAnim }}>
 
-            {/* Central rings + icon */}
-            <View style={{ alignItems: 'center', justifyContent: 'center', width: 200, height: 200, marginBottom: 44 }}>
-                <Animated.View style={{
-                    position: 'absolute', width: 180, height: 180, borderRadius: 90,
-                    borderWidth: 1.5, borderColor: color,
-                    opacity: pulse1.interpolate({ inputRange: [1, 1.4], outputRange: [0.35, 0] }),
-                    transform: [{ scale: pulse1 }],
-                }} />
-                <Animated.View style={{
-                    position: 'absolute', width: 148, height: 148, borderRadius: 74,
-                    borderWidth: 1, borderColor: color,
-                    opacity: pulse2.interpolate({ inputRange: [1, 1.4], outputRange: [0.45, 0] }),
-                    transform: [{ scale: pulse2 }],
-                }} />
-                <Animated.View style={{
-                    position: 'absolute', width: 116, height: 116, borderRadius: 58,
-                    borderWidth: 1, borderColor: color,
-                    opacity: pulse3.interpolate({ inputRange: [1, 1.4], outputRange: [0.55, 0] }),
-                    transform: [{ scale: pulse3 }],
-                }} />
+            {/* Radial background glow */}
+            <Animated.View style={{
+                position: 'absolute',
+                width: 380, height: 380, borderRadius: 190,
+                backgroundColor: `${color}07`,
+                transform: [{ scale: scaleAnim }],
+            }} />
 
-                {/* Rotating dashed ring */}
-                <Animated.View style={{
-                    position: 'absolute', width: 100, height: 100, borderRadius: 50,
-                    borderWidth: 2, borderColor: color,
-                    borderStyle: 'dashed',
-                    transform: [{ rotate }],
+            {/* Top label */}
+            <Text style={{ position: 'absolute', top: 58, color: '#1e1e1e', fontSize: 10, fontWeight: '900', letterSpacing: 5 }}>
+                NEXUS ATHLETICS
+            </Text>
+
+            {/* Corner brackets */}
+            <View style={{ position: 'absolute', top: 44, left: 20, width: 22, height: 22, borderTopWidth: 1.5, borderLeftWidth: 1.5, borderColor: `${color}50` }} />
+            <View style={{ position: 'absolute', top: 44, right: 20, width: 22, height: 22, borderTopWidth: 1.5, borderRightWidth: 1.5, borderColor: `${color}50` }} />
+            <View style={{ position: 'absolute', bottom: 24, left: 20, width: 22, height: 22, borderBottomWidth: 1.5, borderLeftWidth: 1.5, borderColor: `${color}50` }} />
+            <View style={{ position: 'absolute', bottom: 24, right: 20, width: 22, height: 22, borderBottomWidth: 1.5, borderRightWidth: 1.5, borderColor: `${color}50` }} />
+
+            {/* Circular spinner */}
+            <View style={{ width: 230, height: 230, alignItems: 'center', justifyContent: 'center', marginBottom: 40 }}>
+
+                {/* Static track ring */}
+                <View style={{
+                    position: 'absolute', width: 210, height: 210, borderRadius: 105,
+                    borderWidth: 1, borderColor: '#141414',
                 }} />
 
-                {/* Icon with glow */}
+                {/* Fast arc — 3/4 circle */}
                 <Animated.View style={{
-                    width: 76, height: 76, borderRadius: 38,
-                    backgroundColor: `${color}12`,
-                    borderWidth: 2, borderColor: color,
+                    position: 'absolute', width: 210, height: 210, borderRadius: 105,
+                    borderWidth: 2.5,
+                    borderTopColor: color,
+                    borderRightColor: color,
+                    borderBottomColor: `${color}30`,
+                    borderLeftColor: 'transparent',
+                    transform: [{ rotate: rotate1 }],
+                    shadowColor: color, shadowOpacity: 0.6, shadowRadius: 8,
+                }} />
+
+                {/* Slow counter arc — thin accent */}
+                <Animated.View style={{
+                    position: 'absolute', width: 188, height: 188, borderRadius: 94,
+                    borderWidth: 1,
+                    borderTopColor: 'transparent',
+                    borderRightColor: `${color}50`,
+                    borderBottomColor: `${color}50`,
+                    borderLeftColor: 'transparent',
+                    transform: [{ rotate: rotate2 }],
+                }} />
+
+                {/* Inner circle with percentage */}
+                <Animated.View style={{
+                    width: 158, height: 158, borderRadius: 79,
+                    backgroundColor: '#080810',
+                    borderWidth: 1, borderColor: `${color}18`,
                     alignItems: 'center', justifyContent: 'center',
                     shadowColor: color,
                     shadowOpacity: glowAnim,
-                    shadowRadius: 24,
-                    elevation: 12,
+                    shadowRadius: 22,
                 }}>
-                    <Ionicons name={isUltimate ? 'trophy' : 'sparkles'} size={32} color={color} />
+                    <Text style={{
+                        color,
+                        fontSize: 52,
+                        fontWeight: '900',
+                        lineHeight: 56,
+                        textShadowColor: color,
+                        textShadowOffset: { width: 0, height: 0 },
+                        textShadowRadius: 10,
+                    }}>{percent}</Text>
+                    <Text style={{ color: '#333', fontSize: 11, fontWeight: '800', letterSpacing: 2 }}>%</Text>
                 </Animated.View>
             </View>
 
-            {/* Title */}
-            <Text style={{
-                color,
-                fontSize: 18,
-                fontWeight: '900',
-                letterSpacing: 2,
-                textAlign: 'center',
-                textShadowColor: color,
-                textShadowOffset: { width: 0, height: 0 },
-                textShadowRadius: 14,
-                marginBottom: 6,
-                paddingHorizontal: 24,
-            }}>
-                {isUltimate ? '👑 GENERANDO MESOCICLO ULTIMATE' : '⚡ GENERANDO PLAN ÉLITE'}
-            </Text>
+            {/* Title block */}
+            <View style={{ alignItems: 'center', marginBottom: 14 }}>
+                <Text style={{ color: '#444', fontSize: 10, fontWeight: '900', letterSpacing: 3, marginBottom: 6 }}>
+                    {isUltimate ? 'GENERANDO' : 'CREANDO'}
+                </Text>
+                <Text style={{
+                    color,
+                    fontSize: 19,
+                    fontWeight: '900',
+                    letterSpacing: 1.5,
+                    textShadowColor: color,
+                    textShadowOffset: { width: 0, height: 0 },
+                    textShadowRadius: 8,
+                }}>
+                    {isUltimate ? '👑 MESOCICLO ULTIMATE' : '⚡ PLAN ÉLITE PRO'}
+                </Text>
+            </View>
 
-            {/* Step counter */}
-            <Text style={{ color: '#444', fontSize: 11, letterSpacing: 2, marginBottom: 28, fontWeight: '700' }}>
-                {stepIdx + 1} / {PLAN_STEPS.length}
-            </Text>
-
-            {/* Animated step text */}
+            {/* Step text */}
             <Animated.Text style={{
-                color: '#777',
-                fontSize: 14,
+                color: '#555',
+                fontSize: 13,
                 textAlign: 'center',
                 opacity: fadeAnim,
-                paddingHorizontal: 48,
-                lineHeight: 22,
+                paddingHorizontal: 52,
+                lineHeight: 21,
                 fontWeight: '500',
+                marginBottom: 24,
             }}>
                 {PLAN_STEPS[stepIdx]}
             </Animated.Text>
 
+            {/* Step dots */}
+            <View style={{ flexDirection: 'row', gap: 5 }}>
+                {PLAN_STEPS.map((_, i) => (
+                    <View key={i} style={{
+                        width: i === stepIdx ? 18 : 5,
+                        height: 5,
+                        borderRadius: 2.5,
+                        backgroundColor: i === stepIdx ? color : '#1e1e1e',
+                    }} />
+                ))}
+            </View>
+
             {/* Bottom progress bar */}
-            <View style={{
-                position: 'absolute', bottom: 0, left: 0, right: 0,
-                height: 3, backgroundColor: '#111',
-            }}>
+            <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, backgroundColor: '#111' }}>
                 <Animated.View style={{
-                    height: 3, backgroundColor: color, width: barWidth,
-                    shadowColor: color, shadowOpacity: 0.9, shadowRadius: 6,
+                    height: 2, backgroundColor: color, width: barWidth,
+                    shadowColor: color, shadowOpacity: 1, shadowRadius: 6,
                 }} />
             </View>
-        </View>
+        </Animated.View>
     );
 };
 
@@ -199,7 +239,7 @@ export default function NexusIA() {
     // Ultimate exclusive
     const [periodi, setPeriodi] = useState('Lineal (Clásica)');
     const [tecnicas, setTecnicas] = useState([]);
-    const [semanasMeso, setSemanasMeso] = useState('8');
+    const [semanasMeso] = useState('4');
     const [horasSueno, setHorasSueno] = useState('7-8h');
     const [nivelEstres, setNivelEstres] = useState('Moderado');
     const [lesiones, setLesiones] = useState('');
@@ -555,15 +595,6 @@ export default function NexusIA() {
                             {['Drop Sets', 'Rest-Pause', 'Superseries', 'Series Gigantes', 'Preagotamiento', 'Cluster Sets', 'Myo-Reps', 'Pausa Isométrica'].map(opt => (
                                 <TouchableOpacity key={opt} style={[styles.optBtn, tecnicas.includes(opt) && styles.optBtnSelected]} onPress={() => setTecnicas(prev => prev.includes(opt) ? prev.filter(t => t !== opt) : [...prev, opt])}>
                                     <Text style={[styles.optText, tecnicas.includes(opt) && styles.optTextSelected]}>{opt}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-
-                        <Text style={styles.labelPlan}>Duración del Mesociclo</Text>
-                        <View style={styles.optionsGrid}>
-                            {['4', '6', '8', '12'].map(opt => (
-                                <TouchableOpacity key={opt} style={[styles.optBtn, semanasMeso === opt && styles.optBtnSelected]} onPress={() => setSemanasMeso(opt)}>
-                                    <Text style={[styles.optText, semanasMeso === opt && styles.optTextSelected]}>{opt} semanas</Text>
                                 </TouchableOpacity>
                             ))}
                         </View>
