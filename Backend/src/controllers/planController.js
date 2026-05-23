@@ -66,9 +66,8 @@ const generatePlanInteractive = async (req, res) => {
     let duracionMin = 60;
     if (durHMatch) duracionMin = Math.round(parseFloat(durHMatch[1].replace(',', '.')) * 60);
     else if (durMMatch) duracionMin = parseInt(durMMatch[1]);
-    // Cap de ejercicios: tope por duración × tope por presupuesto JSON (96 ejerc. máx. totales)
-    const baseEj = duracionMin >= 120 ? 6 : duracionMin >= 90 ? 5 : 4;
-    const maxEjercicios = Math.min(baseEj, Math.max(4, Math.floor(96 / (diasSemana * semanasNum))));
+    // Ejercicios por sesión según duración — responseMimeType garantiza JSON válido
+    const maxEjercicios = duracionMin >= 120 ? 6 : duracionMin >= 90 ? 5 : 4;
     try {
         let user = await prisma.user.findUnique({
             where: { id: req.user.id },
@@ -381,8 +380,7 @@ const generateUltimatePlan = async (req, res) => {
     if (durHMatchU) duracionMinU = Math.round(parseFloat(durHMatchU[1].replace(',', '.')) * 60);
     else if (durMMatchU) duracionMinU = parseInt(durMMatchU[1]);
     const semanasPlanU = parseInt(semanas) || 4;
-    const baseU = duracionMinU >= 120 ? 6 : duracionMinU >= 90 ? 5 : 4;
-    const maxEjerciciosU = Math.min(baseU, Math.max(4, Math.floor(96 / (diasSemana * semanasPlanU))));
+    const maxEjerciciosU = duracionMinU >= 120 ? 6 : duracionMinU >= 90 ? 5 : 4;
     try {
         const user = await prisma.user.findUnique({
             where: { id: req.user.id },
