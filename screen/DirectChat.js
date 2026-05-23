@@ -1,58 +1,135 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Image } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+    StyleSheet, Text, View, FlatList, TextInput, TouchableOpacity,
+    KeyboardAvoidingView, Platform, ActivityIndicator, Image, Animated, Dimensions
+} from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Config from '../constants/Config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient';
 
 const BACKEND_URL = Config.BACKEND_URL;
+const { width } = Dimensions.get('window');
 
+// ─── Bubble ──────────────────────────────────────────────────────────────────
+const Bubble = ({ item, isMine, showTail }) => {
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(isMine ? 16 : -16)).current;
+
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
+            Animated.spring(slideAnim, { toValue: 0, tension: 90, friction: 10, useNativeDriver: true }),
+        ]).start();
+    }, []);
+
+    const isPending = item._pending;
+
+    return (
+        <Animated.View style={[
+            styles.bubbleWrap,
+            isMine ? styles.bubbleWrapMine : styles.bubbleWrapTheir,
+            { opacity: fadeAnim, transform: [{ translateX: slideAnim }] }
+        ]}>
+            {isMine ? (
+                <LinearGradient
+                    colors={isPending ? ['#4acc10aa', '#3aaa09aa'] : ['#63ff15', '#4acc10']}
+                    style={[styles.bubble, styles.bubbleMine, showTail && styles.bubbleMineWithTail]}
+                >
+                    {item.image ? <Image source={{ uri: item.image }} style={styles.msgImage} /> : null}
+                    {item.text ? <Text style={styles.textMine}>{item.text}</Text> : null}
+                    <View style={styles.timeRow}>
+                        <Text style={styles.timeMine}>
+                            {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                        <Ionicons
+                            name={isPending ? 'time-outline' : 'checkmark-done'}
+                            size={11}
+                            color={isPending ? '#1a1a1a' : '#1a6600'}
+                        />
+                    </View>
+                </LinearGradient>
+            ) : (
+                <View style={[styles.bubble, styles.bubbleTheir, showTail && styles.bubbleTheirWithTail]}>
+                    {item.image ? <Image source={{ uri: item.image }} style={styles.msgImage} /> : null}
+                    {item.text ? <Text style={styles.textTheir}>{item.text}</Text> : null}
+                    <Text style={styles.timeTheir}>
+                        {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                </View>
+            )}
+        </Animated.View>
+    );
+};
+
+// ─── Date separator ──────────────────────────────────────────────────────────
+const DateSep = ({ label }) => (
+    <View style={styles.dateSepRow}>
+        <View style={styles.dateSepLine} />
+        <Text style={styles.dateSepText}>{label}</Text>
+        <View style={styles.dateSepLine} />
+    </View>
+);
+
+// ─── Main screen ─────────────────────────────────────────────────────────────
 export default function DirectChat() {
     const navigation = useNavigation();
     const route = useRoute();
-    const { friendId, friendName } = route.params;
+    const { friendId, friendName, friendAvatar } = route.params;
 
     const [messages, setMessages] = useState([]);
     const [inputText, setInputText] = useState('');
     const [loading, setLoading] = useState(true);
     const [currentUserId, setCurrentUserId] = useState(null);
-    const [sending, setSending] = useState(false);
+    const [isFocused, setIsFocused] = useState(false);
     const flatListRef = useRef();
+    const sendScale = useRef(new Animated.Value(1)).current;
 
     useEffect(() => {
         loadData();
-        const interval = setInterval(loadMessages, 5000); // Polling cada 5 segundos
+        const interval = setInterval(syncMessages, 4000);
         return () => clearInterval(interval);
-    }, []);
+    }, [syncMessages]);
 
     const loadData = async () => {
         const userData = await AsyncStorage.getItem('user');
-        if (userData) {
-            const user = JSON.parse(userData);
-            setCurrentUserId(user.id);
-        }
+        if (userData) setCurrentUserId(JSON.parse(userData).id);
         await loadMessages();
     };
 
     const loadMessages = async () => {
         try {
             const token = await AsyncStorage.getItem('token');
-            const response = await fetch(`${BACKEND_URL}/chat/dm/${friendId}`, {
+            const res = await fetch(`${BACKEND_URL}/chat/dm/${friendId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (response.ok) {
-                const data = await response.json();
-                setMessages(data);
-            }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
+            if (res.ok) setMessages(await res.json());
+        } catch (_) {}
+        finally { setLoading(false); }
     };
+
+    const syncMessages = useCallback(async () => {
+        try {
+            const token = await AsyncStorage.getItem('token');
+            const res = await fetch(`${BACKEND_URL}/chat/dm/${friendId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const fresh = await res.json();
+                setMessages(prev => {
+                    const pending = prev.filter(m => m._pending);
+                    if (pending.length === 0) return fresh;
+                    // If server message count grew vs our confirmed count, pending was delivered
+                    const prevConfirmed = prev.length - pending.length;
+                    if (fresh.length > prevConfirmed) return fresh;
+                    return [...fresh, ...pending];
+                });
+            }
+        } catch (_) {}
+    }, [friendId]);
 
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -61,43 +138,48 @@ export default function DirectChat() {
             quality: 0.7,
             base64: true
         });
-
-        if (!result.canceled) {
-            handleSend(`data:image/jpeg;base64,${result.assets[0].base64}`);
-        }
+        if (!result.canceled) sendMessage(null, `data:image/jpeg;base64,${result.assets[0].base64}`);
     };
 
-    const handleSend = async (base64Image = null) => {
-        if (!inputText.trim() && !base64Image) return;
+    const animateSend = () => {
+        Animated.sequence([
+            Animated.timing(sendScale, { toValue: 0.82, duration: 70, useNativeDriver: true }),
+            Animated.spring(sendScale, { toValue: 1, tension: 120, friction: 6, useNativeDriver: true }),
+        ]).start();
+    };
 
-        const textToSend = inputText;
+    const sendMessage = useCallback(async (text = null, image = null) => {
+        const msgText = text ?? inputText.trim();
+        if (!msgText && !image) return;
+
         setInputText('');
+        animateSend();
+
+        const tempId = Date.now();
+        const optimistic = {
+            id: tempId,
+            _tempId: tempId,
+            _pending: true,
+            userId: currentUserId,
+            text: msgText || null,
+            image: image || null,
+            createdAt: new Date().toISOString(),
+        };
+        setMessages(prev => [...prev, optimistic]);
+        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
 
         try {
-            setSending(true);
             const token = await AsyncStorage.getItem('token');
-            const response = await fetch(`${BACKEND_URL}/chat/dm`, {
+            await fetch(`${BACKEND_URL}/chat/dm`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    receiverId: friendId,
-                    text: textToSend,
-                    image: base64Image
-                })
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ receiverId: friendId, text: msgText, image })
             });
-
-            if (response.ok) {
-                loadMessages();
-            }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setSending(false);
+            syncMessages(); // replace optimistic with real server message
+        } catch (_) {
+            setMessages(prev => prev.map(m => m._tempId === tempId ? { ...m, _failed: true } : m));
         }
-    };
+    }, [inputText, currentUserId, friendId, syncMessages]);
 
     const formatDateLabel = (dateStr) => {
         const d = new Date(dateStr);
@@ -106,108 +188,130 @@ export default function DirectChat() {
         yesterday.setDate(today.getDate() - 1);
         if (d.toDateString() === today.toDateString()) return 'Hoy';
         if (d.toDateString() === yesterday.toDateString()) return 'Ayer';
-        return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+        return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'long' });
     };
 
-    const shouldShowDateSeparator = (item, index) => {
-        if (index === 0) return true;
+    const renderItem = useCallback(({ item, index }) => {
+        const isMine = item.userId === currentUserId;
         const prev = messages[index - 1];
-        return new Date(item.createdAt).toDateString() !== new Date(prev.createdAt).toDateString();
-    };
+        const next = messages[index + 1];
+        const showDate = index === 0 ||
+            new Date(item.createdAt).toDateString() !== new Date(prev.createdAt).toDateString();
+        const showTail = !next || next.senderId !== item.senderId;
 
-    const renderMessage = ({ item, index }) => {
-        const isMine = item.senderId === currentUserId;
         return (
             <>
-                {shouldShowDateSeparator(item, index) && (
-                    <View style={styles.dateSeparatorWrap}>
-                        <Text style={styles.dateSeparator}>{formatDateLabel(item.createdAt)}</Text>
-                    </View>
-                )}
-                <View style={[styles.messageRow, isMine ? styles.messageRowMine : styles.messageRowTheir]}>
-                    {!isMine && <View style={styles.miniAvatarDot} />}
-                    <View style={[styles.messageBubble, isMine ? styles.myMessage : styles.theirMessage]}>
-                        {item.image && (
-                            <Image source={{ uri: item.image }} style={styles.messageImage} />
-                        )}
-                        {item.text ? (
-                            <Text style={[styles.messageText, isMine ? styles.myMessageText : styles.theirMessageText]}>
-                                {item.text}
-                            </Text>
-                        ) : null}
-                        <Text style={[styles.timestamp, isMine && styles.timestampMine]}>
-                            {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </Text>
-                    </View>
-                </View>
+                {showDate && <DateSep label={formatDateLabel(item.createdAt)} />}
+                <Bubble item={item} isMine={isMine} showTail={showTail} />
             </>
         );
-    };
+    }, [messages, currentUserId]);
 
-    const EmptyState = () => (
-        <View style={styles.emptyState}>
-            <Ionicons name="chatbubbles-outline" size={42} color="#2f2f36" />
-            <Text style={styles.emptyTitle}>Inicia la conversación</Text>
-            <Text style={styles.emptyText}>Saluda, comparte una foto o coordina un entrenamiento.</Text>
-        </View>
-    );
+    const canSend = inputText.trim().length > 0;
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.bgLayer} pointerEvents="none">
-                <LinearGradient colors={['rgba(99,255,21,0.08)','transparent']} style={styles.bgOrb1} />
-                <LinearGradient colors={['rgba(0,209,255,0.06)','transparent']} style={styles.bgOrb2} />
-            </View>
+        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+            {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color="white" />
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
+                    <Ionicons name="chevron-back" size={26} color="white" />
                 </TouchableOpacity>
-                <View style={styles.friendAvatar}>
-                    <Ionicons name="person" size={20} color="#63ff15" />
+
+                <View style={styles.headerAvatarWrap}>
+                    {friendAvatar
+                        ? <Image source={{ uri: friendAvatar }} style={styles.headerAvatar} />
+                        : (
+                            <LinearGradient colors={['#63ff1530', '#63ff1510']} style={styles.headerAvatarPlaceholder}>
+                                <Text style={styles.headerAvatarLetter}>{friendName?.charAt(0) || '?'}</Text>
+                            </LinearGradient>
+                        )
+                    }
+                    <View style={styles.onlineDot} />
                 </View>
+
                 <View style={{ flex: 1 }}>
-                    <Text style={styles.headerTitle}>{friendName}</Text>
-                    <Text style={styles.headerSub}>Chat privado</Text>
+                    <Text style={styles.headerName}>{friendName}</Text>
+                    <Text style={styles.headerStatus}>En línea</Text>
                 </View>
+
+                <TouchableOpacity style={styles.headerAction} activeOpacity={0.7}>
+                    <Ionicons name="ellipsis-horizontal" size={20} color="#666" />
+                </TouchableOpacity>
             </View>
 
-            {loading ? (
-                <ActivityIndicator size="large" color="#63ff15" style={{ flex: 1 }} />
-            ) : (
-                <FlatList
-                    ref={flatListRef}
-                    data={messages}
-                    renderItem={renderMessage}
-                    keyExtractor={(item) => item.id.toString()}
-                    contentContainerStyle={styles.chatList}
-                    onContentSizeChange={() => flatListRef.current.scrollToEnd({ animated: true })}
-                    ListEmptyComponent={<EmptyState />}
-                />
-            )}
-
+            {/* KAV wraps messages + input so both move together */}
             <KeyboardAvoidingView
+                style={{ flex: 1 }}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
             >
-                <View style={styles.inputArea}>
-                    <TouchableOpacity style={styles.imagePickerBtn} onPress={pickImage}>
-                        <Ionicons name="image-outline" size={24} color="#63ff15" />
+                {loading ? (
+                    <View style={styles.loadingWrap}>
+                        <ActivityIndicator color="#63ff15" size="large" />
+                    </View>
+                ) : (
+                    <FlatList
+                        ref={flatListRef}
+                        data={messages}
+                        renderItem={renderItem}
+                        keyExtractor={item => (item._tempId || item.id).toString()}
+                        contentContainerStyle={styles.listContent}
+                        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+                        onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
+                        ListEmptyComponent={
+                            <View style={styles.emptyState}>
+                                <View style={styles.emptyIconWrap}>
+                                    <Ionicons name="chatbubbles-outline" size={38} color="#2a2a2a" />
+                                </View>
+                                <Text style={styles.emptyTitle}>Inicia la conversación</Text>
+                                <Text style={styles.emptySub}>Saluda, comparte progreso o coordina un entreno.</Text>
+                            </View>
+                        }
+                        showsVerticalScrollIndicator={false}
+                        keyboardDismissMode="interactive"
+                        keyboardShouldPersistTaps="handled"
+                    />
+                )}
+
+                {/* Input bar */}
+                <View style={[styles.inputBar, isFocused && styles.inputBarFocused]}>
+                    <TouchableOpacity style={styles.attachBtn} onPress={pickImage} activeOpacity={0.7}>
+                        <Ionicons name="image-outline" size={22} color="#555" />
                     </TouchableOpacity>
+
                     <TextInput
                         style={styles.input}
-                        placeholder="Escribe un mensaje..."
-                        placeholderTextColor="#666"
+                        placeholder="Mensaje..."
+                        placeholderTextColor="#333"
                         value={inputText}
                         onChangeText={setInputText}
+                        onFocus={() => setIsFocused(true)}
+                        onBlur={() => setIsFocused(false)}
                         multiline
+                        maxLength={1000}
+                        blurOnSubmit={false}
                     />
-                    <TouchableOpacity style={styles.sendBtn} onPress={() => handleSend()}>
-                        {sending ? (
-                            <ActivityIndicator size="small" color="#000" />
-                        ) : (
-                            <Ionicons name="send" size={20} color="black" />
-                        )}
-                    </TouchableOpacity>
+
+                    <Animated.View style={{ transform: [{ scale: sendScale }] }}>
+                        <TouchableOpacity
+                            onPress={() => sendMessage()}
+                            disabled={!canSend}
+                            activeOpacity={0.85}
+                        >
+                            {canSend ? (
+                                <LinearGradient
+                                    colors={['#63ff15', '#4acc10']}
+                                    style={styles.sendBtn}
+                                >
+                                    <Ionicons name="send" size={17} color="black" />
+                                </LinearGradient>
+                            ) : (
+                                <View style={styles.sendBtnDisabled}>
+                                    <Ionicons name="send" size={17} color="#333" />
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                    </Animated.View>
                 </View>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -216,53 +320,108 @@ export default function DirectChat() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#0a0a0a' },
-    bgLayer: { ...StyleSheet.absoluteFillObject },
-    bgOrb1: { position: 'absolute', width: 240, height: 240, borderRadius: 140, top: -90, right: -70 },
-    bgOrb2: { position: 'absolute', width: 220, height: 220, borderRadius: 140, top: 240, left: -80 },
-    header: { flexDirection: 'row', alignItems: 'center', padding: 18, borderBottomWidth: 1, borderBottomColor: 'rgba(99,255,21,0.12)', backgroundColor: 'rgba(10,10,10,0.9)' },
-    backBtn: { marginRight: 15 },
-    friendAvatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', marginRight: 10, borderWidth: 1, borderColor: 'rgba(99,255,21,0.25)' },
-    headerTitle: { color: 'white', fontSize: 17, fontWeight: '800' },
-    headerSub: { color: '#6f6f76', fontSize: 11, marginTop: 1, fontWeight: '600' },
-    chatList: { padding: 14, paddingBottom: 8, flexGrow: 1 },
-    dateSeparatorWrap: { alignItems: 'center', marginVertical: 8 },
-    dateSeparator: {
-        color: '#7a7a84',
-        fontSize: 11,
-        fontWeight: '700',
-        backgroundColor: 'rgba(255,255,255,0.04)',
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 999,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.06)',
+
+    // Header
+    header: {
+        flexDirection: 'row', alignItems: 'center',
+        paddingHorizontal: 16, paddingVertical: 12,
+        borderBottomWidth: 1, borderBottomColor: '#141414',
+        backgroundColor: '#0a0a0a', gap: 10,
     },
-    messageRow: { flexDirection: 'row', marginBottom: 10, alignItems: 'flex-end' },
-    messageRowMine: { justifyContent: 'flex-end' },
-    messageRowTheir: { justifyContent: 'flex-start' },
-    miniAvatarDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
+    backBtn: {
+        width: 36, height: 36, borderRadius: 18,
+        justifyContent: 'center', alignItems: 'center',
+        backgroundColor: '#141414',
+    },
+    headerAvatarWrap: { position: 'relative' },
+    headerAvatar: { width: 42, height: 42, borderRadius: 21, borderWidth: 2, borderColor: '#63ff1540' },
+    headerAvatarPlaceholder: {
+        width: 42, height: 42, borderRadius: 21,
+        justifyContent: 'center', alignItems: 'center',
+        borderWidth: 2, borderColor: '#63ff1540',
+    },
+    headerAvatarLetter: { color: '#63ff15', fontSize: 18, fontWeight: '900' },
+    onlineDot: {
+        position: 'absolute', bottom: 1, right: 1,
+        width: 11, height: 11, borderRadius: 6,
         backgroundColor: '#63ff15',
-        marginRight: 6,
-        marginBottom: 10,
-        opacity: 0.7,
+        borderWidth: 2, borderColor: '#0a0a0a',
     },
-    messageBubble: { maxWidth: '82%', padding: 12, borderRadius: 16 },
-    myMessage: { alignSelf: 'flex-end', backgroundColor: '#63ff15', borderBottomRightRadius: 4 },
-    theirMessage: { alignSelf: 'flex-start', backgroundColor: '#161616', borderBottomLeftRadius: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-    messageText: { fontSize: 15 },
-    myMessageText: { color: 'black', fontWeight: '500' },
-    theirMessageText: { color: '#F1F1F4' },
-    timestamp: { fontSize: 9, color: '#7d7d86', marginTop: 6, alignSelf: 'flex-end', fontWeight: '600' },
-    timestampMine: { color: '#1b1b1b' },
-    inputArea: { flexDirection: 'row', alignItems: 'center', padding: 12, backgroundColor: 'rgba(17,17,17,0.95)', borderTopWidth: 1, borderTopColor: 'rgba(99,255,21,0.12)' },
-    input: { flex: 1, backgroundColor: '#0a0a0a', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, color: 'white', fontSize: 14, maxHeight: 100, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-    sendBtn: { backgroundColor: '#63ff15', width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center', marginLeft: 10 },
-    messageImage: { width: 220, height: 160, borderRadius: 12, marginBottom: 5 },
-    imagePickerBtn: { marginRight: 10, padding: 6, borderRadius: 12, backgroundColor: 'rgba(99,255,21,0.08)', borderWidth: 1, borderColor: 'rgba(99,255,21,0.15)' },
-    emptyState: { alignItems: 'center', justifyContent: 'center', paddingTop: 80, paddingHorizontal: 30 },
-    emptyTitle: { color: '#bdbdc4', fontSize: 16, fontWeight: '800', marginTop: 12 },
-    emptyText: { color: '#6e6e75', fontSize: 13, textAlign: 'center', marginTop: 8, lineHeight: 19 },
+    headerName: { color: '#fff', fontSize: 16, fontWeight: '800' },
+    headerStatus: { color: '#63ff15', fontSize: 11, fontWeight: '600', marginTop: 1 },
+    headerAction: {
+        width: 36, height: 36, borderRadius: 18,
+        justifyContent: 'center', alignItems: 'center',
+        backgroundColor: '#141414',
+    },
+
+    // Messages
+    loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    listContent: { paddingHorizontal: 12, paddingVertical: 14, flexGrow: 1, gap: 2 },
+
+    // Date separator
+    dateSepRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 16, paddingHorizontal: 4 },
+    dateSepLine: { flex: 1, height: 1, backgroundColor: '#1a1a1a' },
+    dateSepText: { color: '#3a3a3a', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+
+    // Bubbles
+    bubbleWrap: { marginVertical: 1, maxWidth: width * 0.78 },
+    bubbleWrapMine: { alignSelf: 'flex-end', alignItems: 'flex-end' },
+    bubbleWrapTheir: { alignSelf: 'flex-start', alignItems: 'flex-start' },
+    bubble: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 8, borderRadius: 20 },
+    bubbleMine: { borderBottomRightRadius: 20 },
+    bubbleMineWithTail: { borderBottomRightRadius: 4 },
+    bubbleTheir: {
+        backgroundColor: '#161616', borderWidth: 1, borderColor: '#222',
+        borderBottomLeftRadius: 20,
+    },
+    bubbleTheirWithTail: { borderBottomLeftRadius: 4 },
+    textMine: { color: '#000', fontSize: 15, fontWeight: '500', lineHeight: 21 },
+    textTheir: { color: '#e8e8e8', fontSize: 15, lineHeight: 21 },
+    timeRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4, alignSelf: 'flex-end' },
+    timeMine: { color: '#1a6600', fontSize: 10, fontWeight: '600' },
+    timeTheir: { color: '#444', fontSize: 10, fontWeight: '600', marginTop: 4, alignSelf: 'flex-end' },
+    msgImage: { width: 220, height: 160, borderRadius: 12, marginBottom: 6 },
+
+    // Input bar
+    inputBar: {
+        flexDirection: 'row', alignItems: 'flex-end', gap: 10,
+        paddingHorizontal: 12, paddingVertical: 10,
+        backgroundColor: '#0d0d0d',
+        borderTopWidth: 1, borderTopColor: '#141414',
+    },
+    inputBarFocused: { borderTopColor: '#63ff1530' },
+    attachBtn: {
+        width: 42, height: 42, borderRadius: 21,
+        justifyContent: 'center', alignItems: 'center',
+        backgroundColor: '#141414', borderWidth: 1, borderColor: '#1e1e1e',
+        marginBottom: 1,
+    },
+    input: {
+        flex: 1, backgroundColor: '#141414', borderRadius: 22,
+        paddingHorizontal: 16, paddingTop: 11, paddingBottom: 11,
+        color: 'white', fontSize: 15, maxHeight: 120,
+        borderWidth: 1, borderColor: '#1e1e1e',
+    },
+    sendBtn: {
+        width: 42, height: 42, borderRadius: 21,
+        justifyContent: 'center', alignItems: 'center',
+        shadowColor: '#63ff15', shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.4, shadowRadius: 8, elevation: 5,
+    },
+    sendBtnDisabled: {
+        width: 42, height: 42, borderRadius: 21,
+        justifyContent: 'center', alignItems: 'center',
+        backgroundColor: '#141414', borderWidth: 1, borderColor: '#1e1e1e',
+    },
+
+    // Empty
+    emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80 },
+    emptyIconWrap: {
+        width: 80, height: 80, borderRadius: 40,
+        backgroundColor: '#111', justifyContent: 'center', alignItems: 'center',
+        borderWidth: 1, borderColor: '#1a1a1a', marginBottom: 16,
+    },
+    emptyTitle: { color: '#3a3a3a', fontSize: 17, fontWeight: '800', marginBottom: 8 },
+    emptySub: { color: '#2a2a2a', fontSize: 13, textAlign: 'center', lineHeight: 20, paddingHorizontal: 40 },
 });

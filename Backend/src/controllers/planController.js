@@ -59,13 +59,16 @@ Objetivo: ${user.objetivo || 'Mejorar'}, Nivel: ${user.nivelActividad || 'Normal
 
 const generatePlanInteractive = async (req, res) => {
     const { details, lesiones, horasSueno, nivelEstres, semanas = 4, periodi, tecnicas = [] } = req.body;
+    const semanasNum = parseInt(semanas) || 4;
     const diasSemana = parseInt(details?.match(/DÍAS\/SEMANA:\s*(\d+)/)?.[1] || '4');
     const durHMatch = details?.match(/(\d+(?:[.,]\d+)?)\s*(hora|horas)/i);
     const durMMatch = details?.match(/(\d+)\s*(min|minutos)/i);
     let duracionMin = 60;
     if (durHMatch) duracionMin = Math.round(parseFloat(durHMatch[1].replace(',', '.')) * 60);
     else if (durMMatch) duracionMin = parseInt(durMMatch[1]);
-    const maxEjercicios = duracionMin >= 120 ? 9 : duracionMin >= 90 ? 7 : duracionMin >= 60 ? 5 : 4;
+    // Cap de ejercicios: tope por duración × tope por presupuesto JSON (96 ejerc. máx. totales)
+    const baseEj = duracionMin >= 120 ? 6 : duracionMin >= 90 ? 5 : 4;
+    const maxEjercicios = Math.min(baseEj, Math.max(4, Math.floor(96 / (diasSemana * semanasNum))));
     try {
         let user = await prisma.user.findUnique({
             where: { id: req.user.id },
@@ -138,10 +141,9 @@ Duración: ${semanas} semanas | Periodización: ${periodi || 'DUP'} | Técnicas:
   "esUltimate": true,
   "resumen": {
     "objetivo": "título",
-    "estrategia": "enfoque científico 2-3 frases",
+    "estrategia": "enfoque científico 1-2 frases",
     "duracion": "${semanas} semanas",
     "frecuencia": "X días/semana",
-    "volumenSemanal": { "Pecho": "X series", "Espalda": "X series", "Piernas": "X series", "Hombros": "X series", "Brazos": "X series", "Core": "X series" },
     "macros": { "Proteina": "Xg", "Carbos": "Xg", "Grasas": "Xg", "Calorias": "Xkcal" },
     "nutricionTiming": { "preWorkout": "...", "postWorkout": "...", "antesDormir": "..." }
   },
@@ -379,8 +381,8 @@ const generateUltimatePlan = async (req, res) => {
     if (durHMatchU) duracionMinU = Math.round(parseFloat(durHMatchU[1].replace(',', '.')) * 60);
     else if (durMMatchU) duracionMinU = parseInt(durMMatchU[1]);
     const semanasPlanU = parseInt(semanas) || 4;
-    const baseU = duracionMinU >= 120 ? 9 : duracionMinU >= 90 ? 7 : duracionMinU >= 60 ? 5 : 4;
-    const maxEjerciciosU = Math.min(baseU, Math.max(4, Math.floor(6000 / (diasSemana * semanasPlanU * 25))));
+    const baseU = duracionMinU >= 120 ? 6 : duracionMinU >= 90 ? 5 : 4;
+    const maxEjerciciosU = Math.min(baseU, Math.max(4, Math.floor(96 / (diasSemana * semanasPlanU))));
     try {
         const user = await prisma.user.findUnique({
             where: { id: req.user.id },
