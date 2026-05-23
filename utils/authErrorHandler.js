@@ -202,9 +202,9 @@ export function parseAuthError(error, response = null, responseData = null) {
     let details = null;
 
     // Errores de red
-    if (!error || error.message === 'Network request failed') {
+    if (error?.message === 'Network request failed') {
         code = AUTH_ERROR_CODES.NETWORK_ERROR;
-    } else if (error.message === 'Timeout') {
+    } else if (error?.message === 'Timeout') {
         code = AUTH_ERROR_CODES.TIMEOUT;
     } else if (response) {
         // Errores basados en status HTTP
@@ -242,9 +242,11 @@ export function parseAuthError(error, response = null, responseData = null) {
                 code = AUTH_ERROR_CODES.INTERNAL_SERVER_ERROR;
                 details = responseData?.error;
         }
-    } else if (error.message?.includes('JSON')) {
+    } else if (error?.message?.includes('JSON')) {
         code = AUTH_ERROR_CODES.JSON_PARSE_ERROR;
-    } else if (error.message?.includes('Network')) {
+    } else if (error?.message?.includes('Network')) {
+        code = AUTH_ERROR_CODES.NETWORK_ERROR;
+    } else if (!error) {
         code = AUTH_ERROR_CODES.NETWORK_ERROR;
     }
 

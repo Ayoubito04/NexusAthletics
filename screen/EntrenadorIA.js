@@ -23,19 +23,17 @@ const TypingIndicator = () => {
         const anim = (dot, delay) => Animated.loop(
             Animated.sequence([
                 Animated.delay(delay),
-                Animated.timing(dot, { toValue: -6, duration: 300, useNativeDriver: true }),
-                Animated.timing(dot, { toValue: 0, duration: 300, useNativeDriver: true }),
-                Animated.delay(540),
+                Animated.timing(dot, { toValue: -5, duration: 350, useNativeDriver: true }),
+                Animated.timing(dot, { toValue: 0, duration: 350, useNativeDriver: true }),
+                Animated.delay(500),
             ])
         ).start();
-        anim(dot1, 0);
-        anim(dot2, 160);
-        anim(dot3, 320);
+        anim(dot1, 0); anim(dot2, 150); anim(dot3, 300);
     }, []);
     return (
         <View style={styles.typingRow}>
             <View style={styles.iaAvatarContainer}>
-                <LinearGradient colors={['#63ff15', 'rgba(99,255,21,0.4)']} style={styles.iaAvatarRing} />
+                <LinearGradient colors={['#63ff15', '#00D1FF']} style={styles.iaAvatarRing} />
                 <View style={styles.iaAvatarCircle}>
                     <Text style={styles.iaAvatarText}>N</Text>
                 </View>
@@ -117,7 +115,7 @@ const MessageBubble = React.memo(({ item: m }) => (
     <View style={[styles.messageRow, m.sender === 'usuario' ? styles.userMessageRow : styles.iaMessageRow]}>
         {m.sender === 'ia' && (
             <View style={styles.iaAvatarContainer}>
-                <LinearGradient colors={['#63ff15', 'rgba(99,255,21,0.4)']} style={styles.iaAvatarRing} />
+                <LinearGradient colors={['#63ff15', '#00D1FF']} style={styles.iaAvatarRing} />
                 <View style={styles.iaAvatarCircle}>
                     <Text style={styles.iaAvatarText}>N</Text>
                 </View>
@@ -125,7 +123,7 @@ const MessageBubble = React.memo(({ item: m }) => (
         )}
         {m.sender === 'usuario' ? (
             <LinearGradient
-                colors={['#7bff35', '#63ff15', '#4dd10e']}
+                colors={['#63ff15', '#00D1FF']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={[styles.bubble, styles.userBubble]}
@@ -153,29 +151,99 @@ const MessageBubble = React.memo(({ item: m }) => (
     </View>
 ));
 
-const WelcomeState = ({ onChipPress }) => (
-    <View style={styles.welcomeContainer}>
-        <LinearGradient
-            colors={['rgba(99,255,21,0.12)', 'rgba(99,255,21,0.03)', 'transparent']}
-            style={styles.welcomeGlow}
-        />
-        <View style={styles.welcomeAvatarWrapper}>
-            <LinearGradient colors={['#63ff15', 'rgba(99,255,21,0.4)']} style={styles.welcomeAvatarRing} />
-            <View style={styles.welcomeAvatarCircle}>
-                <Text style={styles.welcomeAvatarText}>N</Text>
+const CHIP_ICONS = {
+    'Crea mi rutina semanal': 'barbell-outline',
+    'Analiza mi progreso': 'trending-up-outline',
+    'Consejo de nutrición': 'nutrition-outline',
+    'Técnica de ejercicio': 'body-outline',
+};
+
+const WelcomeState = ({ onChipPress }) => {
+    const pulseAnim = useRef(new Animated.Value(1)).current;
+    const glowAnim = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+        Animated.loop(Animated.sequence([
+            Animated.timing(pulseAnim, { toValue: 1.06, duration: 1800, useNativeDriver: true }),
+            Animated.timing(pulseAnim, { toValue: 1, duration: 1800, useNativeDriver: true }),
+        ])).start();
+        Animated.loop(Animated.sequence([
+            Animated.timing(glowAnim, { toValue: 1, duration: 2000, useNativeDriver: false }),
+            Animated.timing(glowAnim, { toValue: 0.3, duration: 2000, useNativeDriver: false }),
+        ])).start();
+    }, []);
+    return (
+        <View style={styles.welcomeContainer}>
+            {/* Corner decorative lines */}
+            <View style={[styles.cornerLine, styles.cornerTL]} />
+            <View style={[styles.cornerLine, styles.cornerTR, { transform: [{ rotate: '90deg' }] }]} />
+            <View style={[styles.cornerLine, styles.cornerBL, { transform: [{ rotate: '-90deg' }] }]} />
+            <View style={[styles.cornerLine, styles.cornerBR, { transform: [{ rotate: '180deg' }] }]} />
+
+            {/* Radial bg glow */}
+            <LinearGradient
+                colors={['rgba(99,255,21,0.18)', 'rgba(99,255,21,0.04)', 'transparent']}
+                style={styles.welcomeGlow}
+            />
+            <LinearGradient
+                colors={['rgba(0,209,255,0.08)', 'transparent']}
+                style={[styles.welcomeGlow, { top: 'auto', bottom: -40, width: 200, height: 200, borderRadius: 100 }]}
+            />
+
+            {/* Animated logo (squircle shield matching splash screen) */}
+            <Animated.View style={[styles.welcomeAvatarWrapper, { transform: [{ scale: pulseAnim }] }]}>
+                <LinearGradient
+                    colors={['#63ff15', '#00D1FF', '#63ff15']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.logoGradientBorder}
+                >
+                    <LinearGradient
+                        colors={['#111111', '#0A0A0A']}
+                        style={styles.logoInnerBox}
+                    >
+                        {/* Logo letter */}
+                        <Text style={styles.logoLetter}>N</Text>
+                        {/* Inner accent lines */}
+                        <View style={styles.logoAccentH} />
+                        <View style={styles.logoAccentV} />
+                    </LinearGradient>
+                </LinearGradient>
+            </Animated.View>
+
+            {/* Badge */}
+            <View style={styles.welcomeBadge}>
+                <View style={styles.welcomeBadgeDot} />
+                <Text style={styles.welcomeBadgeText}>NEXUS AI · ONLINE</Text>
+            </View>
+
+            <Text style={styles.welcomeTitle}>Tu Entrenador{`\n`}<Text style={styles.welcomeTitleAccent}>con Inteligencia</Text></Text>
+            <Text style={styles.welcomeSubtitle}>Planes, nutrición, técnica y motivación.{`\n`}Todo personalizado para ti.</Text>
+
+            {/* Divider */}
+            <View style={styles.welcomeDivider}>
+                <View style={styles.welcomeDividerLine} />
+                <Text style={styles.welcomeDividerText}>EMPIEZA AQUÍ</Text>
+                <View style={styles.welcomeDividerLine} />
+            </View>
+
+            <View style={styles.welcomeChips}>
+                {['Crea mi rutina semanal', 'Analiza mi progreso', 'Consejo de nutrición', 'Técnica de ejercicio'].map(chip => (
+                    <TouchableOpacity key={chip} style={styles.welcomeChip} onPress={() => onChipPress(chip)} activeOpacity={0.75}>
+                        <LinearGradient
+                            colors={['rgba(99,255,21,0.1)', 'rgba(0,209,255,0.05)']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={StyleSheet.absoluteFill}
+                        />
+                        <Ionicons name={CHIP_ICONS[chip] || 'flash-outline'} size={14} color="#63ff15" style={{ marginRight: 6 }} />
+                        <Text style={styles.welcomeChipText}>{chip}</Text>
+                        <Ionicons name="arrow-forward" size={12} color="rgba(99,255,21,0.5)" style={{ marginLeft: 4 }} />
+                    </TouchableOpacity>
+                ))}
             </View>
         </View>
-        <Text style={styles.welcomeTitle}>Nexus AI Elite</Text>
-        <Text style={styles.welcomeSubtitle}>Hola, soy tu entrenador personal con IA.{'\n'}¿En qué puedo ayudarte hoy?</Text>
-        <View style={styles.welcomeChips}>
-            {['Crea mi rutina semanal', 'Analiza mi progreso', 'Consejo de nutrición', 'Técnica de ejercicio'].map(chip => (
-                <TouchableOpacity key={chip} style={styles.welcomeChip} onPress={() => onChipPress(chip)}>
-                    <Text style={styles.welcomeChipText}>{chip}</Text>
-                </TouchableOpacity>
-            ))}
-        </View>
-    </View>
-);
+    );
+};
 
 export default function EntrenadorIA() {
     const insets = useSafeAreaInsets();
@@ -728,26 +796,37 @@ export default function EntrenadorIA() {
                 style={{ flex: 1 }}
             >
                 <View style={styles.header}>
+                    {/* Bottom border glow */}
                     <LinearGradient
-                        colors={['rgba(99, 255, 21, 0.12)', 'transparent']}
-                        style={StyleSheet.absoluteFill}
+                        colors={['transparent', 'rgba(99,255,21,0.4)', 'transparent']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1 }}
                     />
+
                     <TouchableOpacity onPress={() => toggleSidebar(true)} style={styles.backBtn}>
-                        <Ionicons name="menu" size={28} color="#63ff15" />
+                        <Ionicons name="menu" size={26} color="#63ff15" />
                     </TouchableOpacity>
+
                     <View style={styles.headerTitleContainer}>
-                        <Text style={styles.headerTitle}>Nexus AI <Text style={styles.titleHighlight}>Elite</Text></Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Text style={styles.headerTitle}>Nexus <Text style={styles.titleHighlight}>AI</Text></Text>
+                            <View style={styles.headerPlanBadge}>
+                                <Text style={styles.headerPlanBadgeText}>{user?.plan?.toUpperCase() || 'FREE'}</Text>
+                            </View>
+                        </View>
                         <View style={styles.statusRow}>
                             <View style={styles.dot} />
-                            <Text style={styles.statusText}>{user ? `Plan ${user.plan || 'Gratis'}` : 'Alto Rendimiento'}</Text>
+                            <Text style={styles.statusText}>Entrenador activo · IA conectada</Text>
                         </View>
                     </View>
+
                     <View style={styles.headerActions}>
                         <TouchableOpacity onPress={descargarPlanPDF} style={styles.headerActionBtn}>
-                            <Ionicons name="document-text-outline" size={22} color="#63ff15" />
+                            <Ionicons name="flash-outline" size={20} color="#63ff15" />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerActionBtn}>
-                            <Ionicons name="close-circle-outline" size={22} color="#ff4d4d" />
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.headerActionBtn, { borderColor: 'rgba(255,77,77,0.3)' }]}>
+                            <Ionicons name="close" size={20} color="#ff4d4d" />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -780,11 +859,17 @@ export default function EntrenadorIA() {
                     contentContainerStyle={{ paddingBottom: 20, flexGrow: 1 }}
                 />
 
+                {/* Quick prompts */}
                 <View style={styles.funPromptsWrap}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.funPromptsRow}>
                         {FUN_PROMPTS.map((p) => (
-                            <TouchableOpacity key={p.text} style={styles.funChip} onPress={() => handleQuickPrompt(p.text)} activeOpacity={0.85}>
-                                <LinearGradient colors={['rgba(99,255,21,0.18)', 'rgba(0,209,255,0.12)']} style={styles.funChipGrad}>
+                            <TouchableOpacity key={p.text} style={styles.funChip} onPress={() => handleQuickPrompt(p.text)} activeOpacity={0.8}>
+                                <LinearGradient
+                                    colors={['rgba(99,255,21,0.12)', 'rgba(0,209,255,0.08)']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                    style={styles.funChipGrad}
+                                >
                                     <Ionicons name={p.icon} size={14} color="#63ff15" />
                                     <Text style={styles.funChipText}>{p.text}</Text>
                                 </LinearGradient>
@@ -793,18 +878,28 @@ export default function EntrenadorIA() {
                     </ScrollView>
                 </View>
 
+                {/* Premium input bar */}
                 <View style={[styles.inputArea, { marginBottom: Platform.OS === 'ios' ? 82 : 74, paddingBottom: Math.max(insets.bottom, 8) }]}>
-                    <View style={[styles.inputRow, inputFocused && styles.inputRowFocused]}>
+                    {inputFocused && (
+                        <LinearGradient
+                            colors={['rgba(99,255,21,0.06)', 'transparent']}
+                            style={{ position: 'absolute', top: -20, left: 0, right: 0, height: 40 }}
+                        />
+                    )}
+                    <View style={[
+                        styles.inputRow,
+                        inputFocused && styles.inputRowFocused,
+                    ]}>
                         <TouchableOpacity style={styles.routineBtn} onPress={handleGenerarRutina}>
-                            <Ionicons name="add" size={22} color={inputFocused ? '#63ff15' : '#D4D4D8'} />
+                            <Ionicons name="add-circle-outline" size={22} color={inputFocused ? '#63ff15' : '#888'} />
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.cameraBtn} onPress={analizarFoto}>
-                            <Ionicons name="image-outline" size={20} color="#D4D4D8" />
+                            <Ionicons name="image-outline" size={20} color={inputFocused ? '#aaa' : '#555'} />
                         </TouchableOpacity>
                         <TextInput
                             style={styles.chatInput}
-                            placeholder="Escribe tu objetivo o pregunta..."
-                            placeholderTextColor="rgba(255,255,255,0.35)"
+                            placeholder="Pregúntame lo que quieras..."
+                            placeholderTextColor="rgba(255,255,255,0.25)"
                             value={inputUsuario}
                             onChangeText={setInputUsuario}
                             multiline
@@ -819,10 +914,12 @@ export default function EntrenadorIA() {
                             disabled={!inputUsuario.trim()}
                         >
                             <LinearGradient
-                                colors={inputUsuario.trim() ? ['#7bff35', '#4dd10e'] : ['#3A3A3F', '#2A2A2E']}
+                                colors={inputUsuario.trim() ? ['#63ff15', '#00D1FF'] : ['#222', '#1a1a1a']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
                                 style={styles.sendBtnGradient}
                             >
-                                <Ionicons name="arrow-up" size={18} color={inputUsuario.trim() ? '#000' : '#8E8E95'} />
+                                <Ionicons name="arrow-up" size={18} color={inputUsuario.trim() ? '#000' : '#444'} />
                             </LinearGradient>
                         </TouchableOpacity>
                     </View>
@@ -1482,39 +1579,34 @@ export default function EntrenadorIA() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: '#050508',
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 16,
         paddingHorizontal: 16,
-        backgroundColor: '#121212',
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(99,255,21,0.12)',
+        paddingVertical: 14,
+        backgroundColor: '#050508',
         overflow: 'hidden',
-        shadowColor: '#63ff15',
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 2,
     },
     backBtn: {
         width: 44,
         height: 44,
         borderRadius: 12,
-        backgroundColor: 'rgba(99,255,21,0.08)',
+        backgroundColor: 'rgba(255, 255, 255, 0.04)',
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.15)',
+        borderColor: 'rgba(255, 255, 255, 0.08)',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
+        overflow: 'hidden',
     },
     headerTitleContainer: {
         flex: 1,
     },
     headerTitle: {
         color: 'white',
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: '900',
         letterSpacing: -0.5,
     },
@@ -1529,11 +1621,12 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 12,
-        backgroundColor: 'rgba(99,255,21,0.08)',
+        backgroundColor: 'rgba(255, 255, 255, 0.04)',
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.15)',
+        borderColor: 'rgba(255, 255, 255, 0.08)',
         justifyContent: 'center',
         alignItems: 'center',
+        overflow: 'hidden',
     },
     statusRow: {
         flexDirection: 'row',
@@ -1547,8 +1640,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#63ff15',
         marginRight: 6,
         shadowColor: '#63ff15',
-        shadowOpacity: 0.8,
-        shadowRadius: 3,
+        shadowOpacity: 1,
+        shadowRadius: 6,
         elevation: 2,
     },
     statusText: {
@@ -1577,24 +1670,26 @@ const styles = StyleSheet.create({
     },
     bubble: {
         maxWidth: '78%',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingHorizontal: 18,
+        paddingVertical: 14,
         borderRadius: 20,
         overflow: 'hidden',
     },
     userBubble: {
         borderBottomRightRadius: 5,
+        borderRadius: 20,
         shadowColor: '#63ff15',
-        shadowOpacity: 0.45,
-        shadowRadius: 12,
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
         shadowOffset: { width: 0, height: 4 },
         elevation: 6,
     },
     iaBubble: {
         backgroundColor: '#151515',
         borderBottomLeftRadius: 5,
+        borderRadius: 20,
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.18)',
+        borderColor: 'rgba(99,255,21,0.15)',
         shadowColor: '#000',
         shadowOpacity: 0.3,
         shadowRadius: 6,
@@ -1620,22 +1715,22 @@ const styles = StyleSheet.create({
         position: 'relative',
         width: 40,
         height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     iaAvatarRing: {
         position: 'absolute',
-        width: 46,
-        height: 46,
-        borderRadius: 23,
-        top: -3,
-        left: -3,
+        width: 42,
+        height: 42,
+        borderRadius: 21,
         zIndex: 0,
     },
     iaAvatarCircle: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 38,
+        height: 38,
+        borderRadius: 19,
         backgroundColor: '#0c0c0c',
-        borderWidth: 2,
+        borderWidth: 1.5,
         borderColor: '#63ff15',
         justifyContent: 'center',
         alignItems: 'center',
@@ -1644,7 +1739,7 @@ const styles = StyleSheet.create({
     iaAvatarText: {
         color: '#63ff15',
         fontWeight: '900',
-        fontSize: 17,
+        fontSize: 18,
         letterSpacing: -0.5,
     },
     userText: {
@@ -1697,7 +1792,8 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(99,255,21,0.18)',
         paddingHorizontal: 18,
-        paddingVertical: 16,
+        paddingLeft: 20,
+        paddingVertical: 14,
         overflow: 'hidden',
     },
     typingDots: {
@@ -1706,12 +1802,12 @@ const styles = StyleSheet.create({
         gap: 7,
     },
     typingDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
+        width: 9,
+        height: 9,
+        borderRadius: 4.5,
         backgroundColor: '#63ff15',
         shadowColor: '#63ff15',
-        shadowOpacity: 0.8,
+        shadowOpacity: 0.6,
         shadowRadius: 4,
         elevation: 2,
     },
@@ -1739,7 +1835,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingTop: 40,
+        paddingTop: 20,
         paddingHorizontal: 28,
         overflow: 'hidden',
     },
@@ -1753,73 +1849,155 @@ const styles = StyleSheet.create({
     },
     welcomeAvatarWrapper: {
         position: 'relative',
-        width: 80,
-        height: 80,
-        marginBottom: 22,
-    },
-    welcomeAvatarRing: {
-        position: 'absolute',
-        width: 86,
-        height: 86,
-        borderRadius: 43,
-        top: -3,
-        left: -3,
-        zIndex: 0,
-    },
-    welcomeAvatarCircle: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: '#0c0c0c',
-        borderWidth: 2.5,
-        borderColor: '#63ff15',
+        marginBottom: 20,
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 1,
-        shadowColor: '#63ff15',
-        shadowOpacity: 0.5,
-        shadowRadius: 16,
-        elevation: 8,
     },
-    welcomeAvatarText: {
-        color: '#63ff15',
-        fontSize: 34,
+    logoGradientBorder: {
+        width: 120,
+        height: 120,
+        borderRadius: 32,
+        padding: 2,
+        shadowColor: '#63ff15',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.8,
+        shadowRadius: 24,
+        elevation: 15,
+    },
+    logoInnerBox: {
+        flex: 1,
+        borderRadius: 30,
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+    },
+    logoLetter: {
+        fontSize: 56,
         fontWeight: '900',
-        letterSpacing: -1,
+        color: '#63ff15',
+        letterSpacing: 2,
+        textShadowColor: 'rgba(99,255,21,0.8)',
+        textShadowOffset: { width: 0, height: 0 },
+        textShadowRadius: 20,
+    },
+    logoAccentH: {
+        position: 'absolute',
+        bottom: 18,
+        width: '60%',
+        height: 1,
+        backgroundColor: 'rgba(99,255,21,0.25)',
+    },
+    logoAccentV: {
+        position: 'absolute',
+        right: 18,
+        height: '60%',
+        width: 1,
+        backgroundColor: 'rgba(99,255,21,0.25)',
+    },
+    // Corner decorative lines
+    cornerLine: {
+        position: 'absolute',
+        width: 32,
+        height: 32,
+        borderColor: 'rgba(99,255,21,0.25)',
+        borderTopWidth: 2,
+        borderLeftWidth: 2,
+    },
+    cornerTL: { top: 20, left: 20 },
+    cornerTR: { top: 20, right: 20 },
+    cornerBL: { bottom: 20, left: 20 },
+    cornerBR: { bottom: 20, right: 20 },
+    welcomeBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: 'rgba(99,255,21,0.1)',
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.3)',
+        borderRadius: 20,
+        paddingHorizontal: 12,
+        paddingVertical: 5,
+        marginBottom: 16,
+    },
+    welcomeBadgeDot: {
+        width: 7,
+        height: 7,
+        borderRadius: 3.5,
+        backgroundColor: '#63ff15',
+        shadowColor: '#63ff15',
+        shadowOpacity: 1,
+        shadowRadius: 5,
+    },
+    welcomeBadgeText: {
+        color: '#63ff15',
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 1.5,
     },
     welcomeTitle: {
         color: '#FFFFFF',
-        fontSize: 26,
+        fontSize: 32,
         fontWeight: '900',
         letterSpacing: -0.8,
         marginBottom: 10,
+        textAlign: 'center',
+        lineHeight: 38,
+    },
+    welcomeTitleAccent: {
+        color: '#63ff15',
+        textShadowColor: 'rgba(99,255,21,0.4)',
+        textShadowOffset: { width: 0, height: 0 },
+        textShadowRadius: 12,
     },
     welcomeSubtitle: {
-        color: '#888',
-        fontSize: 15,
+        color: '#666',
+        fontSize: 14,
         textAlign: 'center',
-        lineHeight: 22,
-        marginBottom: 30,
+        lineHeight: 21,
+        marginBottom: 24,
+        fontWeight: '500',
+    },
+    welcomeDivider: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginBottom: 20,
+        width: '90%',
+    },
+    welcomeDividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: 'rgba(99,255,21,0.15)',
+    },
+    welcomeDividerText: {
+        color: '#444',
+        fontSize: 10,
+        fontWeight: '700',
+        letterSpacing: 2,
     },
     welcomeChips: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
+        width: '100%',
         gap: 10,
     },
     welcomeChip: {
-        backgroundColor: 'rgba(99,255,21,0.07)',
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.22)',
-        borderRadius: 20,
+        borderColor: 'rgba(99,255,21,0.25)',
+        borderRadius: 14,
         paddingHorizontal: 16,
-        paddingVertical: 10,
+        paddingVertical: 14,
+        flexDirection: 'row',
+        alignItems: 'center',
+        overflow: 'hidden',
+        shadowColor: '#63ff15',
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 2,
     },
     welcomeChipText: {
-        color: '#63ff15',
-        fontSize: 13,
+        color: '#D4D4D8',
+        fontSize: 14,
         fontWeight: '600',
-        letterSpacing: 0.2,
+        flex: 1,
     },
     funPromptsWrap: {
         paddingTop: 4,
@@ -1831,21 +2009,21 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     funChip: {
-        borderRadius: 18,
+        borderRadius: 24,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.16)',
+        borderColor: 'rgba(99,255,21,0.2)',
     },
     funChipGrad: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
+        paddingHorizontal: 14,
+        paddingVertical: 9,
     },
     funChipText: {
-        color: '#D9D9DF',
-        fontSize: 12,
+        color: '#63ff15',
+        fontSize: 13,
         fontWeight: '700',
     },
     inputArea: {
@@ -1857,10 +2035,10 @@ const styles = StyleSheet.create({
     inputRow: {
         flexDirection: 'row',
         alignItems: 'flex-end',
-        backgroundColor: '#1B1B1F',
+        backgroundColor: '#0C0C10',
         borderRadius: 24,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.12)',
+        borderColor: 'rgba(99,255,21,0.15)',
         paddingHorizontal: 8,
         paddingVertical: 8,
         minHeight: 56,
@@ -1873,8 +2051,8 @@ const styles = StyleSheet.create({
     inputRowFocused: {
         borderColor: '#63ff15',
         shadowColor: '#63ff15',
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
+        shadowOpacity: 0.12,
+        shadowRadius: 16,
         elevation: 8,
     },
     chatInput: {
@@ -1909,16 +2087,17 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        borderRadius: 16,
     },
     routineBtn: {
         width: 38,
         height: 38,
         borderRadius: 19,
-        backgroundColor: 'rgba(99,255,21,0.08)',
+        backgroundColor: 'rgba(255, 255, 255, 0.04)',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(99,255,21,0.2)',
+        borderColor: 'rgba(255, 255, 255, 0.08)',
         marginRight: 4,
         alignSelf: 'flex-end',
         marginBottom: 1,
@@ -1927,11 +2106,11 @@ const styles = StyleSheet.create({
         width: 38,
         height: 38,
         borderRadius: 19,
-        backgroundColor: 'rgba(255,255,255,0.06)',
+        backgroundColor: 'rgba(255, 255, 255, 0.04)',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: 'rgba(255, 255, 255, 0.08)',
         marginRight: 4,
         alignSelf: 'flex-end',
         marginBottom: 1,

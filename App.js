@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import { LogBox } from 'react-native';
 import { colors, shadows, radius, rs } from './theme';
 
@@ -25,6 +25,7 @@ import IGCResult from './screen/IGCResult';
 import Community from './screen/Community';
 import AdminDashboard from './screen/AdminDashboard';
 import SplashScreen from './components/SplashScreen';
+import LoadingScreen from './components/LoadingScreen';
 import Verification from './screen/Verification';
 import Checkout from './screen/Checkout';
 import DirectChat from './screen/DirectChat';
@@ -59,7 +60,16 @@ import * as Haptics from 'expo-haptics';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
+export const LoadingContext = createContext({
+  showLoading: (message, subMessage, duration) => {},
+  hideLoading: () => {},
+});
+
+export const useLoading = () => useContext(LoadingContext);
+
 function TabNavigator() {
+  const { showLoading } = useLoading();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -84,22 +94,26 @@ function TabNavigator() {
           height: 66,
           borderRadius: radius.tab,
           borderTopWidth: 0,
-          borderWidth: 1,
-          borderColor: 'rgba(99,255,21,0.16)',
+          borderWidth: 1.2,
+          borderColor: 'rgba(99,255,21,0.35)',
           ...shadows.tabBar,
           overflow: 'hidden',
           elevation: 20,
           zIndex: 999,
+          shadowColor: '#63ff15',
+          shadowOpacity: 0.15,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 4 },
         },
         tabBarBackground: () => (
           <View style={{ flex: 1 }}>
             <BlurView
-              intensity={18}
+              intensity={95}
               tint="dark"
               style={{ ...StyleSheet.absoluteFillObject }}
             />
             <LinearGradient
-              colors={['rgba(255,255,255,0.02)', 'rgba(10,10,10,0.80)']}
+              colors={['rgba(15,15,18,0.96)', 'rgba(5,5,8,0.99)']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={{ ...StyleSheet.absoluteFillObject }}
@@ -126,11 +140,16 @@ function TabNavigator() {
               <Ionicons name={iconName} size={rs(23)} color={color} />
               {focused && (
                 <View style={{
-                  width: 14,
-                  height: 2,
-                  borderRadius: 2,
-                  backgroundColor: colors.primary,
+                  width: 16,
+                  height: 3,
+                  borderRadius: 1.5,
+                  backgroundColor: '#63ff15',
                   marginTop: 4,
+                  shadowColor: '#63ff15',
+                  shadowOpacity: 0.9,
+                  shadowRadius: 5,
+                  shadowOffset: { width: 0, height: 0 },
+                  elevation: 5,
                 }} />
               )}
             </View>
@@ -142,41 +161,71 @@ function TabNavigator() {
         name="Dashboard" 
         component={Home}
         options={{ tabBarLabel: 'Home' }}
-        listeners={{
-          tabPress: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
-        }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            const isFocused = navigation.isFocused();
+            if (!isFocused) {
+              showLoading('ACCEDIENDO AL DASHBOARD', 'SINCRONIZANDO CORE SYSTEM...', 800);
+            }
+          },
+        })}
       />
       <Tab.Screen 
         name="Nexus IA" 
         component={EntrenadorIA}
         options={{ tabBarLabel: 'Nexus' }}
-        listeners={{
-          tabPress: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium),
-        }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            const isFocused = navigation.isFocused();
+            if (!isFocused) {
+              showLoading('ACCEDIENDO A NEXUS IA', 'SINTONIZANDO RED NEURONAL...', 800);
+            }
+          },
+        })}
       />
       <Tab.Screen 
         name="Estadísticas" 
         component={Analytics}
         options={{ tabBarLabel: 'Stats' }}
-        listeners={{
-          tabPress: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
-        }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            const isFocused = navigation.isFocused();
+            if (!isFocused) {
+              showLoading('PROCESANDO MÉTRICAS', 'CALCULANDO RENDIMIENTO...', 800);
+            }
+          },
+        })}
       />
       <Tab.Screen 
         name="Comunidad" 
         component={Community}
         options={{ tabBarLabel: 'Social' }}
-        listeners={{
-          tabPress: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
-        }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            const isFocused = navigation.isFocused();
+            if (!isFocused) {
+              showLoading('CONECTANDO A LA RED', 'SINCRONIZANDO ATLETAS NEXUS...', 800);
+            }
+          },
+        })}
       />
       <Tab.Screen 
         name="Perfil" 
         component={Profile}
         options={{ tabBarLabel: 'Yo' }}
-        listeners={{
-          tabPress: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
-        }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            const isFocused = navigation.isFocused();
+            if (!isFocused) {
+              showLoading('CARGANDO EXPEDIENTE', 'SINCRONIZANDO CONFIGURACIÓN...', 800);
+            }
+          },
+        })}
       />
     </Tab.Navigator>
   );
@@ -196,6 +245,25 @@ const screenTransition = {
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loadingMsg, setLoadingMsg] = useState('');
+  const [loadingSubMsg, setLoadingSubMsg] = useState('');
+
+  const showLoading = (message = '', subMessage = '', duration = 0) => {
+    setLoadingMsg(message);
+    setLoadingSubMsg(subMessage);
+    setLoading(true);
+
+    if (duration > 0) {
+      setTimeout(() => {
+        setLoading(false);
+      }, duration);
+    }
+  };
+
+  const hideLoading = () => {
+    setLoading(false);
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -217,89 +285,96 @@ export default function App() {
   }
 
   return (
-    <StripeProvider
-      publishableKey="pk_live_51SxCur3T8zYFpQJlxQCx79IL6Kj5Ioby9BuJEWOkWz4ZbKfNSXh7XeDi3bO7Ww8q2FTEOC4ralvwqtFDD6gRcaDC00MwOAK2Tf"
-      merchantIdentifier="merchant.com.nexusathletics"
-    >
-      <NavigationContainer>
-        <Stack.Navigator
-          initialRouteName="Login"
-          screenOptions={{
-            headerShown: false,
-            gestureEnabled: true,
-            gestureDirection: 'horizontal',
-            transitionSpec: {
-              open: screenTransition,
-              close: screenTransition,
-            },
-            cardStyleInterpolator: ({ current, next, layouts }) => {
-              return {
-                cardStyle: {
-                  transform: [
-                    {
-                      translateX: current.progress.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [layouts.screen.width * 0.35, 0],
-                      }),
-                    },
-                    {
-                      scale: next
-                        ? next.progress.interpolate({
+    <LoadingContext.Provider value={{ showLoading, hideLoading }}>
+      <StripeProvider
+        publishableKey="pk_live_51SxCur3T8zYFpQJlxQCx79IL6Kj5Ioby9BuJEWOkWz4ZbKfNSXh7XeDi3bO7Ww8q2FTEOC4ralvwqtFDD6gRcaDC00MwOAK2Tf"
+        merchantIdentifier="merchant.com.nexusathletics"
+      >
+        <NavigationContainer>
+          <Stack.Navigator
+            initialRouteName="Login"
+            screenOptions={{
+              headerShown: false,
+              gestureEnabled: true,
+              gestureDirection: 'horizontal',
+              transitionSpec: {
+                open: screenTransition,
+                close: screenTransition,
+              },
+              cardStyleInterpolator: ({ current, next, layouts }) => {
+                return {
+                  cardStyle: {
+                    transform: [
+                      {
+                        translateX: current.progress.interpolate({
                           inputRange: [0, 1],
-                          outputRange: [1, 0.985],
-                        })
-                        : 1,
-                    },
-                  ],
-                  opacity: current.progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.75, 1],
-                  }),
-                },
-                overlayStyle: {
-                  opacity: current.progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, 0.12],
-                  }),
-                },
-              };
-            },
-          }}
-        >
-          <Stack.Screen name="MainTabs" component={TabNavigator} />
-          <Stack.Screen name="Home" component={Home} />
-          <Stack.Screen name="Login" component={Login} />
-          <Stack.Screen name="Register" component={Register} />
-          <Stack.Screen name="PlanesPago" component={PlanesPago} />
-          <Stack.Screen name="EntrenadorIA" component={EntrenadorIA} />
-          <Stack.Screen name="Profile" component={Profile} />
-          <Stack.Screen name="IGCResult" component={IGCResult} />
-          <Stack.Screen name="Community" component={Community} />
-          <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
-          <Stack.Screen name="Verification" component={Verification} />
-          <Stack.Screen name="Checkout" component={Checkout} />
-          <Stack.Screen name="DirectChat" component={DirectChat} />
-          <Stack.Screen name="Friends" component={Friends} />
-          <Stack.Screen name="BiometricData" component={BiometricData} />
-          <Stack.Screen name="BodyScanner" component={BodyScanner} />
-          <Stack.Screen name="Analytics" component={Analytics} />
-          <Stack.Screen name="Achievements" component={Achievements} />
-          <Stack.Screen name="AccountSettings" component={AccountSettings} />
-          <Stack.Screen name="ElitePlanScreen" component={ElitePlanScreen} />
-          <Stack.Screen name="SavedElitePlans" component={SavedElitePlans} />
-          <Stack.Screen name="FoodScanner" component={FoodScanner} />
-          <Stack.Screen name="TrainingCalendar" component={TrainingCalendar} />
-          <Stack.Screen name="FAQ" component={FAQ} />
-          <Stack.Screen name="Ranking" component={Ranking} />
-          <Stack.Screen name="MuscleRankings" component={MuscleRankings} />
-          <Stack.Screen name="WelcomePlans" component={WelcomePlans} />
-          <Stack.Screen name="Notifications" component={Notifications} />
-          <Stack.Screen name="UserRanking" component={UserRanking} />
-          <Stack.Screen name="Facturacion" component={Facturacion} />
-          <Stack.Screen name="DigitalTwin" component={DigitalTwin} />
-          <Stack.Screen name="FormAnalysis" component={FormAnalysis} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </StripeProvider>
+                          outputRange: [layouts.screen.width * 0.35, 0],
+                        }),
+                      },
+                      {
+                        scale: next
+                          ? next.progress.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [1, 0.985],
+                          })
+                          : 1,
+                      },
+                    ],
+                    opacity: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.75, 1],
+                    }),
+                  },
+                  overlayStyle: {
+                    opacity: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, 0.12],
+                    }),
+                  },
+                };
+              },
+            }}
+          >
+            <Stack.Screen name="MainTabs" component={TabNavigator} />
+            <Stack.Screen name="Home" component={Home} />
+            <Stack.Screen name="Login" component={Login} />
+            <Stack.Screen name="Register" component={Register} />
+            <Stack.Screen name="PlanesPago" component={PlanesPago} />
+            <Stack.Screen name="EntrenadorIA" component={EntrenadorIA} />
+            <Stack.Screen name="Profile" component={Profile} />
+            <Stack.Screen name="IGCResult" component={IGCResult} />
+            <Stack.Screen name="Community" component={Community} />
+            <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
+            <Stack.Screen name="Verification" component={Verification} />
+            <Stack.Screen name="Checkout" component={Checkout} />
+            <Stack.Screen name="DirectChat" component={DirectChat} />
+            <Stack.Screen name="Friends" component={Friends} />
+            <Stack.Screen name="BiometricData" component={BiometricData} />
+            <Stack.Screen name="BodyScanner" component={BodyScanner} />
+            <Stack.Screen name="Analytics" component={Analytics} />
+            <Stack.Screen name="Achievements" component={Achievements} />
+            <Stack.Screen name="AccountSettings" component={AccountSettings} />
+            <Stack.Screen name="ElitePlanScreen" component={ElitePlanScreen} />
+            <Stack.Screen name="SavedElitePlans" component={SavedElitePlans} />
+            <Stack.Screen name="FoodScanner" component={FoodScanner} />
+            <Stack.Screen name="TrainingCalendar" component={TrainingCalendar} />
+            <Stack.Screen name="FAQ" component={FAQ} />
+            <Stack.Screen name="Ranking" component={Ranking} />
+            <Stack.Screen name="MuscleRankings" component={MuscleRankings} />
+            <Stack.Screen name="WelcomePlans" component={WelcomePlans} />
+            <Stack.Screen name="Notifications" component={Notifications} />
+            <Stack.Screen name="UserRanking" component={UserRanking} />
+            <Stack.Screen name="Facturacion" component={Facturacion} />
+            <Stack.Screen name="DigitalTwin" component={DigitalTwin} />
+            <Stack.Screen name="FormAnalysis" component={FormAnalysis} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </StripeProvider>
+      {loading && (
+        <View style={StyleSheet.absoluteFill}>
+          <LoadingScreen message={loadingMsg} subMessage={loadingSubMsg} />
+        </View>
+      )}
+    </LoadingContext.Provider>
   );
 }

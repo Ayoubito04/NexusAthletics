@@ -14,6 +14,7 @@ import NativeAd from '../components/NativeAd';
 import { BlurView } from 'expo-blur';
 import AchievementUnlockedModal from '../components/AchievementUnlockedModal';
 import * as Haptics from 'expo-haptics';
+import { useLoading } from '../App';
 
 import Config from '../constants/Config';
 import Constants from 'expo-constants';
@@ -25,8 +26,75 @@ const { width } = Dimensions.get('window');
 
 export default function Home() {
     const navigation = useNavigation();
+    const { showLoading } = useLoading();
     const [nombreUsuario, setNombreUsuario] = useState('Atleta');
     const [plan, setPlan] = useState('Gratis');
+
+    const navigateToScreen = (screenName) => {
+        let msg = 'CARGANDO SISTEMA';
+        let subMsg = 'SINCRONIZANDO...';
+
+        switch (screenName) {
+            case 'SavedElitePlans':
+                msg = 'ACCEDIENDO AL ELITE VAULT';
+                subMsg = 'DESBLOQUEANDO EXPEDIENTES...';
+                break;
+            case 'Ranking':
+                msg = 'CONECTANDO A LIGA NEXUS';
+                subMsg = 'RECOPILANDO CLASIFICACIÓN...';
+                break;
+            case 'Achievements':
+                msg = 'ACCEDIENDO A LOGROS';
+                subMsg = 'SINTONIZANDO RECOMPENSAS...';
+                break;
+            case 'Notifications':
+                msg = 'CARGANDO NOTIFICACIONES';
+                subMsg = 'COMPUTANDO ALERTAS...';
+                break;
+            case 'AccountSettings':
+                msg = 'ACCEDIENDO A CONFIGURACIÓN';
+                subMsg = 'CARGANDO DATOS DE SEGURIDAD...';
+                break;
+            case 'PlanesPago':
+                msg = 'CARGANDO PLANES ÉLITE';
+                subMsg = 'CONECTANDO PASARELA DE PAGO...';
+                break;
+            case 'TrainingCalendar':
+                msg = 'CARGANDO CALENDARIO';
+                subMsg = 'SINTONIZANDO TUS ENTRENAMIENTOS...';
+                break;
+            case 'BodyScanner':
+                msg = 'ACCEDIENDO AL BODY SCANNER';
+                subMsg = 'INICIALIZANDO LENTES SENSORIALES...';
+                break;
+            case 'FoodScanner':
+                msg = 'ACCEDIENDO AL NUTRI SCANNER';
+                subMsg = 'CARGANDO BASE DE ALIMENTOS IA...';
+                break;
+            case 'FormAnalysis':
+                msg = 'ACCEDIENDO A FORM ANALYSIS';
+                subMsg = 'CONECTANDO CÁMARA DE MOVIMIENTO...';
+                break;
+            case 'DigitalTwin':
+                msg = 'ACCEDIENDO AL DIGITAL TWIN';
+                subMsg = 'COMPUTANDO AVATAR TRIDIMENSIONAL...';
+                break;
+            case 'Analytics':
+                msg = 'PROCESANDO METRICAS';
+                subMsg = 'CALCULANDO RENDIMIENTO DEPORTIVO...';
+                break;
+            case 'Nexus IA':
+            case 'EntrenadorIA':
+                msg = 'ACCEDIENDO A NEXUS IA';
+                subMsg = 'CONECTANDO CON TU ENTRENADOR...';
+                break;
+        }
+
+        showLoading(msg, subMsg, 1200);
+        setTimeout(() => {
+            navigation.navigate(screenName);
+        }, 100);
+    };
     const [notifCount, setNotifCount] = useState(0);
     const [avatar, setAvatar] = useState(null);
     const [role, setRole] = useState('USER');
@@ -197,18 +265,28 @@ export default function Home() {
 
     const planConfig = getPlanConfig(plan);
 
-    const QuickAction = ({ icon, label, color, onPress, delay = 0 }) => (
+    const QuickAction = ({ icon, label, color, onPress, delay = 0 }) => {
+        const pressAnim = useRef(new Animated.Value(1)).current;
+        const handlePressIn = () => {
+            Animated.spring(pressAnim, { toValue: 0.93, useNativeDriver: true, friction: 8 }).start();
+        };
+        const handlePressOut = () => {
+            Animated.spring(pressAnim, { toValue: 1, useNativeDriver: true, friction: 5, tension: 140 }).start();
+        };
+        return (
         <Animated.View style={{
             opacity: cardAnims[delay] || fadeAnim,
-            transform: [{ scale: cardAnims[delay] || scaleAnim }]
+            transform: [{ scale: Animated.multiply(cardAnims[delay] || scaleAnim, pressAnim) }]
         }}>
             <TouchableOpacity
-                style={styles.quickAction}
+                style={[styles.quickAction, { borderColor: color + '30' }]}
                     onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         onPress();
                     }}
-                    activeOpacity={0.7}
+                    onPressIn={handlePressIn}
+                    onPressOut={handlePressOut}
+                    activeOpacity={1}
             >
                 <LinearGradient
                     colors={[color, color + '60']}
@@ -216,22 +294,39 @@ export default function Home() {
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                 />
-                <View style={styles.quickActionIconBox}>
-                    <Ionicons name={icon} size={24} color="white" />
-                </View>
+                <LinearGradient
+                    colors={[color + 'CC', color + '55']}
+                    style={styles.quickActionIconBox}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                >
+                    <Ionicons name={icon} size={22} color="white" />
+                </LinearGradient>
                 <Text style={styles.quickActionLabelText}>{label}</Text>
             </TouchableOpacity>
         </Animated.View>
-    );
+        );
+    };
 
-    const FeatureCard = ({ title, icon, iconType = "Ionicons", color, screen, badge, description }) => (
+    const FeatureCard = ({ title, icon, iconType = "Ionicons", color, screen, badge, description }) => {
+        const featurePressAnim = useRef(new Animated.Value(1)).current;
+        const handleFeaturePressIn = () => {
+            Animated.spring(featurePressAnim, { toValue: 0.97, useNativeDriver: true, friction: 10 }).start();
+        };
+        const handleFeaturePressOut = () => {
+            Animated.spring(featurePressAnim, { toValue: 1, useNativeDriver: true, friction: 6, tension: 120 }).start();
+        };
+        return (
+        <Animated.View style={{ transform: [{ scale: featurePressAnim }] }}>
         <TouchableOpacity
             style={styles.featureCard}
             onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                navigation.navigate(screen);
+                navigateToScreen(screen);
             }}
-            activeOpacity={0.8}
+            onPressIn={handleFeaturePressIn}
+            onPressOut={handleFeaturePressOut}
+            activeOpacity={1}
             data-testid={`feature-${screen.toLowerCase()}`}
         >
             <LinearGradient
@@ -244,8 +339,15 @@ export default function Home() {
                 end={{ x: 1, y: 0 }}
                 style={styles.featureCardTopSheen}
             />
+            {/* Left accent border strip */}
+            <View style={[styles.featureAccentStrip, { backgroundColor: color }]} />
             <View style={styles.featureCardContent}>
-                <View style={[styles.featureIconWrap, { backgroundColor: color + '15' }]}> 
+                <LinearGradient
+                    colors={[color + '30', color + '10']}
+                    style={styles.featureIconWrap}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                >
                     {iconType === "Ionicons" ? (
                         <Ionicons name={icon} size={24} color={color} />
                     ) : iconType === "FontAwesome5" ? (
@@ -253,7 +355,7 @@ export default function Home() {
                     ) : (
                         <MaterialCommunityIcons name={icon} size={24} color={color} />
                     )}
-                </View>
+                </LinearGradient>
                 <View style={styles.featureTextWrap}>
                     <Text style={styles.featureTitle}>{title}</Text>
                     {description && <Text style={styles.featureDesc}>{description}</Text>}
@@ -264,11 +366,13 @@ export default function Home() {
                     <Text style={styles.featureBadgeText}>{badge}</Text>
                 </View>
             )}
-            <View style={styles.featureArrowWrap}>
-                <Ionicons name="chevron-forward" size={16} color="#9CA3AF" style={styles.featureArrow} />
+            <View style={[styles.featureArrowWrap, { backgroundColor: color + '15' }]}>
+                <Ionicons name="chevron-forward" size={16} color={color} style={styles.featureArrow} />
             </View>
         </TouchableOpacity>
-    );
+        </Animated.View>
+        );
+    };
 
     // Sistema de detección de logros
     const ACHIEVEMENTS = [
@@ -360,14 +464,17 @@ export default function Home() {
                                 </TouchableOpacity>
                                 <View style={styles.welcomeTextContainer}>
                                     <Text style={styles.greetingText}>{greeting},</Text>
-                                    <Text style={styles.userName}>{nombreUsuario}</Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                        <Text style={styles.userName}>{nombreUsuario}</Text>
+                                        <View style={styles.activeIndicatorDot} />
+                                    </View>
                                 </View>
                             </View>
 
                             <View style={styles.headerRight}>
                                 <TouchableOpacity
                                     style={styles.notifBtn}
-                                    onPress={() => navigation.navigate('Notifications')}
+                                    onPress={() => navigateToScreen('Notifications')}
                                 >
                                     <Ionicons name="notifications-outline" size={22} color="#fff" />
                                     {notifCount > 0 && <View style={styles.pulsatingDot} />}
@@ -375,7 +482,7 @@ export default function Home() {
 
                                 <TouchableOpacity
                                     style={styles.avatarWrapper}
-                                    onPress={() => navigation.navigate('AccountSettings')}
+                                    onPress={() => navigateToScreen('AccountSettings')}
                                 >
                                     <LinearGradient
                                         colors={planConfig.gradient}
@@ -391,7 +498,7 @@ export default function Home() {
 
                         <TouchableOpacity
                             style={styles.membershipStrip}
-                            onPress={() => navigation.navigate('PlanesPago')}
+                            onPress={() => navigateToScreen('PlanesPago')}
                         >
                             <View style={styles.membershipInfo}>
                                 <MaterialCommunityIcons name="shield-check" size={16} color={planConfig.color} />
@@ -402,47 +509,107 @@ export default function Home() {
                     </BlurView>
                 </Animated.View>
 
-                {/* BENTO DASHBOARD: STATS & FOCUS */}
+                {/* BENTO DASHBOARD */}
                 <View style={styles.bentoGrid}>
                     <View style={styles.bentoRow}>
                         {/* AI Sessions Card */}
                         <TouchableOpacity
                             style={[styles.bentoCard, styles.cardHalf]}
-                            onPress={() => navigation.navigate('Nexus IA')}
-                            activeOpacity={0.8}
+                            onPress={() => navigateToScreen('Nexus IA')}
+                            activeOpacity={0.85}
                         >
-                            <BlurView intensity={10} tint="dark" style={StyleSheet.absoluteFill} />
-                            <LinearGradient colors={['rgba(162,89,255,0.12)', 'transparent']} style={StyleSheet.absoluteFill} />
-                            <View style={[styles.bentoIconBox, { borderColor: 'rgba(162,89,255,0.3)' }]}>
-                                <Ionicons name="sparkles" size={20} color="#A259FF" />
+                            <LinearGradient
+                                colors={['rgba(162,89,255,0.25)', 'rgba(162,89,255,0.05)', 'transparent']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={StyleSheet.absoluteFill}
+                            />
+                            {/* Top color bar */}
+                            <View style={[styles.bentoTopBar, { backgroundColor: '#A259FF' }]} />
+                            <View style={[styles.bentoIconBox, { backgroundColor: 'rgba(162,89,255,0.2)', borderColor: 'rgba(162,89,255,0.5)' }]}>
+                                <Ionicons name="sparkles" size={22} color="#A259FF" />
                             </View>
-                            <Text style={[styles.bentoValue, { color: '#A259FF' }]}>{userData?.mensajesHoy || 0}</Text>
+                            <Text style={[styles.bentoValue, { color: '#A259FF', fontSize: rs(38) }]}>{userData?.mensajesHoy || 0}</Text>
                             <Text style={styles.bentoLabel}>CONSULTAS HOY</Text>
                             <View style={styles.bentoMiniGraph}>
-                                <View style={[styles.graphBar, { width: `${Math.min((userData?.mensajesHoy || 0) * 10, 100)}%`, backgroundColor: '#A259FF' }]} />
+                                <LinearGradient
+                                    colors={['#A259FF', '#6B2FD9']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={[styles.graphBar, { width: `${Math.min((userData?.mensajesHoy || 0) * 10, 100)}%` }]}
+                                />
+                            </View>
+                            <View style={styles.bentoFooterRow}>
+                                <Text style={[styles.bentoFooterText, { color: 'rgba(162,89,255,0.7)' }]}>Ver chat →</Text>
                             </View>
                         </TouchableOpacity>
 
                         {/* Training Streak Card */}
                         <TouchableOpacity
                             style={[styles.bentoCard, styles.cardHalf]}
-                            onPress={() => navigation.navigate('TrainingCalendar')}
-                            activeOpacity={0.8}
+                            onPress={() => navigateToScreen('TrainingCalendar')}
+                            activeOpacity={0.85}
                         >
-                            <BlurView intensity={10} tint="dark" style={StyleSheet.absoluteFill} />
-                            <LinearGradient colors={['rgba(99,255,21,0.1)', 'transparent']} style={StyleSheet.absoluteFill} />
-                            <View style={styles.bentoIconBox}>
-                                <MaterialCommunityIcons name="fire" size={20} color="#63ff15" />
+                            <LinearGradient
+                                colors={['rgba(99,255,21,0.2)', 'rgba(99,255,21,0.04)', 'transparent']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={StyleSheet.absoluteFill}
+                            />
+                            <View style={[styles.bentoTopBar, { backgroundColor: '#63ff15' }]} />
+                            <View style={[styles.bentoIconBox, { backgroundColor: 'rgba(99,255,21,0.15)', borderColor: 'rgba(99,255,21,0.4)' }]}>
+                                <MaterialCommunityIcons name="fire" size={22} color="#63ff15" />
                             </View>
-                            <Text style={styles.bentoValue}>{streak}</Text>
+                            <Text style={[styles.bentoValue, { fontSize: rs(38) }]}>{streak}</Text>
                             <Text style={styles.bentoLabel}>DÍAS DE RACHA</Text>
                             <View style={styles.bentoMiniGraph}>
-                                <View style={[styles.graphBar, { width: `${Math.min(streak * 14, 100)}%`, backgroundColor: '#63ff15' }]} />
+                                <LinearGradient
+                                    colors={['#63ff15', '#00D1FF']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={[styles.graphBar, { width: `${Math.min(streak * 14, 100)}%` }]}
+                                />
+                            </View>
+                            <View style={styles.bentoFooterRow}>
+                                <Text style={[styles.bentoFooterText, { color: 'rgba(99,255,21,0.7)' }]}>Calendario →</Text>
                             </View>
                         </TouchableOpacity>
                     </View>
 
-
+                    {/* Wide promo card */}
+                    <TouchableOpacity
+                        style={styles.bentoBigCard}
+                        onPress={() => navigateToScreen('Nexus IA')}
+                        activeOpacity={0.85}
+                    >
+                        <LinearGradient
+                            colors={['rgba(0,209,255,0.15)', 'rgba(99,255,21,0.08)', 'transparent']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={StyleSheet.absoluteFill}
+                        />
+                        <LinearGradient
+                            colors={['#63ff15', '#00D1FF']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.bentoBigTopBar}
+                        />
+                        <View style={styles.bentoBigContent}>
+                            <View style={styles.bentoBigLeft}>
+                                <View style={styles.bentoBigBadge}>
+                                    <Text style={styles.bentoBigBadgeText}>⚡ NEXUS AI</Text>
+                                </View>
+                                <Text style={styles.bentoBigTitle}>Entrena con{`\n`}<Text style={{ color: '#63ff15' }}>Inteligencia</Text></Text>
+                                <Text style={styles.bentoBigSub}>Tu entrenador personal 24/7</Text>
+                            </View>
+                            <LinearGradient
+                                colors={['rgba(99,255,21,0.25)', 'rgba(99,255,21,0.08)']}
+                                style={styles.bentoBigIconCircle}
+                            >
+                                <Ionicons name="sparkles" size={32} color="#63ff15" />
+                            </LinearGradient>
+                        </View>
+                    </TouchableOpacity>
                 </View>
 
                 {/* QUICK NAV: HORIZONTAL SCROLL */}
@@ -451,15 +618,20 @@ export default function Home() {
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.premiumHorizontalScroll}
                 >
-                    <QuickAction icon="diamond" label="Elite Vault" color="#FFD700" onPress={() => navigation.navigate('SavedElitePlans')} delay={1} />
-                    <QuickAction icon="trophy-outline" label="Liga Nexus" color="#a855f7" onPress={() => navigation.navigate('Ranking')} delay={2} />
-                    <QuickAction icon="medal-outline" label="Logros" color="#63ff15" onPress={() => navigation.navigate('Achievements')} delay={3} />
+                    <QuickAction icon="diamond" label="Elite Vault" color="#FFD700" onPress={() => navigateToScreen('SavedElitePlans')} delay={1} />
+                    <QuickAction icon="trophy-outline" label="Liga Nexus" color="#a855f7" onPress={() => navigateToScreen('Ranking')} delay={2} />
+                    <QuickAction icon="medal-outline" label="Logros" color="#63ff15" onPress={() => navigateToScreen('Achievements')} delay={3} />
                 </ScrollView>
 
                 {/* SECTIONS: BENTO STYLE LISTS */}
                 <View style={[styles.sectionGroup, styles.sectionCardWrap]}>
                     <View style={styles.premiumSectionHeader}>
-                        <View style={styles.accentLine} />
+                        <LinearGradient
+                            colors={['#A259FF', 'transparent']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.accentLine}
+                        />
                         <Text style={styles.premiumSectionTitle}>INTELIGENCIA NEXUS</Text>
                     </View>
                     <View style={styles.bentoFeatureList}>
@@ -471,7 +643,12 @@ export default function Home() {
 
                 <View style={[styles.sectionGroup, styles.sectionCardWrap]}>
                     <View style={styles.premiumSectionHeader}>
-                        <View style={styles.accentLine} />
+                        <LinearGradient
+                            colors={['#007AFF', 'transparent']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.accentLine}
+                        />
                         <Text style={styles.premiumSectionTitle}>PROTOCOLO DE ENTRENAMIENTO</Text>
                     </View>
                     <View style={styles.bentoFeatureList}>
@@ -487,7 +664,12 @@ export default function Home() {
                 {/* SECCIÓN: SOCIAL */}
                 <View style={[styles.sectionGroup, styles.sectionCardWrap]}>
                     <View style={styles.premiumSectionHeader}>
-                        <View style={styles.accentLine} />
+                        <LinearGradient
+                            colors={['#00D1FF', 'transparent']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.accentLine}
+                        />
                         <Text style={styles.premiumSectionTitle}>COMUNIDAD NEXUS</Text>
                     </View>
                     <View style={styles.bentoFeatureList}>
@@ -515,7 +697,7 @@ export default function Home() {
                 {plan === 'Gratis' && (
                     <TouchableOpacity
                         style={styles.promoBanner}
-                        onPress={() => navigation.navigate('PlanesPago')}
+                        onPress={() => navigateToScreen('PlanesPago')}
                         activeOpacity={0.9}
                     >
                         <LinearGradient
@@ -561,6 +743,8 @@ export default function Home() {
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                     />
+                    {/* Left green accent strip */}
+                    <View style={styles.motivationAccentStrip} />
                     <Text style={styles.motivationQuoteMark}>"</Text>
                     <View style={styles.motivationContent}>
                         <Text style={styles.motivationText}>{motivation}</Text>
@@ -612,19 +796,19 @@ export default function Home() {
                     </View>
 
                     <ScrollView style={styles.sidebarMenu}>
-                        <TouchableOpacity style={styles.sidebarItem} onPress={() => { toggleSidebar(false); navigation.navigate('AccountSettings'); }}>
+                        <TouchableOpacity style={styles.sidebarItem} onPress={() => { toggleSidebar(false); navigateToScreen('AccountSettings'); }}>
                             <Ionicons name="person-outline" size={22} color="#888" />
                             <Text style={styles.sidebarItemText}>Mi Perfil</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.sidebarItem} onPress={() => { toggleSidebar(false); navigation.navigate('PlanesPago'); }}>
+                        <TouchableOpacity style={styles.sidebarItem} onPress={() => { toggleSidebar(false); navigateToScreen('PlanesPago'); }}>
                             <Ionicons name="card-outline" size={22} color="#888" />
                             <Text style={styles.sidebarItemText}>Suscripción</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.sidebarItem} onPress={() => { toggleSidebar(false); navigation.navigate('SavedElitePlans'); }}>
+                        <TouchableOpacity style={styles.sidebarItem} onPress={() => { toggleSidebar(false); navigateToScreen('SavedElitePlans'); }}>
                             <Ionicons name="folder-open-outline" size={22} color="#888" />
                             <Text style={styles.sidebarItemText}>Nexus Vault</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.sidebarItem} onPress={() => { toggleSidebar(false); navigation.navigate('Analytics'); }}>
+                        <TouchableOpacity style={styles.sidebarItem} onPress={() => { toggleSidebar(false); navigateToScreen('Analytics'); }}>
                             <Ionicons name="analytics-outline" size={22} color="#888" />
                             <Text style={styles.sidebarItemText}>Estadísticas</Text>
                         </TouchableOpacity>
@@ -686,7 +870,19 @@ const styles = StyleSheet.create({
         borderColor: colors.primaryBorder,
         overflow: 'hidden',
         backgroundColor: 'rgba(18,18,18,0.94)',
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(99,255,21,0.1)',
         ...shadows.cardMd,
+    },
+    activeIndicatorDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#63ff15',
+        shadowColor: '#63ff15',
+        shadowOpacity: 0.8,
+        shadowRadius: 4,
+        elevation: 3,
     },
     headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.base },
     headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
@@ -701,7 +897,7 @@ const styles = StyleSheet.create({
         borderColor: colors.primaryBorder,
     },
     welcomeTextContainer: { gap: 2 },
-    greetingText: { color: colors.textDim, fontSize: rs(11), fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.2 },
+    greetingText: { color: 'rgba(99,255,21,0.7)', fontSize: rs(11), fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.2 },
     userName: { color: colors.textPrimary, fontSize: rs(22), fontWeight: '900', letterSpacing: -0.4 },
 
     headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
@@ -770,29 +966,109 @@ const styles = StyleSheet.create({
     bentoCard: {
         borderRadius: radius.xl,
         padding: 18,
-        backgroundColor: 'rgba(18,18,18,0.93)',
+        backgroundColor: '#111114',
         borderWidth: 1,
-        borderColor: colors.primaryBorder,
+        borderColor: 'rgba(255,255,255,0.07)',
         overflow: 'hidden',
-        ...shadows.card,
+        shadowColor: '#000',
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 6,
     },
-    cardHalf: { flex: 1, height: rs(160), justifyContent: 'space-between' },
+    bentoTopBar: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 3,
+        borderTopLeftRadius: radius.xl,
+        borderTopRightRadius: radius.xl,
+    },
+    cardHalf: { flex: 1, height: rs(185), justifyContent: 'space-between' },
     bentoCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
     bentoIconBox: {
-        width: rs(40),
-        height: rs(40),
+        width: rs(44),
+        height: rs(44),
         borderRadius: radius.lg,
         backgroundColor: colors.primaryGlow,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
         borderColor: colors.primaryBorder,
+        marginTop: spacing.sm,
     },
-    bentoValue: { color: colors.primary, fontSize: rs(30), fontWeight: '900', letterSpacing: -1, marginTop: spacing.sm },
+    bentoValue: { color: colors.primary, fontSize: rs(30), fontWeight: '900', letterSpacing: -1.5, marginTop: spacing.xs },
     unitText: { fontSize: rs(13), color: colors.textDim, fontWeight: '600' },
-    bentoLabel: { color: '#7A7A7A', fontSize: rs(10), fontWeight: '800', letterSpacing: 0.8, marginTop: spacing.xs },
-    bentoMiniGraph: { height: 4, backgroundColor: colors.primaryGlow, borderRadius: 2, marginTop: spacing.md, overflow: 'hidden' },
+    bentoLabel: { color: '#555', fontSize: rs(10), fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' },
+    bentoMiniGraph: { height: 3, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' },
     graphBar: { height: '100%', borderRadius: 2 },
+    bentoFooterRow: { marginTop: spacing.xs },
+    bentoFooterText: { fontSize: rs(11), fontWeight: '700', letterSpacing: 0.3 },
+
+    // BIG BENTO CARD
+    bentoBigCard: {
+        borderRadius: radius.xl,
+        backgroundColor: '#111114',
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.15)',
+        overflow: 'hidden',
+        shadowColor: '#63ff15',
+        shadowOpacity: 0.1,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 0 },
+        elevation: 6,
+    },
+    bentoBigTopBar: {
+        height: 3,
+        width: '100%',
+    },
+    bentoBigContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 20,
+    },
+    bentoBigLeft: { flex: 1 },
+    bentoBigBadge: {
+        backgroundColor: 'rgba(99,255,21,0.12)',
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.3)',
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        alignSelf: 'flex-start',
+        marginBottom: 10,
+    },
+    bentoBigBadgeText: {
+        color: '#63ff15',
+        fontSize: rs(10),
+        fontWeight: '900',
+        letterSpacing: 1.5,
+    },
+    bentoBigTitle: {
+        color: '#fff',
+        fontSize: rs(22),
+        fontWeight: '900',
+        letterSpacing: -0.5,
+        lineHeight: rs(28),
+        marginBottom: 6,
+    },
+    bentoBigSub: {
+        color: '#555',
+        fontSize: rs(12),
+        fontWeight: '600',
+    },
+    bentoBigIconCircle: {
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(99,255,21,0.2)',
+    },
 
     // QUICK ACTIONS & FEATURES
     premiumHorizontalScroll: { paddingLeft: PAGE_PADDING, paddingRight: PAGE_PADDING, gap: spacing.md, marginBottom: spacing.xl },
@@ -812,7 +1088,7 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     quickActionGradient: { ...StyleSheet.absoluteFill, borderRadius: radius.card },
-    quickActionIconBox: { width: 44, height: 44, borderRadius: radius.lg, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', marginBottom: spacing.sm },
+    quickActionIconBox: { width: 50, height: 50, borderRadius: radius.lg, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.sm, overflow: 'hidden' },
     quickActionLabelText: { color: colors.textPrimary, fontSize: rs(11), fontWeight: '800', marginTop: spacing.xs, textAlign: 'center', letterSpacing: 0.4 },
 
     // SECTION SYSTEM
@@ -827,8 +1103,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 0,
     },
     premiumSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.base },
-    accentLine: { width: 3, height: 16, backgroundColor: colors.primary, borderRadius: 1.5 },
-    premiumSectionTitle: { color: '#A2A2AC', fontSize: rs(11), fontWeight: '900', letterSpacing: 1.2, textTransform: 'uppercase' },
+    accentLine: { width: 3, height: 16, borderRadius: 1.5 },
+    premiumSectionTitle: { color: '#A2A2AC', fontSize: rs(12), fontWeight: '900', letterSpacing: 1.2, textTransform: 'uppercase' },
     bentoFeatureList: { gap: spacing.sm },
 
     // FEATURE CARD
@@ -845,6 +1121,15 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         ...shadows.card,
     },
+    featureAccentStrip: {
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: 3,
+        borderTopLeftRadius: radius.xl,
+        borderBottomLeftRadius: radius.xl,
+    },
     featureCardTopSheen: {
         position: 'absolute',
         top: 0,
@@ -860,8 +1145,10 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: spacing.md,
+        marginLeft: spacing.xs,
         borderWidth: 0,
         borderColor: 'transparent',
+        overflow: 'hidden',
     },
     featureTextWrap: { flex: 1 },
     featureTitle: { color: colors.textPrimary, fontSize: rs(16), fontWeight: '900', letterSpacing: -0.2 },
@@ -922,19 +1209,30 @@ const styles = StyleSheet.create({
         marginBottom: spacing.lg,
         ...shadows.cardMd,
     },
+    motivationAccentStrip: {
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: 3,
+        backgroundColor: '#63ff15',
+        borderTopLeftRadius: radius.xxl,
+        borderBottomLeftRadius: radius.xxl,
+    },
     motivationQuoteMark: {
         position: 'absolute',
         top: -rs(10),
         left: rs(16),
-        fontSize: rs(110),
-        color: 'rgba(99,255,21,0.05)',
+        fontSize: rs(120),
+        color: 'rgba(99,255,21,0.07)',
         fontWeight: '900',
-        lineHeight: rs(110),
+        lineHeight: rs(120),
     },
     motivationContent: {
         paddingHorizontal: spacing.xl,
         paddingTop: rs(36),
         paddingBottom: spacing.md,
+        paddingVertical: 20,
     },
     motivationText: {
         color: '#D4D4D8',
