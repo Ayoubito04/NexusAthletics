@@ -92,7 +92,11 @@ export default function Home() {
 
         showLoading(msg, subMsg, 1200);
         setTimeout(() => {
-            navigation.navigate(screenName);
+            if (screenName === 'Nexus IA' || screenName === 'EntrenadorIA') {
+                navigation.navigate('MainTabs', { screen: 'Nexus IA' });
+            } else {
+                navigation.navigate(screenName);
+            }
         }, 100);
     };
     const [notifCount, setNotifCount] = useState(0);
