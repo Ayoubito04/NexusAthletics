@@ -17,7 +17,7 @@ const { width, height } = Dimensions.get('window');
 const GIF_CACHE_KEY = 'nexus_exercise_gifs_v1';
 
 export default function ElitePlanScreen({ route, navigation }) {
-    const { plan } = route.params;
+    const { plan, diasDisponibles } = route.params;
     const [guardado, setGuardado] = useState(false);
     const [agendado, setAgendado] = useState(false);
     const [apiGifs, setApiGifs] = useState({});
@@ -142,17 +142,16 @@ export default function ElitePlanScreen({ route, navigation }) {
             const numDays = diasOrdenados.length;
 
             // Distribución Lun→Dom: training days primero, descansos en finde
-            // 0=Lun 1=Mar 2=Mié 3=Jue 4=Vie 5=Sáb 6=Dom
-            const WEEKLY_DAY_OFFSETS = {
-                1: [0],
-                2: [0, 4],
-                3: [0, 2, 4],
-                4: [0, 1, 3, 4],
-                5: [0, 1, 2, 3, 4],
-                6: [0, 1, 2, 3, 4, 5],
-                7: [0, 1, 2, 3, 4, 5, 6],
+            // Usar los días que el usuario seleccionó; si no vienen (plan guardado antiguo) usar fallback
+            const fallbackOffsets = {
+                1: [0], 2: [0, 4], 3: [0, 2, 4],
+                4: [0, 1, 3, 4], 5: [0, 1, 2, 3, 4],
+                6: [0, 1, 2, 3, 4, 5], 7: [0, 1, 2, 3, 4, 5, 6],
             };
-            const offsets = WEEKLY_DAY_OFFSETS[numDays] ?? [...Array(numDays).keys()];
+            const offsets = (diasDisponibles && diasDisponibles.length > 0)
+                ? [...diasDisponibles].sort((a, b) => a - b)
+                : (fallbackOffsets[numDays] ?? [...Array(numDays).keys()]);
+
             const isUltimatePlan = !!(plan.analisis || plan.suplementacion?.length);
 
             for (let week = 0; week < 4; week++) {

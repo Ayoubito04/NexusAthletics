@@ -245,7 +245,12 @@ export default function NexusIA() {
     // Plan config
     const [objetivoPlan, setObjetivoPlan] = useState('Ganar Músculo');
     const [nivelPlan, setNivelPlan] = useState('Intermedio');
-    const [diasPlan, setDiasPlan] = useState('4');
+    // 0=Lun 1=Mar 2=Mié 3=Jue 4=Vie 5=Sáb 6=Dom
+    const [diasDisponibles, setDiasDisponibles] = useState([0, 2, 4]);
+    const toggleDia = (offset) =>
+        setDiasDisponibles(prev =>
+            prev.includes(offset) ? prev.filter(d => d !== offset) : [...prev, offset]
+        );
     const [prefAlimenticia, setPrefAlimenticia] = useState('Alta Proteína');
     const [metodologia, setMetodologia] = useState('IA Decide por Mí');
     const [equipamiento, setEquipamiento] = useState('Gimnasio Completo');
@@ -290,13 +295,13 @@ export default function NexusIA() {
         try {
             const body = isUltimate
                 ? {
-                    details: `OBJETIVO: ${objetivoPlan}. NIVEL: ${nivelPlan}. DÍAS/SEMANA: ${diasPlan}. DIETA: ${prefAlimenticia}. METODOLOGÍA: ${metodologia}. EQUIPAMIENTO: ${equipamiento}. PRIORIDAD: ${prioridad}. DURACIÓN: ${duracion}.`,
+                    details: `OBJETIVO: ${objetivoPlan}. NIVEL: ${nivelPlan}. DÍAS/SEMANA: ${diasDisponibles.length}. DIETA: ${prefAlimenticia}. METODOLOGÍA: ${metodologia}. EQUIPAMIENTO: ${equipamiento}. PRIORIDAD: ${prioridad}. DURACIÓN: ${duracion}.`,
                     lesiones, horasSueno, nivelEstres,
                     semanas: parseInt(semanasMeso),
                     periodi, tecnicas,
                 }
                 : {
-                    details: `OBJETIVO: ${objetivoPlan}. NIVEL: ${nivelPlan}. DÍAS/SEMANA: ${diasPlan}. DIETA: ${prefAlimenticia}. METODOLOGÍA: ${metodologia}. EQUIPAMIENTO: ${equipamiento}. PRIORIDAD: ${prioridad}. DURACIÓN: ${duracion}.`
+                    details: `OBJETIVO: ${objetivoPlan}. NIVEL: ${nivelPlan}. DÍAS/SEMANA: ${diasDisponibles.length}. DIETA: ${prefAlimenticia}. METODOLOGÍA: ${metodologia}. EQUIPAMIENTO: ${equipamiento}. PRIORIDAD: ${prioridad}. DURACIÓN: ${duracion}.`
                 };
 
             const response = await fetch(`${BACKEND_URL}/generate-plan-interactive`, {
@@ -313,7 +318,7 @@ export default function NexusIA() {
 
             const planData = await response.json();
             setGenerandoPlan(false);
-            navigation.navigate('ElitePlanScreen', { plan: planData });
+            navigation.navigate('ElitePlanScreen', { plan: planData, diasDisponibles: [...diasDisponibles].sort((a, b) => a - b) });
         } catch (error) {
             if (error.name === 'AbortError') {
                 setGenerandoPlan(false);
@@ -338,7 +343,7 @@ export default function NexusIA() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({
-                    details: `OBJETIVO: ${objetivoPlan}. NIVEL: ${nivelPlan}. DÍAS/SEMANA: ${diasPlan}. DIETA: ${prefAlimenticia}. METODOLOGÍA: ${metodologia}. EQUIPAMIENTO: ${equipamiento}. PRIORIDAD: ${prioridad}. DURACIÓN: ${duracion}. Usuario: ${user.nombre} ${user.apellido}.`,
+                    details: `OBJETIVO: ${objetivoPlan}. NIVEL: ${nivelPlan}. DÍAS/SEMANA: ${diasDisponibles.length}. DIETA: ${prefAlimenticia}. METODOLOGÍA: ${metodologia}. EQUIPAMIENTO: ${equipamiento}. PRIORIDAD: ${prioridad}. DURACIÓN: ${duracion}. Usuario: ${user.nombre} ${user.apellido}.`,
                     format: 'base64',
                 }),
             });
@@ -490,15 +495,45 @@ export default function NexusIA() {
                     ))}
                 </View>
 
-                {/* Días */}
-                <Text style={styles.labelPlan}>Días de entrenamiento por semana</Text>
-                <View style={styles.optionsGrid}>
-                    {['2', '3', '4', '5', '6'].map(opt => (
-                        <TouchableOpacity key={opt} style={[styles.optBtn, diasPlan === opt && styles.optBtnSelected]} onPress={() => setDiasPlan(opt)}>
-                            <Text style={[styles.optText, diasPlan === opt && styles.optTextSelected]}>{opt}</Text>
-                        </TouchableOpacity>
-                    ))}
+                {/* Días disponibles */}
+                <Text style={styles.labelPlan}>Días disponibles para entrenar</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                    {[
+                        { label: 'L', offset: 0 },
+                        { label: 'M', offset: 1 },
+                        { label: 'X', offset: 2 },
+                        { label: 'J', offset: 3 },
+                        { label: 'V', offset: 4 },
+                        { label: 'S', offset: 5 },
+                        { label: 'D', offset: 6 },
+                    ].map(({ label, offset }) => {
+                        const selected = diasDisponibles.includes(offset);
+                        const isWeekend = offset >= 5;
+                        return (
+                            <TouchableOpacity
+                                key={offset}
+                                onPress={() => toggleDia(offset)}
+                                style={{
+                                    width: 42, height: 42, borderRadius: 12,
+                                    backgroundColor: selected ? (isWeekend ? 'rgba(255,184,0,0.15)' : 'rgba(99,255,21,0.12)') : 'rgba(255,255,255,0.04)',
+                                    borderWidth: 1.5,
+                                    borderColor: selected ? (isWeekend ? '#FFB800' : '#63ff15') : 'rgba(255,255,255,0.08)',
+                                    alignItems: 'center', justifyContent: 'center',
+                                }}
+                            >
+                                <Text style={{
+                                    color: selected ? (isWeekend ? '#FFB800' : '#63ff15') : '#555',
+                                    fontWeight: '900', fontSize: 13,
+                                }}>{label}</Text>
+                            </TouchableOpacity>
+                        );
+                    })}
                 </View>
+                {diasDisponibles.length === 0 && (
+                    <Text style={{ color: '#FF4444', fontSize: 11, marginTop: -10, marginBottom: 12 }}>
+                        Selecciona al menos un día
+                    </Text>
+                )}
 
                 {/* Dieta */}
                 <Text style={styles.labelPlan}>Preferencia Alimenticia</Text>
