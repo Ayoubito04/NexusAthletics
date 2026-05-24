@@ -173,13 +173,18 @@ export default function PlanesPago() {
     // ─── Datos derivados ────────────────────────────────────────────────────
     const invites      = trialStatus?.invites ?? (user?.invitacionesExitosas || 0);
     const pricing      = getNextDiscountInfo(invites);
-    // Descuento SOLO si el usuario aplicó un código manualmente en esta sesión
     const hasDiscount  = codigoAplicado;
     const proPrice     = codigoAplicado ? pricing.currentPrice : PRO_BASE_PRICE;
     const isInTrial    = trialStatus?.trialActive;
     const trialExpired = trialStatus?.trialExpired;
     const daysLeft     = trialStatus?.daysLeft;
     const trialUsed    = user?.haUsadoTrial;
+
+    // Expiración Ultimate
+    const ultimateExpiry = user?.plan === 'Ultimate' && user?.role !== 'ADMIN' && user?.trialEndDate
+        ? new Date(user.trialEndDate) : null;
+    const ultimateDaysLeft = ultimateExpiry
+        ? Math.max(0, Math.ceil((ultimateExpiry - new Date()) / (1000 * 60 * 60 * 24))) : null;
 
     const planes = [
         {
@@ -264,6 +269,42 @@ export default function PlanesPago() {
                         <Ionicons name="alert-circle-outline" size={22} color="#ff6b6b" />
                         <Text style={styles.expiredText}>Tu mes gratis ha terminado. Renueva el Plan Pro para seguir disfrutando de todas las funciones.</Text>
                     </View>
+                )}
+
+                {/* ── Ultimate: banner de expiración ── */}
+                {user?.plan === 'Ultimate' && user?.role !== 'ADMIN' && (
+                    <LinearGradient
+                        colors={ultimateDaysLeft !== null && ultimateDaysLeft <= 5
+                            ? ['rgba(255,68,68,0.15)', 'rgba(255,68,68,0.04)']
+                            : ['rgba(255,215,0,0.15)', 'rgba(255,215,0,0.04)']}
+                        style={styles.trialBanner}
+                    >
+                        <Ionicons
+                            name={ultimateDaysLeft !== null && ultimateDaysLeft <= 5 ? 'warning-outline' : 'timer-outline'}
+                            size={28}
+                            color={ultimateDaysLeft !== null && ultimateDaysLeft <= 5 ? '#FF4444' : '#FFD700'}
+                        />
+                        <View style={{ flex: 1 }}>
+                            {ultimateExpiry ? (
+                                <>
+                                    <Text style={[styles.trialBannerTitle, { color: ultimateDaysLeft <= 5 ? '#FF4444' : '#FFD700' }]}>
+                                        {ultimateDaysLeft <= 5 ? `⚠️ Plan expira en ${ultimateDaysLeft} día${ultimateDaysLeft === 1 ? '' : 's'}` : '👑 Plan Ultimate Activo'}
+                                    </Text>
+                                    <Text style={styles.trialBannerSub}>
+                                        Expira el{' '}
+                                        <Text style={{ color: '#FFD700', fontWeight: '900' }}>
+                                            {ultimateExpiry.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                        </Text>
+                                    </Text>
+                                </>
+                            ) : (
+                                <>
+                                    <Text style={[styles.trialBannerTitle, { color: '#FFD700' }]}>👑 Plan Ultimate Activo</Text>
+                                    <Text style={styles.trialBannerSub}>Renueva para registrar tu fecha de expiración</Text>
+                                </>
+                            )}
+                        </View>
+                    </LinearGradient>
                 )}
 
                 {/* ── Código de descuento ── */}
