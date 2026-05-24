@@ -2,12 +2,19 @@ const { prisma } = require('../config/prisma');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { createOrder, captureOrder } = require('../services/paypalService');
 
+const getPlanData = (plan) => ({
+    plan,
+    trialEndDate: plan === 'Ultimate'
+        ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        : null,
+});
+
 const processPayPal = async (req, res) => {
     const { amount, plan, orderId } = req.body;
     try {
         const user = await prisma.user.update({
             where: { id: req.user.id },
-            data: { plan }
+            data: getPlanData(plan)
         });
         const { password: _, ...userWithoutPassword } = user;
         res.json({ success: true, user: userWithoutPassword, message: "Pago procesado exitosamente con PayPal" });
@@ -31,7 +38,7 @@ const processStripe = async (req, res) => {
         if (paymentIntent.status === 'succeeded') {
             const user = await prisma.user.update({
                 where: { id: req.user.id },
-                data: { plan }
+                data: getPlanData(plan)
             });
             const { password: _, ...userWithoutPassword } = user;
             res.json({ success: true, user: userWithoutPassword, message: "Pago real procesado con éxito" });
@@ -90,7 +97,7 @@ const capturePayPalOrder = async (req, res) => {
         if (capture.status === 'COMPLETED') {
             const user = await prisma.user.update({
                 where: { id: req.user.id },
-                data: { plan }
+                data: getPlanData(plan)
             });
             const { password: _, ...userWithoutPassword } = user;
             res.json({ success: true, user: userWithoutPassword });

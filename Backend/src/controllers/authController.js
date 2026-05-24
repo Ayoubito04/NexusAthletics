@@ -390,7 +390,7 @@ const socialLogin = async (req, res) => {
 
 const getMe = async (req, res) => {
     try {
-        const user = await prisma.user.findUnique({
+        let user = await prisma.user.findUnique({
             where: { id: req.user.id },
             include: {
                 _count: {
@@ -402,6 +402,23 @@ const getMe = async (req, res) => {
             }
         });
         if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+
+        // Auto-degradar Ultimate expirado (admins son eternos)
+        if (user.plan === 'Ultimate' && user.role !== 'ADMIN' && user.trialEndDate && new Date() > user.trialEndDate) {
+            user = await prisma.user.update({
+                where: { id: user.id },
+                data: { plan: 'Gratis', trialEndDate: null },
+                include: {
+                    _count: {
+                        select: {
+                            sentFriendRequests: { where: { status: 'ACEPTADA' } },
+                            receivedFriendRequests: { where: { status: 'ACEPTADA' } },
+                        }
+                    }
+                }
+            });
+        }
+
         const { password: _, _count, ...userWithoutPassword } = user;
         const friendsCount = (_count?.sentFriendRequests || 0) + (_count?.receivedFriendRequests || 0);
         res.json({ ...userWithoutPassword, friendsCount });
