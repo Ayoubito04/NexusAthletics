@@ -98,9 +98,13 @@ export default function ElitePlanScreen({ route, navigation }) {
             let currentRoutines = savedRoutines ? JSON.parse(savedRoutines) : {};
 
             const now = new Date();
-            const dow = now.getDay();
+            const dow = now.getDay(); // 0=Dom, 1=Lun, ..., 6=Sáb
+
+            // Arrancar siempre desde el próximo lunes (o hoy si es lunes)
+            // (8 - dow) % 7 → 0 si hoy es lunes, 1 si es domingo, 6 si es martes...
+            const daysToMonday = (8 - dow) % 7;
             const startMonday = new Date(now);
-            startMonday.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
+            startMonday.setDate(now.getDate() + daysToMonday);
             startMonday.setHours(0, 0, 0, 0);
 
             const mapEx = (ex, dateKey, i) => ({
@@ -119,22 +123,25 @@ export default function ElitePlanScreen({ route, navigation }) {
                 nota: ex.nota || null,
             });
 
-            // Distribución óptima de días de entrenamiento dentro de la semana
-            // Garantiza descanso adecuado entre sesiones según el volumen semanal
+            // Offsets Lunes→Domingo: los descansos caen en finde siempre que sea posible
+            // 0=Lun 1=Mar 2=Mié 3=Jue 4=Vie 5=Sáb 6=Dom
             const WEEKLY_DAY_OFFSETS = {
-                1: [0],
-                2: [0, 3],
-                3: [0, 2, 4],
-                4: [0, 1, 3, 4],
-                5: [0, 1, 2, 3, 4],
-                6: [0, 1, 2, 3, 4, 5],
+                1: [0],                      // Lun
+                2: [0, 3],                   // Lun, Jue
+                3: [0, 2, 4],               // Lun, Mié, Vie
+                4: [0, 1, 3, 4],            // Lun, Mar, Jue, Vie
+                5: [0, 1, 2, 3, 4],         // Lun–Vie  → finde libre
+                6: [0, 1, 2, 3, 4, 5],      // Lun–Sáb  → solo Dom libre
+                7: [0, 1, 2, 3, 4, 5, 6],   // Todos
             };
+
             const getDayOffset = (numDays, idx) =>
                 (WEEKLY_DAY_OFFSETS[numDays] ?? [...Array(numDays).keys()])[idx] ?? idx;
 
             const WEEKS = 4;
             const numDays = (plan.dias || []).length;
             const isUltimatePlan = !!(plan.analisis || plan.suplementacion?.length);
+
             for (let week = 0; week < WEEKS; week++) {
                 (plan.dias || []).forEach((diaPlan, index) => {
                     const d = new Date(startMonday);
@@ -151,12 +158,15 @@ export default function ElitePlanScreen({ route, navigation }) {
                     };
                 });
             }
+
             await AsyncStorage.setItem('assigned_routines', JSON.stringify(currentRoutines));
             setAgendado(true);
             showAlert('🚀 Propagación Nexus Completada', `Tu rutina se ha inyectado para el próximo mes (4 semanas).`, 'success');
         } catch (error) {
             console.error('Schedule error:', error);
             showAlert('Error', 'No se pudo programar el plan.', 'error');
+        }
+    };
         }
     };
 
