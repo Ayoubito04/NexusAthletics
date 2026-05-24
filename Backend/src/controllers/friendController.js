@@ -135,16 +135,19 @@ const getNotifications = async (req, res) => {
     try {
         const pendingRequests = await prisma.friendship.findMany({
             where: { receiverId: req.user.id, status: 'PENDIENTE' },
-            include: { sender: { select: { id: true, nombre: true, avatar: true } } }
+            include: { sender: { select: { id: true, nombre: true, apellido: true, avatar: true } } }
         });
 
-        const notifications = pendingRequests.map(req => ({
-            id: `friend_${req.senderId}`,
+        const notifications = pendingRequests.map(r => ({
+            id: `friend_${r.senderId}`,
             title: 'Solicitud de amistad',
-            message: `${req.sender.nombre} quiere ser tu amigo en Nexus.`,
-            type: 'info',
+            message: `${r.sender.nombre} ${r.sender.apellido || ''} quiere conectar contigo en Nexus.`,
+            type: 'friend_request',
             time: 'Nuevo',
-            icon: 'person-add'
+            icon: 'person-add',
+            senderId: r.senderId,
+            senderName: `${r.sender.nombre} ${r.sender.apellido || ''}`.trim(),
+            senderAvatar: r.sender.avatar || null,
         }));
 
         res.json(notifications);
