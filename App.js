@@ -1,5 +1,6 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { LogBox } from 'react-native';
+import * as Updates from 'expo-updates';
 import { colors, shadows, radius, rs } from './theme';
 
 // Ignorar advertencias de NativeEventEmitter y notificaciones en Expo Go
@@ -19,7 +20,7 @@ import Home from './screen/Home';
 import Login from './screen/Login';
 import Register from './screen/register';
 import PlanesPago from './screen/PlanesPago';
-import EntrenadorIA from './screen/EntrenadorIA';
+import NexusIA from './screen/NexusIA';
 import Profile from './screen/Profile';
 import IGCResult from './screen/IGCResult';
 import Community from './screen/Community';
@@ -173,7 +174,7 @@ function TabNavigator() {
       />
       <Tab.Screen 
         name="Nexus IA" 
-        component={EntrenadorIA}
+        component={NexusIA}
         options={{ tabBarLabel: 'Nexus' }}
         listeners={({ navigation }) => ({
           tabPress: (e) => {
@@ -272,6 +273,16 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    if (!__DEV__) {
+      Updates.checkForUpdateAsync().then(({ isAvailable }) => {
+        if (isAvailable) {
+          Updates.fetchUpdateAsync().then(() => Updates.reloadAsync()).catch(() => {});
+        }
+      }).catch(() => {});
+    }
+  }, []);
+
   // Keepalive: ping al servidor cada 14 min para evitar cold starts de Render
   useEffect(() => {
     const ping = () => fetch('https://nexusathletics.onrender.com/').catch(() => {});
@@ -340,7 +351,7 @@ export default function App() {
             <Stack.Screen name="Login" component={Login} />
             <Stack.Screen name="Register" component={Register} />
             <Stack.Screen name="PlanesPago" component={PlanesPago} />
-            <Stack.Screen name="EntrenadorIA" component={EntrenadorIA} />
+            <Stack.Screen name="EntrenadorIA" component={NexusIA} />
             <Stack.Screen name="Profile" component={Profile} />
             <Stack.Screen name="IGCResult" component={IGCResult} />
             <Stack.Screen name="Community" component={Community} />
