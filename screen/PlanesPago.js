@@ -193,7 +193,6 @@ export default function PlanesPago() {
                 'Bio Scanner (métricas biométricas)',
                 'Rutinas personalizadas con IA',
                 'Calendario de entrenamiento',
-                'Consultas IA Ilimitadas',
             ],
         },
         {
@@ -206,9 +205,8 @@ export default function PlanesPago() {
             caracteristicas: [
                 'Body Scanner Avanzado (análisis detallado)',
                 'Bio Scanner completo',
-                'Rutinas personalizables generadas con IA',
+                'Crea rutinas con IA adaptadas a ti',
                 'Programación automática en el calendario',
-                'Presentaciones Élite descargables (PDF)',
                 'Sin anuncios · Soporte Prioritario',
             ],
         },
