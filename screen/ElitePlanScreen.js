@@ -167,8 +167,6 @@ export default function ElitePlanScreen({ route, navigation }) {
             showAlert('Error', 'No se pudo programar el plan.', 'error');
         }
     };
-        }
-    };
 
     // ─── Single unified render for both Pro and Ultimate ────────────────────
     const isUltimatePlan = !!(plan.analisis || plan.suplementacion?.length);
