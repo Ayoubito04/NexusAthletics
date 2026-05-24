@@ -217,33 +217,42 @@ export default function Profile() {
                     <MenuSection title="Suscripción">
                         <MenuItem icon="card-outline" label={`Gestionar mi Plan (${user.plan})`} onPress={() => navigation.navigate('PlanesPago')} />
                         <MenuItem icon="receipt-outline" label="Facturación" onPress={() => navigation.navigate('Facturacion')} />
-                        {ultimateExpiry && (
+                        {user.plan === 'Ultimate' && user.role !== 'ADMIN' && (
                             <View style={{
                                 marginHorizontal: 4, marginBottom: 8, borderRadius: 12, padding: 12,
-                                backgroundColor: daysLeft <= 5 ? 'rgba(255,68,68,0.08)' : 'rgba(255,215,0,0.06)',
+                                backgroundColor: daysLeft !== null && daysLeft <= 5 ? 'rgba(255,68,68,0.08)' : 'rgba(255,215,0,0.06)',
                                 borderWidth: 1,
-                                borderColor: daysLeft <= 5 ? 'rgba(255,68,68,0.25)' : 'rgba(255,215,0,0.2)',
+                                borderColor: daysLeft !== null && daysLeft <= 5 ? 'rgba(255,68,68,0.25)' : 'rgba(255,215,0,0.2)',
                                 flexDirection: 'row', alignItems: 'center', gap: 10,
                             }}>
                                 <Ionicons
-                                    name={daysLeft <= 5 ? 'warning-outline' : 'time-outline'}
+                                    name={daysLeft !== null && daysLeft <= 5 ? 'warning-outline' : 'time-outline'}
                                     size={18}
-                                    color={daysLeft <= 5 ? '#FF4444' : '#FFD700'}
+                                    color={daysLeft !== null && daysLeft <= 5 ? '#FF4444' : '#FFD700'}
                                 />
                                 <View style={{ flex: 1 }}>
-                                    <Text style={{ color: daysLeft <= 5 ? '#FF4444' : '#FFD700', fontSize: 12, fontWeight: '800' }}>
-                                        {daysLeft <= 5 ? `⚠️ Tu plan expira en ${daysLeft} día${daysLeft === 1 ? '' : 's'}` : `Plan Ultimate activo`}
-                                    </Text>
-                                    <Text style={{ color: '#555', fontSize: 11, marginTop: 2 }}>
-                                        Expira el {ultimateExpiry.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                    </Text>
+                                    {ultimateExpiry ? (
+                                        <>
+                                            <Text style={{ color: daysLeft <= 5 ? '#FF4444' : '#FFD700', fontSize: 12, fontWeight: '800' }}>
+                                                {daysLeft <= 5 ? `⚠️ Expira en ${daysLeft} día${daysLeft === 1 ? '' : 's'}` : `Plan Ultimate activo`}
+                                            </Text>
+                                            <Text style={{ color: '#555', fontSize: 11, marginTop: 2 }}>
+                                                Expira el {ultimateExpiry.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                            </Text>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Text style={{ color: '#FFD700', fontSize: 12, fontWeight: '800' }}>Plan Ultimate activo</Text>
+                                            <Text style={{ color: '#555', fontSize: 11, marginTop: 2 }}>Renueva para registrar fecha de expiración</Text>
+                                        </>
+                                    )}
                                 </View>
-                                {daysLeft <= 5 && (
+                                {(daysLeft !== null && daysLeft <= 5) || !ultimateExpiry ? (
                                     <TouchableOpacity onPress={() => navigation.navigate('PlanesPago')}
-                                        style={{ backgroundColor: '#FF4444', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}>
-                                        <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>RENOVAR</Text>
+                                        style={{ backgroundColor: daysLeft !== null && daysLeft <= 5 ? '#FF4444' : '#FFD700', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}>
+                                        <Text style={{ color: '#000', fontSize: 11, fontWeight: '900' }}>RENOVAR</Text>
                                     </TouchableOpacity>
-                                )}
+                                ) : null}
                             </View>
                         )}
                         {user.plan === 'Ultimate' && (
