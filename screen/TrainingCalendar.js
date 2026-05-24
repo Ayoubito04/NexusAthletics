@@ -96,6 +96,9 @@ export default function TrainingCalendar({ navigation }) {
 
     const pulseAnim = new Animated.Value(1);
 
+    const toLocalKey = (d) =>
+        `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
     useEffect(() => { loadData(); }, []);
 
     const loadData = async () => {
@@ -202,7 +205,7 @@ export default function TrainingCalendar({ navigation }) {
         setCompletedDays(newList);
         await AsyncStorage.setItem('completed_days', JSON.stringify(newList));
 
-        const todayKey = new Date().toISOString().split('T')[0];
+        const todayKey = toLocalKey(new Date());
         if (dayKey === todayKey && index === -1) {
             const newStreak = streak + 1;
             setStreak(newStreak);
@@ -268,7 +271,7 @@ export default function TrainingCalendar({ navigation }) {
         setSessionDataForReview(stats);
         setReviewVisible(true);
 
-        const todayKey = new Date().toISOString().split('T')[0];
+        const todayKey = toLocalKey(new Date());
         await toggleDayCompletion(todayKey, true); // el timer ya loguea la sesión abajo
 
         // Sync real weights/reps from session to backend for strength tracking
@@ -309,7 +312,7 @@ export default function TrainingCalendar({ navigation }) {
     const getMonthStats = () => {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
-        const todayKey = new Date().toISOString().split('T')[0];
+        const todayKey = toLocalKey(new Date());
 
         let planned = 0;
         let completed = 0;
@@ -362,10 +365,10 @@ export default function TrainingCalendar({ navigation }) {
 
         for (let i = 1; i <= daysInMonth; i++) {
             const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), i);
-            const key = date.toISOString().split('T')[0];
+            const key = toLocalKey(date);
             const isCompleted = completedDays.includes(key);
             const routine = assignedRoutines[key];
-            const isToday = key === new Date().toISOString().split('T')[0];
+            const isToday = key === toLocalKey(new Date());
 
             let accessibilityLabel = `${i} de ${currentDate.toLocaleString('es-ES', { month: 'long' })}`;
             if (isToday) accessibilityLabel += ", hoy";
@@ -430,10 +433,10 @@ export default function TrainingCalendar({ navigation }) {
                 {Array.from({ length: 7 }).map((_, i) => {
                     const d = new Date(monday);
                     d.setDate(monday.getDate() + i);
-                    const key = d.toISOString().split('T')[0];
+                    const key = toLocalKey(d);
                     const isCompleted = completedDays.includes(key);
                     const routine = assignedRoutines[key];
-                    const isToday = key === new Date().toISOString().split('T')[0];
+                    const isToday = key === toLocalKey(new Date());
                     const isUltimate = routine?.isUltimate;
                     const isElitePro = routine?.isElite && !isUltimate;
                     const faseColor = isUltimate ? (FASE_COLORS[routine.fase] || '#FFD700') : null;
