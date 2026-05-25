@@ -572,14 +572,15 @@ const getTrialStatus = async (req, res) => {
             });
         }
 
-        // Migración única: usuarios Ultimate cuya trialEndDate viene del trial Pro anterior
-        // (el bug existía antes del 25-May-2026). Si su fecha es anterior al límite, se les
-        // otorgan 30 días frescos. Tras la extensión la fecha supera el límite y no vuelve a correr.
-        const ULTIMATE_FIX_CUTOFF = new Date('2026-06-25T00:00:00.000Z');
-        if (isUltimate && !ultimateExpired && user.haUsadoTrial && user.trialEndDate && user.trialEndDate < ULTIMATE_FIX_CUTOFF) {
+        // Migración única: Ultimate sin ultimateActivatedAt = subió antes del fix.
+        // Se les otorgan 30 días frescos y se marca la fecha de activación.
+        if (isUltimate && !ultimateExpired && !user.ultimateActivatedAt) {
             user = await prisma.user.update({
                 where: { id: req.user.id },
-                data: { trialEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) }
+                data: {
+                    trialEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                    ultimateActivatedAt: now,
+                }
             });
         }
 
@@ -730,6 +731,7 @@ const updatePlan = async (req, res) => {
                 plan,
                 ...(plan === 'Ultimate' ? {
                     trialEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                    ultimateActivatedAt: new Date(),
                 } : {}),
             },
         });
