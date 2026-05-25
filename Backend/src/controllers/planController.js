@@ -572,6 +572,18 @@ const getTrialStatus = async (req, res) => {
             });
         }
 
+        // Migración única: Ultimate activado antes del fix que añadió trialEndDate correcto.
+        // ultimateActivatedAt null = usuario antiguo → darle 30 días frescos una sola vez.
+        if (isUltimate && !ultimateExpired && !user.ultimateActivatedAt) {
+            user = await prisma.user.update({
+                where: { id: req.user.id },
+                data: {
+                    trialEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                    ultimateActivatedAt: now,
+                }
+            });
+        }
+
         const invites = user.invitacionesExitosas || 0;
         const pricing = getNextDiscountInfo(invites);
 
@@ -717,8 +729,10 @@ const updatePlan = async (req, res) => {
             where: { id: req.user.id },
             data: {
                 plan,
-                // Siempre 30 días frescos al activar Ultimate, sin importar plan anterior
-                ...(plan === 'Ultimate' ? { trialEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) } : {}),
+                ...(plan === 'Ultimate' ? {
+                    trialEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                    ultimateActivatedAt: new Date(),
+                } : {}),
             },
         });
         const { password: _, ...userWithoutPassword } = updatedUser;
