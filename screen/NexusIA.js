@@ -1,854 +1,446 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Animated, TextInput, Dimensions, Easing } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-
 import Config from '../constants/Config';
 import NexusAlert from '../components/NexusAlert';
 
 const BACKEND_URL = Config.BACKEND_URL;
-
+const { width: SW, height: SH } = Dimensions.get('window');
 const PLAN_STEPS = [
-    'Analizando tu perfil atlético...',
-    'Diseñando periodización inteligente...',
+    'Analizando tu perfil atletico...',
+    'Disenando periodizacion inteligente...',
     'Calculando volumen y cargas...',
-    'Seleccionando ejercicios óptimos...',
-    'Ajustando macros y nutrición...',
+    'Seleccionando ejercicios optimos...',
+    'Ajustando macros y nutricion...',
     'Preparando tu plan maestro...',
 ];
+const DIAS_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
-const PlanGeneratingScreen = ({ isUltimate, onCancel }) => {
-    const [stepIdx, setStepIdx] = useState(0);
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    const barAnim = useRef(new Animated.Value(0)).current;
-    const rotateAnim = useRef(new Animated.Value(0)).current;
-    const rotateAnim2 = useRef(new Animated.Value(0)).current;
-    const glowAnim = useRef(new Animated.Value(0.4)).current;
-    const scaleAnim = useRef(new Animated.Value(0.96)).current;
-    const mountAnim = useRef(new Animated.Value(0)).current;
+const LOAD_PARTICLES = Array.from({ length: 18 }, (_, i) => ({
+    id: i, x: Math.random() * SW, y: Math.random() * SH,
+    size: 2 + Math.random() * 3, duration: 3000 + Math.random() * 4000,
+    delay: Math.random() * 2000, opacity: 0.2 + Math.random() * 0.5,
+}));
 
+const LoadParticle = ({ config, color }) => {
+    const ty = useRef(new Animated.Value(0)).current;
+    const op = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+        Animated.loop(Animated.sequence([
+            Animated.delay(config.delay),
+            Animated.parallel([
+                Animated.timing(op, { toValue: config.opacity, duration: 800, useNativeDriver: true }),
+                Animated.timing(ty, { toValue: -30, duration: config.duration, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+            ]),
+            Animated.parallel([
+                Animated.timing(op, { toValue: 0, duration: 800, useNativeDriver: true }),
+                Animated.timing(ty, { toValue: 0, duration: 0, useNativeDriver: true }),
+            ]),
+        ])).start();
+    }, []);
+    return <Animated.View style={{ position: 'absolute', left: config.x, top: config.y, width: config.size, height: config.size, borderRadius: config.size / 2, backgroundColor: color, opacity: op, transform: [{ translateY: ty }] }} />;
+};
+
+const LoadGlowRing = ({ size, delay, duration, baseOpacity, color }) => {
+    const scale = useRef(new Animated.Value(0.6)).current;
+    const op = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+        Animated.loop(Animated.sequence([
+            Animated.delay(delay),
+            Animated.parallel([
+                Animated.timing(scale, { toValue: 1, duration, useNativeDriver: true, easing: Easing.out(Easing.ease) }),
+                Animated.sequence([
+                    Animated.timing(op, { toValue: baseOpacity, duration: duration * 0.3, useNativeDriver: true }),
+                    Animated.timing(op, { toValue: 0, duration: duration * 0.7, useNativeDriver: true, easing: Easing.in(Easing.ease) }),
+                ]),
+            ]),
+            Animated.timing(scale, { toValue: 0.6, duration: 0, useNativeDriver: true }),
+        ])).start();
+    }, []);
+    return <Animated.View style={{ position: 'absolute', width: size, height: size, borderRadius: size / 2, borderWidth: 1.5, borderColor: color, opacity: op, transform: [{ scale }] }} />;
+};
+
+const PlanGeneratingScreen = ({ isUltimate }) => {
     const color = isUltimate ? '#FFD700' : '#63ff15';
+    const color2 = isUltimate ? '#FFA500' : '#00D1FF';
+    const rgb = isUltimate ? '255,215,0' : '99,255,21';
+    const barW = useRef(new Animated.Value(0)).current;
+    const barGlow = useRef(new Animated.Value(0)).current;
+    const stepFade = useRef(new Animated.Value(1)).current;
+    const pulseLogo = useRef(new Animated.Value(1)).current;
+    const glowOp = useRef(new Animated.Value(0)).current;
+    const [stepIdx, setStepIdx] = useState(0);
+    const [count, setCount] = useState(0);
 
     useEffect(() => {
-        // Mount fade-in
-        Animated.timing(mountAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
-        Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
-
-        // Progress bar (linear, not looped)
-        Animated.timing(barAnim, {
-            toValue: 1, duration: PLAN_STEPS.length * 4000, useNativeDriver: false,
-        }).start();
-
-        // Step cycling
-        const interval = setInterval(() => {
+        Animated.timing(barW, { toValue: 1, duration: PLAN_STEPS.length * 4200, useNativeDriver: false, easing: Easing.bezier(0.25, 0.46, 0.45, 0.94) }).start();
+        Animated.loop(Animated.sequence([
+            Animated.timing(barGlow, { toValue: 1, duration: 600, useNativeDriver: false }),
+            Animated.timing(barGlow, { toValue: 0.4, duration: 600, useNativeDriver: false }),
+        ])).start();
+        Animated.loop(Animated.sequence([
+            Animated.timing(pulseLogo, { toValue: 1.06, duration: 900, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+            Animated.timing(pulseLogo, { toValue: 1, duration: 900, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+        ])).start();
+        Animated.loop(Animated.sequence([
+            Animated.timing(glowOp, { toValue: 1, duration: 1000, useNativeDriver: true }),
+            Animated.timing(glowOp, { toValue: 0.2, duration: 1000, useNativeDriver: true }),
+        ])).start();
+        const stepInt = setInterval(() => {
             Animated.sequence([
-                Animated.timing(fadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
-                Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+                Animated.timing(stepFade, { toValue: 0, duration: 280, useNativeDriver: true }),
+                Animated.timing(stepFade, { toValue: 1, duration: 280, useNativeDriver: true }),
             ]).start();
             setStepIdx(i => (i + 1) % PLAN_STEPS.length);
         }, 3500);
-
-        // Fast rotating arc
-        Animated.loop(
-            Animated.timing(rotateAnim, { toValue: 1, duration: 1600, useNativeDriver: true })
-        ).start();
-
-        // Slow counter-rotating arc
-        Animated.loop(
-            Animated.timing(rotateAnim2, { toValue: 1, duration: 4000, useNativeDriver: true })
-        ).start();
-
-        // Inner glow breathe
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(glowAnim, { toValue: 1, duration: 1400, useNativeDriver: false }),
-                Animated.timing(glowAnim, { toValue: 0.25, duration: 1400, useNativeDriver: false }),
-            ])
-        ).start();
-
-        // Subtle scale breathe for bg glow
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(scaleAnim, { toValue: 1.05, duration: 2200, useNativeDriver: true }),
-                Animated.timing(scaleAnim, { toValue: 0.96, duration: 2200, useNativeDriver: true }),
-            ])
-        ).start();
-
-        return () => clearInterval(interval);
+        const countInt = setInterval(() => setCount(c => c + Math.floor(Math.random() * 47 + 8)), 180);
+        return () => { clearInterval(stepInt); clearInterval(countInt); };
     }, []);
 
-    const barWidth = barAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
-    const rotate1 = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
-    const rotate2 = rotateAnim2.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-360deg'] });
-    const percent = Math.round((stepIdx / PLAN_STEPS.length) * 100);
+    const barWidth = barW.interpolate({ inputRange: [0, 0.15, 0.5, 0.85, 1], outputRange: ['0%', '12%', '55%', '85%', '100%'] });
+    const barShimmerOp = barGlow.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] });
 
     return (
-        <Animated.View style={{ flex: 1, backgroundColor: '#050508', alignItems: 'center', justifyContent: 'center', opacity: mountAnim }}>
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#050508', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            {LOAD_PARTICLES.map(p => <LoadParticle key={p.id} config={p} color={color} />)}
+            <View style={{ position: 'absolute', top: 48, left: 24, width: 40, height: 40, borderTopWidth: 2, borderLeftWidth: 2, borderColor: `rgba(${rgb},0.3)` }} />
+            <View style={{ position: 'absolute', top: 48, right: 24, width: 40, height: 40, borderTopWidth: 2, borderRightWidth: 2, borderColor: `rgba(${rgb},0.3)` }} />
+            <View style={{ position: 'absolute', bottom: 48, left: 24, width: 40, height: 40, borderBottomWidth: 2, borderLeftWidth: 2, borderColor: `rgba(${rgb},0.3)` }} />
+            <View style={{ position: 'absolute', bottom: 48, right: 24, width: 40, height: 40, borderBottomWidth: 2, borderRightWidth: 2, borderColor: `rgba(${rgb},0.3)` }} />
 
-            {/* Radial background glow */}
-            <Animated.View style={{
-                position: 'absolute',
-                width: 380, height: 380, borderRadius: 190,
-                backgroundColor: `${color}07`,
-                transform: [{ scale: scaleAnim }],
-            }} />
-
-            {/* Top label */}
-            <Text style={{ position: 'absolute', top: 58, color: '#1e1e1e', fontSize: 10, fontWeight: '900', letterSpacing: 5 }}>
-                NEXUS ATHLETICS
-            </Text>
-
-            {/* Corner brackets */}
-            <View style={{ position: 'absolute', top: 44, left: 20, width: 22, height: 22, borderTopWidth: 1.5, borderLeftWidth: 1.5, borderColor: `${color}50` }} />
-            <View style={{ position: 'absolute', top: 44, right: 20, width: 22, height: 22, borderTopWidth: 1.5, borderRightWidth: 1.5, borderColor: `${color}50` }} />
-            <View style={{ position: 'absolute', bottom: 24, left: 20, width: 22, height: 22, borderBottomWidth: 1.5, borderLeftWidth: 1.5, borderColor: `${color}50` }} />
-            <View style={{ position: 'absolute', bottom: 24, right: 20, width: 22, height: 22, borderBottomWidth: 1.5, borderRightWidth: 1.5, borderColor: `${color}50` }} />
-
-            {/* Circular spinner */}
-            <View style={{ width: 230, height: 230, alignItems: 'center', justifyContent: 'center', marginBottom: 40 }}>
-
-                {/* Static track ring */}
-                <View style={{
-                    position: 'absolute', width: 210, height: 210, borderRadius: 105,
-                    borderWidth: 1, borderColor: '#141414',
-                }} />
-
-                {/* Fast arc — 3/4 circle */}
-                <Animated.View style={{
-                    position: 'absolute', width: 210, height: 210, borderRadius: 105,
-                    borderWidth: 2.5,
-                    borderTopColor: color,
-                    borderRightColor: color,
-                    borderBottomColor: `${color}30`,
-                    borderLeftColor: 'transparent',
-                    transform: [{ rotate: rotate1 }],
-                    shadowColor: color, shadowOpacity: 0.6, shadowRadius: 8,
-                }} />
-
-                {/* Slow counter arc — thin accent */}
-                <Animated.View style={{
-                    position: 'absolute', width: 188, height: 188, borderRadius: 94,
-                    borderWidth: 1,
-                    borderTopColor: 'transparent',
-                    borderRightColor: `${color}50`,
-                    borderBottomColor: `${color}50`,
-                    borderLeftColor: 'transparent',
-                    transform: [{ rotate: rotate2 }],
-                }} />
-
-                {/* Inner circle with percentage */}
-                <Animated.View style={{
-                    width: 158, height: 158, borderRadius: 79,
-                    backgroundColor: '#080810',
-                    borderWidth: 1, borderColor: `${color}18`,
-                    alignItems: 'center', justifyContent: 'center',
-                    shadowColor: color,
-                    shadowOpacity: glowAnim,
-                    shadowRadius: 22,
-                }}>
-                    <Text style={{
-                        color,
-                        fontSize: 52,
-                        fontWeight: '900',
-                        lineHeight: 56,
-                        textShadowColor: color,
-                        textShadowOffset: { width: 0, height: 0 },
-                        textShadowRadius: 10,
-                    }}>{percent}</Text>
-                    <Text style={{ color: '#333', fontSize: 11, fontWeight: '800', letterSpacing: 2 }}>%</Text>
+            <View style={{ alignItems: 'center', justifyContent: 'center', marginBottom: 32 }}>
+                <LoadGlowRing size={320} delay={0}    duration={2200} baseOpacity={0.25} color={color} />
+                <LoadGlowRing size={260} delay={700}  duration={2200} baseOpacity={0.35} color={color} />
+                <LoadGlowRing size={200} delay={1400} duration={2200} baseOpacity={0.45} color={color} />
+                <View style={{ position: 'absolute', width: 180, height: 180, borderRadius: 90, backgroundColor: color, opacity: 0.08, shadowColor: color, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 100 }} />
+                <Animated.View style={{ transform: [{ scale: pulseLogo }] }}>
+                    <LinearGradient colors={[color, color2, color]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                        style={{ width: 144, height: 144, borderRadius: 38, padding: 2, shadowColor: color, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.9, shadowRadius: 30, elevation: 20 }}>
+                        <LinearGradient colors={['#111111', '#0A0A0A']} style={{ flex: 1, borderRadius: 36, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                            <Text style={{ fontSize: 68, fontWeight: '900', color, letterSpacing: 2, textShadowColor: color, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 24 }}>N</Text>
+                            <View style={{ position: 'absolute', bottom: 22, width: '60%', height: 1, backgroundColor: `rgba(${rgb},0.25)` }} />
+                            <View style={{ position: 'absolute', right: 22, height: '60%', width: 1, backgroundColor: `rgba(${rgb},0.25)` }} />
+                        </LinearGradient>
+                    </LinearGradient>
                 </Animated.View>
             </View>
 
-            {/* Title block */}
-            <View style={{ alignItems: 'center', marginBottom: 14 }}>
-                <Text style={{ color: '#444', fontSize: 10, fontWeight: '900', letterSpacing: 3, marginBottom: 6 }}>
-                    {isUltimate ? 'GENERANDO' : 'CREANDO'}
-                </Text>
-                <Text style={{
-                    color,
-                    fontSize: 19,
-                    fontWeight: '900',
-                    letterSpacing: 1.5,
-                    textShadowColor: color,
-                    textShadowOffset: { width: 0, height: 0 },
-                    textShadowRadius: 8,
-                }}>
-                    {isUltimate ? '👑 MESOCICLO ULTIMATE' : '⚡ PLAN ÉLITE PRO'}
-                </Text>
+            <Text style={{ fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: 10, textShadowColor: `rgba(${rgb},0.4)`, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 16, marginBottom: 6 }}>NEXUS</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                <View style={{ width: 28, height: 1, backgroundColor: color, opacity: 0.6 }} />
+                <Text style={{ fontSize: 11, fontWeight: '800', color, letterSpacing: 5 }}>AI ENGINE</Text>
+                <View style={{ width: 28, height: 1, backgroundColor: color, opacity: 0.6 }} />
             </View>
-
-            {/* Step text */}
-            <Animated.Text style={{
-                color: '#555',
-                fontSize: 13,
-                textAlign: 'center',
-                opacity: fadeAnim,
-                paddingHorizontal: 52,
-                lineHeight: 21,
-                fontWeight: '500',
-                marginBottom: 24,
-            }}>
+            <Animated.Text style={{ fontSize: 11, color: '#71717A', fontWeight: '600', letterSpacing: 2, textTransform: 'uppercase', opacity: stepFade, paddingHorizontal: 40, textAlign: 'center', marginBottom: 6 }}>
                 {PLAN_STEPS[stepIdx]}
             </Animated.Text>
+            <Text style={{ fontSize: 10, color: `rgba(${rgb},0.5)`, letterSpacing: 2 }}>{count.toLocaleString()} VARIABLES</Text>
 
-            {/* Step dots */}
-            <View style={{ flexDirection: 'row', gap: 5 }}>
-                {PLAN_STEPS.map((_, i) => (
-                    <View key={i} style={{
-                        width: i === stepIdx ? 18 : 5,
-                        height: 5,
-                        borderRadius: 2.5,
-                        backgroundColor: i === stepIdx ? color : '#1e1e1e',
-                    }} />
-                ))}
+            <View style={{ position: 'absolute', bottom: 100, width: '70%', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 8 }}>
+                    <Text style={{ fontSize: 9, color: '#52525B', fontWeight: '700', letterSpacing: 2 }}>{isUltimate ? 'GENERANDO PLAN ULTIMATE' : 'GENERANDO PLAN ELITE'}</Text>
+                </View>
+                <View style={{ width: '100%', height: 4, backgroundColor: `rgba(${rgb},0.08)`, borderRadius: 4, overflow: 'hidden', borderWidth: 0.5, borderColor: `rgba(${rgb},0.12)` }}>
+                    <Animated.View style={{ height: '100%', borderRadius: 4, overflow: 'hidden', width: barWidth, shadowColor: color, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 8 }}>
+                        <LinearGradient colors={[color, color2, color]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
+                        <Animated.View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', backgroundColor: 'rgba(255,255,255,0.4)', borderRadius: 2, opacity: barShimmerOp }} />
+                        <View style={{ position: 'absolute', right: -2, top: '50%', marginTop: -4, width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff', shadowColor: color, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 6 }} />
+                    </Animated.View>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                    {[0, 0.33, 0.66].map((t, i) => (
+                        <Animated.View key={i} style={{ width: 6, height: 6, borderRadius: 3, shadowColor: color, shadowOffset: { width: 0, height: 0 }, shadowRadius: 4, elevation: 4, backgroundColor: barW.interpolate({ inputRange: [t, t + 0.01], outputRange: [`rgba(${rgb},0.2)`, color], extrapolate: 'clamp' }) }} />
+                    ))}
+                </View>
             </View>
 
-            {/* Cancel button */}
-            <TouchableOpacity
-                onPress={onCancel}
-                style={{
-                    position: 'absolute', bottom: 40,
-                    paddingHorizontal: 32, paddingVertical: 12,
-                    borderRadius: 24, borderWidth: 1,
-                    borderColor: '#2a2a2a',
-                    backgroundColor: 'rgba(255,255,255,0.04)',
-                }}
-            >
-                <Text style={{ color: '#444', fontSize: 13, fontWeight: '700', letterSpacing: 1 }}>
-                    CANCELAR
-                </Text>
-            </TouchableOpacity>
-
-            {/* Bottom progress bar */}
-            <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, backgroundColor: '#111' }}>
-                <Animated.View style={{
-                    height: 2, backgroundColor: color, width: barWidth,
-                    shadowColor: color, shadowOpacity: 1, shadowRadius: 6,
-                }} />
+            <View style={{ position: 'absolute', bottom: 44, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Animated.View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: color, opacity: glowOp }} />
+                <Text style={{ fontSize: 9, color: '#3F3F46', fontWeight: '700', letterSpacing: 1.5 }}>NEXUS PERFORMANCE SYSTEM</Text>
+                <Animated.View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: color, opacity: glowOp }} />
             </View>
-        </Animated.View>
+        </View>
+    );
+};
+
+
+const Row = ({ label, options, value, onChange, color }) => {
+    const activeColor = color || '#63ff15';
+    return (
+        <View style={styles.rowBlock}>
+            <Text style={styles.rowLabel}>{label}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+                {options.map(opt => {
+                    const active = value === opt;
+                    return (
+                        <TouchableOpacity key={opt} onPress={() => onChange(opt)}
+                            style={[styles.chip, active && { backgroundColor: activeColor, borderColor: activeColor }]}>
+                            <Text style={[styles.chipText, active && { color: '#0A0A0A', fontWeight: '700' }]}>{opt}</Text>
+                        </TouchableOpacity>
+                    );
+                })}
+            </ScrollView>
+        </View>
     );
 };
 
 export default function NexusIA() {
     const navigation = useNavigation();
-
     const [user, setUser] = useState(null);
     const [generandoPlan, setGenerandoPlan] = useState(false);
-    const abortControllerRef = useRef(null);
-
-    // Plan config
-    const [objetivoPlan, setObjetivoPlan] = useState('Ganar Músculo');
-    const [nivelPlan, setNivelPlan] = useState('Intermedio');
-    // 0=Lun 1=Mar 2=Mié 3=Jue 4=Vie 5=Sáb 6=Dom
+    const [cargando, setCargando] = useState(false);
     const [diasDisponibles, setDiasDisponibles] = useState([0, 2, 4]);
-    const toggleDia = (offset) =>
-        setDiasDisponibles(prev =>
-            prev.includes(offset) ? prev.filter(d => d !== offset) : [...prev, offset]
-        );
-    const [prefAlimenticia, setPrefAlimenticia] = useState('Alta Proteína');
-    const [metodologia, setMetodologia] = useState('IA Decide por Mí');
-    const [equipamiento, setEquipamiento] = useState('Gimnasio Completo');
+    const [objetivoPlan, setObjetivoPlan] = useState('Ganar Musculo');
+    const [nivelPlan, setNivelPlan] = useState('Intermedio');
+    const [prefAlimenticia, setPrefAlimenticia] = useState('Equilibrada');
+    const [metodologia, setMetodologia] = useState('Arnold Split');
     const [prioridad, setPrioridad] = useState('Equilibrado');
-    const [duracion, setDuracion] = useState('60-90 min');
-
-    // Ultimate exclusive
-    const [periodi, setPeriodi] = useState('Lineal (Clásica)');
+    const [duracion, setDuracion] = useState('90 min');
+    const [equipamiento, setEquipamiento] = useState('Sin Restriccion');
+    const [periodi, setPeriodi] = useState('Lineal (Clasica)');
     const [tecnicas, setTecnicas] = useState([]);
-    const [semanasMeso] = useState('4');
+    const [lesiones, setLesiones] = useState('');
     const [horasSueno, setHorasSueno] = useState('7-8h');
     const [nivelEstres, setNivelEstres] = useState('Moderado');
-    const [lesiones, setLesiones] = useState('');
+    const semanasMeso = '4';
+    const [alert, setAlert] = useState({ visible: false, title: '', message: '', type: 'info', onConfirm: null });
 
-    // Alert
-    const [alert, setAlert] = useState({ visible: false, title: '', message: '', type: 'info', onConfirm: null, onCancel: null, confirmText: 'OK', cancelText: 'Cancelar' });
-
-    const showAlert = (title, message, type = 'info', onConfirm = null, onCancel = null, confirmText = 'OK', cancelText = 'Cancelar') => {
-        setAlert({
-            visible: true, title, message, type,
-            onConfirm: () => { if (onConfirm) onConfirm(); setAlert(a => ({ ...a, visible: false })); },
-            onCancel: onCancel ? () => { onCancel(); setAlert(a => ({ ...a, visible: false })); } : null,
-            confirmText, cancelText,
-        });
+    const showAlert = (title, message, type = 'info', onConfirm = null) => {
+        setAlert({ visible: true, title, message, type, onConfirm: () => { if (onConfirm) onConfirm(); setAlert(p => ({ ...p, visible: false })); } });
     };
 
     useEffect(() => {
         AsyncStorage.getItem('user').then(u => { if (u) setUser(JSON.parse(u)); });
     }, []);
 
-    const isUltimate = user?.plan === 'Ultimate';
+    const toggleDia = (offset) =>
+        setDiasDisponibles(prev => prev.includes(offset) ? prev.filter(d => d !== offset) : [...prev, offset]);
+
+    const toggleTecnica = (t) =>
+        setTecnicas(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
 
     const handleGenerarPlanVisual = async () => {
         if (!user || user.plan === 'Gratis') {
-            showAlert("Mejora tu plan", "La generación de planes Élite es exclusiva para usuarios Pro y Ultimate.", "info", () => navigation.navigate('PlanesPago'));
+            showAlert('Mejora tu plan', 'La generacion de planes Elite es exclusiva para usuarios Pro y Ultimate.', 'info', () => navigation.navigate('PlanesPago'));
+            return;
+        }
+        if (diasDisponibles.length === 0) {
+            showAlert('Selecciona dias', 'Elige al menos un dia disponible para entrenar.', 'warning');
             return;
         }
         const token = await AsyncStorage.getItem('token');
-        const controller = new AbortController();
-        abortControllerRef.current = controller;
+        setCargando(true);
         setGenerandoPlan(true);
+        const sortedDias = [...diasDisponibles].sort((a, b) => a - b);
+        const esUltimate = user.plan === 'Ultimate';
+        const details = 'OBJETIVO: ' + objetivoPlan + '. NIVEL: ' + nivelPlan + '. D\u00CDAS/SEMANA: ' + sortedDias.length + '. DIETA: ' + prefAlimenticia + '. METODOLOG\u00CDA: ' + metodologia + '. EQUIPAMIENTO: ' + equipamiento + '. PRIORIDAD: ' + prioridad + '. DURACI\u00D3N: ' + duracion + '.';
+        const body = esUltimate
+            ? { details, lesiones, horasSueno, nivelEstres, semanas: parseInt(semanasMeso), periodi, tecnicas }
+            : { details };
         try {
-            const body = isUltimate
-                ? {
-                    details: `OBJETIVO: ${objetivoPlan}. NIVEL: ${nivelPlan}. DÍAS/SEMANA: ${diasDisponibles.length}. DIETA: ${prefAlimenticia}. METODOLOGÍA: ${metodologia}. EQUIPAMIENTO: ${equipamiento}. PRIORIDAD: ${prioridad}. DURACIÓN: ${duracion}.`,
-                    lesiones, horasSueno, nivelEstres,
-                    semanas: parseInt(semanasMeso),
-                    periodi, tecnicas,
-                }
-                : {
-                    details: `OBJETIVO: ${objetivoPlan}. NIVEL: ${nivelPlan}. DÍAS/SEMANA: ${diasDisponibles.length}. DIETA: ${prefAlimenticia}. METODOLOGÍA: ${metodologia}. EQUIPAMIENTO: ${equipamiento}. PRIORIDAD: ${prioridad}. DURACIÓN: ${duracion}.`
-                };
-
-            const response = await fetch(`${BACKEND_URL}/generate-plan-interactive`, {
+            const response = await fetch(BACKEND_URL + '/generate-plan-interactive', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
                 body: JSON.stringify(body),
-                signal: controller.signal,
             });
-
             if (!response.ok) {
                 const errData = await response.json().catch(() => ({}));
-                throw new Error(errData.error || `Error del servidor (${response.status})`);
+                throw new Error(errData.error || 'Error del servidor (' + response.status + ')');
             }
-
             const planData = await response.json();
+            setCargando(false);
             setGenerandoPlan(false);
-            navigation.navigate('ElitePlanScreen', { plan: planData, diasDisponibles: [...diasDisponibles].sort((a, b) => a - b) });
+            navigation.navigate('ElitePlanScreen', { plan: planData, diasDisponibles: sortedDias });
         } catch (error) {
-            if (error.name === 'AbortError') {
-                setGenerandoPlan(false);
-                return;
-            }
-            showAlert("Error", error.message || "No se pudo generar la presentación interactiva.", "error");
+            showAlert('Error', error.message || 'No se pudo generar el plan.', 'error');
+            setCargando(false);
             setGenerandoPlan(false);
-        } finally {
-            abortControllerRef.current = null;
         }
     };
 
     const descargarRutinaPDF = async () => {
         if (!user || user.plan === 'Gratis') {
-            showAlert("Mejora tu plan", "La generación de rutinas en PDF es exclusiva para usuarios Pro y Ultimate.", "info", () => navigation.navigate('PlanesPago'));
+            showAlert('Mejora tu plan', 'La generacion de PDF es exclusiva para usuarios Pro y Ultimate.', 'info', () => navigation.navigate('PlanesPago'));
+            return;
+        }
+        if (diasDisponibles.length === 0) {
+            showAlert('Selecciona dias', 'Elige al menos un dia disponible.', 'warning');
             return;
         }
         const token = await AsyncStorage.getItem('token');
-        setGenerandoPlan(true);
+        setCargando(true);
         try {
-            const response = await fetch(`${BACKEND_URL}/generate-pdf`, {
+            const response = await fetch(BACKEND_URL + '/generate-pdf', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
                 body: JSON.stringify({
-                    details: `OBJETIVO: ${objetivoPlan}. NIVEL: ${nivelPlan}. DÍAS/SEMANA: ${diasDisponibles.length}. DIETA: ${prefAlimenticia}. METODOLOGÍA: ${metodologia}. EQUIPAMIENTO: ${equipamiento}. PRIORIDAD: ${prioridad}. DURACIÓN: ${duracion}. Usuario: ${user.nombre} ${user.apellido}.`,
+                    details: 'OBJETIVO: ' + objetivoPlan + '. NIVEL: ' + nivelPlan + '. D\u00CDAS/SEMANA: ' + diasDisponibles.length + '. DIETA: ' + prefAlimenticia + '. METODOLOG\u00CDA: ' + metodologia + '. EQUIPAMIENTO: ' + equipamiento + '. PRIORIDAD: ' + prioridad + '. DURACI\u00D3N: ' + duracion + '. Usuario: ' + user.nombre + ' ' + user.apellido + '.',
                     format: 'base64',
                 }),
             });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Error al generar PDF');
-            }
+            if (!response.ok) { const e = await response.json(); throw new Error(e.error || 'Error al generar PDF'); }
             const data = await response.json();
-            if (!data.base64) throw new Error('El servidor no devolvió el PDF correctamente');
-
-            const fileUri = FileSystem.documentDirectory + 'Plan_Entrenamiento_Nexus_AI.pdf';
+            if (!data.base64) throw new Error('El servidor no devolvio el PDF correctamente');
+            const fileUri = FileSystem.documentDirectory + 'Plan_Nexus_AI.pdf';
             await FileSystem.writeAsStringAsync(fileUri, data.base64, { encoding: 'base64' });
             const canShare = await Sharing.isAvailableAsync();
-            if (canShare) {
-                await Sharing.shareAsync(fileUri);
-            } else {
-                showAlert("Éxito", `PDF guardado en: ${fileUri}`, "success");
-            }
+            if (canShare) { await Sharing.shareAsync(fileUri); }
+            else { showAlert('Exito', 'PDF guardado en: ' + fileUri, 'success'); }
         } catch (error) {
-            showAlert("Error", error.message || "No se pudo generar el PDF", "error");
-        } finally {
-            setGenerandoPlan(false);
-        }
+            showAlert('Error', error.message || 'No se pudo generar el PDF', 'error');
+        } finally { setCargando(false); }
     };
 
+    const isUltimate = user?.plan === 'Ultimate';
+    const isPro = user?.plan === 'Pro';
+    const planColor = isUltimate ? '#FFD700' : '#63ff15';
+
     return (
-        <SafeAreaView style={styles.container}>
-            {/* Header */}
+        <SafeAreaView style={styles.container} edges={['top']}>
+            <NexusAlert
+                visible={alert.visible} title={alert.title} message={alert.message}
+                type={alert.type} onConfirm={alert.onConfirm}
+                onCancel={() => setAlert(p => ({ ...p, visible: false }))}
+            />
+
             <View style={styles.header}>
-                <LinearGradient
-                    colors={['transparent', 'rgba(99,255,21,0.4)', 'transparent']}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                    style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1 }}
-                />
-                <View style={styles.headerTitleContainer}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Text style={styles.headerTitle}>Nexus <Text style={styles.titleHighlight}>IA</Text></Text>
-                        {user?.plan && (
-                            <View style={[styles.planBadge, { borderColor: isUltimate ? '#FFD700' : '#63ff15', backgroundColor: isUltimate ? 'rgba(255,215,0,0.1)' : 'rgba(99,255,21,0.1)' }]}>
-                                <Text style={[styles.planBadgeText, { color: isUltimate ? '#FFD700' : '#63ff15' }]}>{user.plan.toUpperCase()}</Text>
-                            </View>
-                        )}
-                    </View>
-                    <View style={styles.statusRow}>
-                        <View style={styles.dot} />
-                        <Text style={styles.statusText}>Generador de rutinas · IA activa</Text>
-                    </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <LinearGradient colors={['#63ff15', '#00D1FF']} style={styles.headerDot} />
+                    <Text style={styles.headerTitle}>NEXUS IA</Text>
                 </View>
-                <TouchableOpacity onPress={() => navigation.navigate('SavedElitePlans')} style={styles.headerActionBtn}>
-                    <Ionicons name="folder-open-outline" size={20} color="#63ff15" />
-                </TouchableOpacity>
+                {user?.plan && (
+                    <View style={[styles.planBadge, { borderColor: planColor }]}>
+                        <Text style={[styles.planBadgeText, { color: planColor }]}>
+                            {isUltimate ? 'ULTIMATE' : isPro ? 'PRO' : 'GRATIS'}
+                        </Text>
+                    </View>
+                )}
             </View>
 
-            {/* Generating overlay */}
-            {generandoPlan && (
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: '#050508' }]}>
-                    <PlanGeneratingScreen
-                        isUltimate={isUltimate}
-                        onCancel={() => abortControllerRef.current?.abort()}
-                    />
-                </View>
-            )}
+            <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
 
-            <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContent}
-                keyboardShouldPersistTaps="handled"
-            >
-                {/* Pro vs Ultimate comparison */}
-                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
-                    {/* PRO */}
-                    <View style={{
-                        flex: 1, borderRadius: 16, borderWidth: 2,
-                        borderColor: user?.plan === 'Pro' ? '#63ff15' : '#222',
-                        backgroundColor: user?.plan === 'Pro' ? 'rgba(99,255,21,0.06)' : '#111',
-                        padding: 12,
-                    }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                            <Text style={{ fontSize: 14 }}>⚡</Text>
-                            <Text style={{ color: '#63ff15', fontWeight: '900', fontSize: 13, letterSpacing: 1 }}>PRO</Text>
-                            {user?.plan === 'Pro' && <View style={{ backgroundColor: '#63ff15', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}><Text style={{ color: '#000', fontSize: 9, fontWeight: '900' }}>TU PLAN</Text></View>}
-                        </View>
-                        {[
-                            'Plan semanal completo',
-                            'GIFs de cada ejercicio',
-                            'Series × repeticiones',
-                            'Macros personalizados',
-                            'Sincroniza 12 semanas',
-                        ].map((f, i) => (
-                            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 5 }}>
-                                <Text style={{ color: '#63ff15', fontSize: 11 }}>✓</Text>
-                                <Text style={{ color: '#ccc', fontSize: 11, flex: 1, lineHeight: 15 }}>{f}</Text>
-                            </View>
-                        ))}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>DIAS DISPONIBLES</Text>
+                    <Text style={styles.sectionSub}>Selecciona los dias que puedes entrenar</Text>
+                    <View style={styles.diasRow}>
+                        {DIAS_LABELS.map((label, idx) => {
+                            const active = diasDisponibles.includes(idx);
+                            const activeColor = idx >= 5 ? '#FFA500' : '#63ff15';
+                            return (
+                                <TouchableOpacity key={idx} onPress={() => toggleDia(idx)}
+                                    style={[styles.diaBtn, active && { backgroundColor: activeColor, borderColor: activeColor }]}>
+                                    <Text style={[styles.diaBtnText, active && { color: '#0A0A0A', fontWeight: '800' }]}>
+                                        {label}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
                     </View>
-                    {/* ULTIMATE */}
-                    <View style={{
-                        flex: 1, borderRadius: 16, borderWidth: 2,
-                        borderColor: isUltimate ? '#FFD700' : '#222',
-                        backgroundColor: isUltimate ? 'rgba(255,215,0,0.06)' : '#111',
-                        padding: 12,
-                    }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                            <Text style={{ fontSize: 14 }}>👑</Text>
-                            <Text style={{ color: '#FFD700', fontWeight: '900', fontSize: 13, letterSpacing: 1 }}>ULTIMATE</Text>
-                            {isUltimate && <View style={{ backgroundColor: '#FFD700', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}><Text style={{ color: '#000', fontSize: 9, fontWeight: '900' }}>TU PLAN</Text></View>}
-                        </View>
-                        {[
-                            '8-10 ejercicios/sesión',
-                            'RIR + peso sugerido',
-                            'Análisis 1RM real',
-                            'Nutrición + timing',
-                            'Suplementación',
-                            'Periodización DUP',
-                        ].map((f, i) => (
-                            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 5 }}>
-                                <Text style={{ color: '#FFD700', fontSize: 11 }}>✓</Text>
-                                <Text style={{ color: '#ccc', fontSize: 11, flex: 1, lineHeight: 15 }}>{f}</Text>
-                            </View>
-                        ))}
-                        {!isUltimate && (
-                            <TouchableOpacity
-                                onPress={() => navigation.navigate('PlanesPago')}
-                                style={{ marginTop: 8, backgroundColor: '#FFD700', borderRadius: 10, paddingVertical: 6, alignItems: 'center' }}
-                            >
-                                <Text style={{ color: '#000', fontWeight: '900', fontSize: 11 }}>MEJORAR →</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                </View>
-
-                {/* Objetivo */}
-                <Text style={styles.labelPlan}>¿Cuál es tu objetivo principal?</Text>
-                <View style={styles.optionsGrid}>
-                    {['Ganar Músculo', 'Perder Grasa', 'Fuerza Pura', 'Resistencia'].map(opt => (
-                        <TouchableOpacity key={opt} style={[styles.optBtn, objetivoPlan === opt && styles.optBtnSelected]} onPress={() => setObjetivoPlan(opt)}>
-                            <Text style={[styles.optText, objetivoPlan === opt && styles.optTextSelected]}>{opt}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-
-                {/* Nivel */}
-                <Text style={styles.labelPlan}>Tu nivel actual</Text>
-                <View style={styles.optionsGrid}>
-                    {['Principiante', 'Intermedio', 'Avanzado', 'Atleta'].map(opt => (
-                        <TouchableOpacity key={opt} style={[styles.optBtn, nivelPlan === opt && styles.optBtnSelected]} onPress={() => setNivelPlan(opt)}>
-                            <Text style={[styles.optText, nivelPlan === opt && styles.optTextSelected]}>{opt}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-
-                {/* Días disponibles */}
-                <Text style={styles.labelPlan}>Días disponibles para entrenar</Text>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
-                    {[
-                        { label: 'L', offset: 0 },
-                        { label: 'M', offset: 1 },
-                        { label: 'X', offset: 2 },
-                        { label: 'J', offset: 3 },
-                        { label: 'V', offset: 4 },
-                        { label: 'S', offset: 5 },
-                        { label: 'D', offset: 6 },
-                    ].map(({ label, offset }) => {
-                        const selected = diasDisponibles.includes(offset);
-                        const isWeekend = offset >= 5;
-                        return (
-                            <TouchableOpacity
-                                key={offset}
-                                onPress={() => toggleDia(offset)}
-                                style={{
-                                    width: 42, height: 42, borderRadius: 12,
-                                    backgroundColor: selected ? (isWeekend ? 'rgba(255,184,0,0.15)' : 'rgba(99,255,21,0.12)') : 'rgba(255,255,255,0.04)',
-                                    borderWidth: 1.5,
-                                    borderColor: selected ? (isWeekend ? '#FFB800' : '#63ff15') : 'rgba(255,255,255,0.08)',
-                                    alignItems: 'center', justifyContent: 'center',
-                                }}
-                            >
-                                <Text style={{
-                                    color: selected ? (isWeekend ? '#FFB800' : '#63ff15') : '#555',
-                                    fontWeight: '900', fontSize: 13,
-                                }}>{label}</Text>
-                            </TouchableOpacity>
-                        );
-                    })}
-                </View>
-                {diasDisponibles.length === 0 && (
-                    <Text style={{ color: '#FF4444', fontSize: 11, marginTop: -10, marginBottom: 12 }}>
-                        Selecciona al menos un día
+                    <Text style={[styles.diasCount, { color: planColor }]}>
+                        {diasDisponibles.length} dia{diasDisponibles.length !== 1 ? 's' : ''} seleccionado{diasDisponibles.length !== 1 ? 's' : ''}
                     </Text>
-                )}
-
-                {/* Dieta */}
-                <Text style={styles.labelPlan}>Preferencia Alimenticia</Text>
-                <View style={styles.optionsGrid}>
-                    {['Equilibrada', 'Alta Proteína', 'Vegana', 'Keto'].map(opt => (
-                        <TouchableOpacity key={opt} style={[styles.optBtn, prefAlimenticia === opt && styles.optBtnSelected]} onPress={() => setPrefAlimenticia(opt)}>
-                            <Text style={[styles.optText, prefAlimenticia === opt && styles.optTextSelected]}>{opt}</Text>
-                        </TouchableOpacity>
-                    ))}
                 </View>
 
-                {/* Metodología */}
-                <Text style={styles.labelPlan}>Metodología de Entrenamiento</Text>
-                <View style={styles.optionsGrid}>
-                    {['IA Decide por Mí', 'Push Pull Legs', 'Full Body', 'Arnold Split', 'Heavy Duty / Mentzer', 'Upper Lower', 'Bro Split', '5x5 StrongLifts', 'Calistenia', 'HIIT', 'Functional Training', 'Powerlifting', 'Hybrid Training'].map(opt => (
-                        <TouchableOpacity key={opt} style={[styles.optBtn, metodologia === opt && styles.optBtnSelected]} onPress={() => setMetodologia(opt)}>
-                            <Text style={[styles.optText, metodologia === opt && styles.optTextSelected]}>{opt}</Text>
-                        </TouchableOpacity>
-                    ))}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>CONFIGURACION</Text>
+                    <Row label="Objetivo" options={['Ganar Musculo', 'Perder Grasa', 'Fuerza Maxima', 'Resistencia', 'Definicion', 'Bienestar']} value={objetivoPlan} onChange={setObjetivoPlan} />
+                    <Row label="Nivel" options={['Principiante', 'Intermedio', 'Avanzado', 'Elite']} value={nivelPlan} onChange={setNivelPlan} />
+                    <Row label="Alimentacion" options={['Equilibrada', 'Vegana', 'Vegetariana', 'Sin Gluten', 'Keto', 'Carnivora']} value={prefAlimenticia} onChange={setPrefAlimenticia} />
+                    <Row label="Metodologia" options={['Arnold Split', 'PPL', 'Full Body', 'Upper/Lower', 'HIIT', 'Functional']} value={metodologia} onChange={setMetodologia} />
+                    <Row label="Equipamiento" options={['Sin Restriccion', 'Gimnasio Completo', 'Casa/Mancuernas', 'Peso Corporal', 'Bandas Elasticas']} value={equipamiento} onChange={setEquipamiento} />
+                    <Row label="Prioridad Muscular" options={['Equilibrado', 'Pecho/Espalda', 'Piernas', 'Hombros/Brazos', 'Core', 'Gluteos']} value={prioridad} onChange={setPrioridad} />
+                    <Row label="Duracion sesion" options={['45 min', '60 min', '75 min', '90 min', '120 min']} value={duracion} onChange={setDuracion} />
                 </View>
 
-                {/* Equipamiento */}
-                <Text style={styles.labelPlan}>Lugar y Equipamiento</Text>
-                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
-                    {[{ label: '🏋️ Gimnasio', value: 'Gimnasio Completo' }, { label: '🏠 En Casa', value: 'Solo Peso Corporal' }].map(({ label, value }) => (
-                        <TouchableOpacity key={value} style={[styles.optBtn, { flex: 1, paddingVertical: 12 }, equipamiento === value && styles.optBtnSelected]} onPress={() => setEquipamiento(value)}>
-                            <Text style={[styles.optText, { fontSize: 13 }, equipamiento === value && styles.optTextSelected]}>{label}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-                <View style={styles.optionsGrid}>
-                    {['Sin Restricción', 'Mancuernas en Casa', 'Bandas Elásticas', 'Barras / Dominadas', 'Exterior / Parque'].map(opt => (
-                        <TouchableOpacity key={opt} style={[styles.optBtn, equipamiento === opt && styles.optBtnSelected]} onPress={() => setEquipamiento(opt)}>
-                            <Text style={[styles.optText, equipamiento === opt && styles.optTextSelected]}>{opt}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-
-                {/* Prioridad */}
-                <Text style={styles.labelPlan}>Enfoque / Prioridad Muscular</Text>
-                <View style={styles.optionsGrid}>
-                    {['Equilibrado', 'Torso Potente', 'Piernas Estéticas', 'Espalda/V', 'Brazos Titanio'].map(opt => (
-                        <TouchableOpacity key={opt} style={[styles.optBtn, prioridad === opt && styles.optBtnSelected]} onPress={() => setPrioridad(opt)}>
-                            <Text style={[styles.optText, prioridad === opt && styles.optTextSelected]}>{opt}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-
-                {/* Duración */}
-                <Text style={styles.labelPlan}>Duración de Sesión</Text>
-                <View style={styles.optionsGrid}>
-                    {['30-45 min', '45-60 min', '60-90 min', '2 horas+'].map(opt => (
-                        <TouchableOpacity key={opt} style={[styles.optBtn, duracion === opt && styles.optBtnSelected]} onPress={() => setDuracion(opt)}>
-                            <Text style={[styles.optText, duracion === opt && styles.optTextSelected]}>{opt}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-
-                {/* ULTIMATE EXCLUSIVE */}
                 {isUltimate && (
-                    <>
-                        <View style={styles.ultimateDivider}>
-                            <LinearGradient colors={['transparent', 'rgba(255,215,0,0.4)', 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ultimateLine} />
-                            <Text style={styles.ultimateLabel}>⚡ ULTIMATE EXCLUSIVO</Text>
-                            <LinearGradient colors={['transparent', 'rgba(255,215,0,0.4)', 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ultimateLine} />
+                    <View style={[styles.section, styles.ultimateSection]}>
+                        <Text style={[styles.sectionTitle, { color: '#FFD700' }]}>ULTIMATE EXCLUSIVO</Text>
+                        <Text style={[styles.sectionSub, { color: '#aaa' }]}>Personalizacion avanzada de elite</Text>
+                        <Row label="Periodizacion" options={['Lineal (Clasica)', 'Ondulada Diaria', 'Ondulada Semanal', 'Por Bloques']} value={periodi} onChange={setPeriodi} color="#FFD700" />
+                        <Row label="Horas de sueno" options={['<6h', '6-7h', '7-8h', '>8h']} value={horasSueno} onChange={setHorasSueno} color="#FFD700" />
+                        <Row label="Nivel de estres" options={['Bajo', 'Moderado', 'Alto', 'Muy Alto']} value={nivelEstres} onChange={setNivelEstres} color="#FFD700" />
+                        <View style={styles.rowBlock}>
+                            <Text style={styles.rowLabel}>Tecnicas avanzadas</Text>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                                {['Drop Sets', 'Super Sets', 'Rest-Pause', 'Myo-Reps', 'Cluster Sets', 'Tempo'].map(t => {
+                                    const active = tecnicas.includes(t);
+                                    return (
+                                        <TouchableOpacity key={t} onPress={() => toggleTecnica(t)}
+                                            style={[styles.chip, active && { backgroundColor: '#FFD700', borderColor: '#FFD700' }]}>
+                                            <Text style={[styles.chipText, active && { color: '#0A0A0A', fontWeight: '700' }]}>{t}</Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
                         </View>
-
-                        <Text style={styles.labelPlan}>Periodización</Text>
-                        <View style={styles.optionsGrid}>
-                            {['Lineal (Clásica)', 'Ondulada Diaria (DUP)', 'Ondulada Semanal', 'Por Bloques (Conjugado)', 'Acumulación → Intensificación'].map(opt => (
-                                <TouchableOpacity key={opt} style={[styles.optBtn, periodi === opt && styles.optBtnSelected]} onPress={() => setPeriodi(opt)}>
-                                    <Text style={[styles.optText, periodi === opt && styles.optTextSelected]}>{opt}</Text>
-                                </TouchableOpacity>
-                            ))}
+                        <View style={styles.rowBlock}>
+                            <Text style={styles.rowLabel}>Lesiones / limitaciones</Text>
+                            <TextInput
+                                style={styles.textInput}
+                                placeholder="Ej: rodilla derecha, espalda baja..."
+                                placeholderTextColor="#555"
+                                value={lesiones}
+                                onChangeText={setLesiones}
+                                multiline
+                            />
                         </View>
-
-                        <Text style={styles.labelPlan}>Técnicas Avanzadas <Text style={{ color: '#555', fontSize: 11 }}>(múltiple)</Text></Text>
-                        <View style={styles.optionsGrid}>
-                            {['Drop Sets', 'Rest-Pause', 'Superseries', 'Series Gigantes', 'Preagotamiento', 'Cluster Sets', 'Myo-Reps', 'Pausa Isométrica'].map(opt => (
-                                <TouchableOpacity key={opt} style={[styles.optBtn, tecnicas.includes(opt) && styles.optBtnSelected]} onPress={() => setTecnicas(prev => prev.includes(opt) ? prev.filter(t => t !== opt) : [...prev, opt])}>
-                                    <Text style={[styles.optText, tecnicas.includes(opt) && styles.optTextSelected]}>{opt}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-
-                        <Text style={styles.labelPlan}>Horas de Sueño / Noche</Text>
-                        <View style={styles.optionsGrid}>
-                            {['5-6h', '7-8h', '8-9h', '+9h'].map(opt => (
-                                <TouchableOpacity key={opt} style={[styles.optBtn, horasSueno === opt && styles.optBtnSelected]} onPress={() => setHorasSueno(opt)}>
-                                    <Text style={[styles.optText, horasSueno === opt && styles.optTextSelected]}>{opt}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-
-                        <Text style={styles.labelPlan}>Nivel de Estrés Actual</Text>
-                        <View style={styles.optionsGrid}>
-                            {['Bajo', 'Moderado', 'Alto', 'Muy Alto'].map(opt => (
-                                <TouchableOpacity key={opt} style={[styles.optBtn, nivelEstres === opt && styles.optBtnSelected]} onPress={() => setNivelEstres(opt)}>
-                                    <Text style={[styles.optText, nivelEstres === opt && styles.optTextSelected]}>{opt}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-
-                        <Text style={styles.labelPlan}>Lesiones o Restricciones <Text style={{ color: '#555', fontSize: 11 }}>(opcional)</Text></Text>
-                        <TextInput
-                            style={[styles.input, { marginBottom: 8 }]}
-                            placeholder="Ej: rodilla derecha, lumbar..."
-                            placeholderTextColor="#444"
-                            value={lesiones}
-                            onChangeText={setLesiones}
-                        />
-                    </>
+                    </View>
                 )}
 
-                {/* Generate button */}
-                <TouchableOpacity style={styles.generateFinalBtn} onPress={handleGenerarPlanVisual}>
-                    <LinearGradient colors={['#63ff15', '#4ad912']} style={styles.gradientBtnPlan} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                        <Ionicons name="sparkles" size={20} color="black" style={{ marginRight: 8 }} />
-                        <Text style={styles.btnTextBlack}>CREAR PRESENTACIÓN ÉLITE</Text>
-                    </LinearGradient>
-                </TouchableOpacity>
-
-                <TouchableOpacity onPress={descargarRutinaPDF} style={{ marginTop: 15, alignSelf: 'center' }}>
-                    <Text style={{ color: '#666', fontSize: 13, textDecorationLine: 'underline' }}>O descargar como PDF clásico</Text>
-                </TouchableOpacity>
-
-                <View style={{ height: 60 }} />
+                <View style={styles.btnContainer}>
+                    <TouchableOpacity onPress={handleGenerarPlanVisual} disabled={cargando} activeOpacity={0.85}>
+                        <LinearGradient
+                            colors={isUltimate ? ['#FFD700', '#FFA500'] : ['#63ff15', '#00D1FF']}
+                            style={styles.btnPrimary}
+                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                        >
+                            {cargando
+                                ? <ActivityIndicator color="#0A0A0A" />
+                                : <><Ionicons name="flash" size={18} color="#0A0A0A" /><Text style={styles.btnPrimaryText}>CREAR PRESENTACION ELITE</Text></>
+                            }
+                        </LinearGradient>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={descargarRutinaPDF} disabled={cargando} style={styles.btnSecondary}>
+                        <Ionicons name="document-text-outline" size={16} color="#888" />
+                        <Text style={styles.btnSecondaryText}>O descargar como PDF clasico</Text>
+                    </TouchableOpacity>
+                </View>
             </ScrollView>
 
-            <NexusAlert
-                visible={alert.visible}
-                title={alert.title}
-                message={alert.message}
-                type={alert.type}
-                onConfirm={alert.onConfirm}
-                onCancel={alert.onCancel}
-                confirmText={alert.confirmText}
-                cancelText={alert.cancelText}
-            />
+            {generandoPlan && <PlanGeneratingScreen isUltimate={isUltimate} />}
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#050508',
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        backgroundColor: '#050508',
-        overflow: 'hidden',
-    },
-    headerTitleContainer: {
-        flex: 1,
-    },
-    headerTitle: {
-        color: 'white',
-        fontSize: 24,
-        fontWeight: '900',
-        letterSpacing: -0.5,
-    },
-    titleHighlight: {
-        color: '#63ff15',
-    },
-    headerActionBtn: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
-        backgroundColor: 'rgba(255, 255, 255, 0.04)',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.08)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    planBadge: {
-        borderRadius: 8,
-        borderWidth: 1,
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-    },
-    planBadgeText: {
-        fontSize: 10,
-        fontWeight: '900',
-        letterSpacing: 1,
-    },
-    statusRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 4,
-    },
-    dot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: '#63ff15',
-        marginRight: 6,
-        shadowColor: '#63ff15',
-        shadowOpacity: 1,
-        shadowRadius: 6,
-        elevation: 2,
-    },
-    statusText: {
-        color: '#888',
-        fontSize: 12,
-        fontWeight: '600',
-    },
-    scrollContent: {
-        paddingHorizontal: 16,
-        paddingTop: 16,
-        paddingBottom: 20,
-    },
-    labelPlan: {
-        color: '#63ff15',
-        fontSize: 14,
-        fontWeight: '800',
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-        marginTop: 20,
-        marginBottom: 12,
-    },
-    optionsGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 10,
-    },
-    optBtn: {
-        paddingHorizontal: 15,
-        paddingVertical: 10,
-        borderRadius: 12,
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-        minWidth: '45%',
-        alignItems: 'center',
-    },
-    optBtnSelected: {
-        backgroundColor: 'rgba(99, 255, 21, 0.15)',
-        borderColor: '#63ff15',
-    },
-    optText: {
-        color: '#888',
-        fontWeight: '600',
-        fontSize: 14,
-    },
-    optTextSelected: {
-        color: '#63ff15',
-    },
-    input: {
-        backgroundColor: '#111',
-        borderWidth: 1.5,
-        borderColor: '#2a2a2a',
-        borderRadius: 14,
-        paddingHorizontal: 16,
-        paddingVertical: 13,
-        color: '#fff',
-        fontSize: 14,
-        marginBottom: 4,
-    },
-    ultimateDivider: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        marginVertical: 20,
-    },
-    ultimateLine: {
-        flex: 1,
-        height: 1,
-    },
-    ultimateLabel: {
-        color: '#FFD700',
-        fontSize: 11,
-        fontWeight: '900',
-        letterSpacing: 1,
-    },
-    generateFinalBtn: {
-        marginTop: 35,
-        borderRadius: 15,
-        overflow: 'hidden',
-        elevation: 10,
-        shadowColor: '#63ff15',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 10,
-    },
-    gradientBtnPlan: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 18,
-    },
-    btnTextBlack: {
-        color: 'black',
-        fontWeight: '700',
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.85)',
-        justifyContent: 'flex-end',
-    },
-    modalContent: {
-        backgroundColor: '#0a0a0a',
-        borderTopLeftRadius: 30,
-        borderTopRightRadius: 30,
-        padding: 25,
-        borderTopWidth: 2,
-        borderTopColor: '#63ff15',
-        width: '100%',
-    },
-    modalTitle: {
-        color: 'white',
-        fontSize: 20,
-        fontWeight: '900',
-    },
+    container: { flex: 1, backgroundColor: '#0A0A0A' },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(99,255,21,0.1)' },
+    headerDot: { width: 8, height: 8, borderRadius: 4 },
+    headerTitle: { color: '#fff', fontSize: 18, fontWeight: '900', letterSpacing: 3 },
+    planBadge: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
+    planBadgeText: { fontSize: 11, fontWeight: '800', letterSpacing: 1 },
+    section: { marginHorizontal: 16, marginTop: 20, backgroundColor: '#111', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+    ultimateSection: { borderColor: 'rgba(255,215,0,0.2)' },
+    sectionTitle: { color: '#fff', fontSize: 12, fontWeight: '900', letterSpacing: 2, marginBottom: 4 },
+    sectionSub: { color: '#666', fontSize: 12, marginBottom: 12 },
+    diasRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 4 },
+    diaBtn: { flex: 1, height: 42, borderRadius: 10, borderWidth: 1, borderColor: '#333', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1a1a1a' },
+    diaBtnText: { color: '#888', fontSize: 13, fontWeight: '700' },
+    diasCount: { marginTop: 10, fontSize: 12, fontWeight: '700', textAlign: 'center' },
+    rowBlock: { marginTop: 14 },
+    rowLabel: { color: '#aaa', fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 6, textTransform: 'uppercase' },
+    chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: '#333', backgroundColor: '#1a1a1a' },
+    chipText: { color: '#888', fontSize: 12, fontWeight: '600' },
+    textInput: { backgroundColor: '#1a1a1a', borderWidth: 1, borderColor: '#333', borderRadius: 10, padding: 12, color: '#fff', fontSize: 14 },
+    btnContainer: { marginHorizontal: 16, marginTop: 24, gap: 12 },
+    btnPrimary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, borderRadius: 14 },
+    btnPrimaryText: { color: '#0A0A0A', fontWeight: '900', fontSize: 14, letterSpacing: 1 },
+    btnSecondary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12 },
+    btnSecondaryText: { color: '#888', fontSize: 13 },
 });

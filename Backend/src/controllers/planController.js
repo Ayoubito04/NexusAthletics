@@ -552,7 +552,8 @@ const getTrialStatus = async (req, res) => {
         let user = await prisma.user.findUnique({ where: { id: req.user.id } });
 
         const now = new Date();
-        const trialExpired = user.haUsadoTrial && user.trialEndDate && user.trialEndDate < now;
+        const isUltimate = user.plan === 'Ultimate';
+        const trialExpired = !isUltimate && user.haUsadoTrial && user.trialEndDate && user.trialEndDate < now;
 
         // Auto-downgrade si el trial expiró y no han renovado
         if (trialExpired && user.plan === 'Pro') {
@@ -566,7 +567,7 @@ const getTrialStatus = async (req, res) => {
         const pricing = getNextDiscountInfo(invites);
 
         let daysLeft = null;
-        if (user.haUsadoTrial && user.trialEndDate && user.trialEndDate > now) {
+        if (!isUltimate && user.haUsadoTrial && user.trialEndDate && user.trialEndDate > now) {
             daysLeft = Math.ceil((new Date(user.trialEndDate) - now) / (1000 * 60 * 60 * 24));
         }
 
@@ -703,7 +704,11 @@ const updatePlan = async (req, res) => {
     try {
         const updatedUser = await prisma.user.update({
             where: { id: req.user.id },
-            data: { plan },
+            data: {
+                plan,
+                // Siempre 30 días frescos al activar Ultimate, sin importar plan anterior
+                ...(plan === 'Ultimate' ? { trialEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) } : {}),
+            },
         });
         const { password: _, ...userWithoutPassword } = updatedUser;
         res.json({ success: true, user: userWithoutPassword });
