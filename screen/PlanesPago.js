@@ -212,7 +212,7 @@ export default function PlanesPago() {
                 'Bio Scanner completo',
                 'Crea rutinas con IA adaptadas a ti',
                 'Programación automática en el calendario',
-                'Sin anuncios · Soporte Prioritario',
+                'Soporte Prioritario',
             ],
         },
         {

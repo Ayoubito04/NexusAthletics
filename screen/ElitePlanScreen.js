@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, Dimensions, Linking } from 'react-native';
 import NexusAlert from '../components/NexusAlert';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as StoreReview from 'expo-store-review';
 import Config from '../constants/Config';
 import { EXERCISE_IMAGES } from '../utils/exerciseMedia';
 
@@ -57,6 +58,33 @@ export default function ElitePlanScreen({ route, navigation }) {
             }
         });
     };
+
+    // Rating prompt — shown once after first routine generated
+    useEffect(() => {
+        (async () => {
+            try {
+                const shown = await AsyncStorage.getItem('ratingPromptShown');
+                if (shown) return;
+                await new Promise(r => setTimeout(r, 2500));
+                await AsyncStorage.setItem('ratingPromptShown', 'true');
+                const available = await StoreReview.isAvailableAsync();
+                if (available) {
+                    await StoreReview.requestReview();
+                } else {
+                    setAlert({
+                        visible: true,
+                        title: '⭐ ¿Te gusta Nexus?',
+                        message: 'Tu valoración nos ayuda a mejorar y llegar a más atletas. ¡Solo tarda 10 segundos!',
+                        type: 'info',
+                        onConfirm: () => {
+                            Linking.openURL('https://play.google.com/store/apps/details?id=com.nexusathletics');
+                            setAlert(prev => ({ ...prev, visible: false }));
+                        },
+                    });
+                }
+            } catch {}
+        })();
+    }, []);
 
     if (!plan || !plan.dias) {
         return (

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Animated, Dimensions, Modal, TextInput, Platform, FlatList } from 'react-native';
 import NexusAlert from '../components/NexusAlert';
+import { scheduleInactivityReminder } from '../services/NotificationService';
 import WorkoutTimer from '../components/WorkoutTimer';
 import WorkoutReview from '../components/WorkoutReview';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -198,6 +199,7 @@ export default function TrainingCalendar({ navigation }) {
                             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                             body: JSON.stringify({ exercises }),
                         });
+                        scheduleInactivityReminder();
                     }
                 } catch (_) {}
             }
@@ -299,6 +301,7 @@ export default function TrainingCalendar({ navigation }) {
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ exercises, duration: stats?.duration || null }),
                 });
+                scheduleInactivityReminder();
             }
         } catch (_) {}
     };

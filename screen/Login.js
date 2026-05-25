@@ -139,7 +139,7 @@ export default function Login() {
                 await AsyncStorage.setItem('token', data.token);
 
                 if (data.isNewUser || !data.user.peso || !data.user.altura) {
-                    navigation.navigate('WelcomePlans');
+                    navigation.navigate('Onboarding');
                 } else {
                     navigation.replace('MainTabs');
                 }
@@ -321,7 +321,7 @@ export default function Login() {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
                 if (data.isNewUser || !data.user.peso || !data.user.altura) {
-                    navigation.navigate('WelcomePlans');
+                    navigation.navigate('Onboarding');
                 } else {
                     navigation.replace('MainTabs');
                 }

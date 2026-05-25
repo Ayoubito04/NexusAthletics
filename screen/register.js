@@ -143,7 +143,7 @@ export default function Register() {
                 "Bienvenido",
                 "✨ Tu cuenta ha sido creada exitosamente. ¡Vamos a personalizarla!",
                 "success",
-                () => navigation.navigate('WelcomePlans')
+                () => navigation.navigate('Onboarding')
             );
 
         } catch (error) {
@@ -173,7 +173,7 @@ export default function Register() {
             await AsyncStorage.setItem('token', data.token);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             if (data.isNewUser || !data.user.peso || !data.user.altura) {
-                navigation.navigate('WelcomePlans');
+                navigation.navigate('Onboarding');
             } else {
                 navigation.replace('MainTabs');
             }

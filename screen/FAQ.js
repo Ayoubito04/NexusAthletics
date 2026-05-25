@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Animated, Platform, LayoutAnimation, UIManager } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Animated, Platform, LayoutAnimation, UIManager, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -99,13 +99,22 @@ export default function FAQ({ navigation }) {
 
                 <View style={styles.contactBox}>
                     <Text style={styles.contactText}>¿No encuentras lo que buscas?</Text>
-                    <TouchableOpacity style={styles.contactBtn}>
+                    <TouchableOpacity style={styles.contactBtn} onPress={() => Linking.openURL('mailto:ayoubarramdani091@gmail.com')}>
                         <LinearGradient
                             colors={['#1a1a1a', '#0a0a0a']}
                             style={styles.contactGradient}
                         >
                             <Ionicons name="mail-outline" size={20} color="#63ff15" />
-                            <Text style={styles.contactBtnText}>CONTACTAR SOPORTE</Text>
+                            <Text style={styles.contactBtnText}>ayoubarramdani091@gmail.com</Text>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.contactBtn, { marginTop: 12 }]} onPress={() => Linking.openURL('tel:+34696348534')}>
+                        <LinearGradient
+                            colors={['#1a1a1a', '#0a0a0a']}
+                            style={styles.contactGradient}
+                        >
+                            <Ionicons name="call-outline" size={20} color="#63ff15" />
+                            <Text style={styles.contactBtnText}>696 34 85 34</Text>
                         </LinearGradient>
                     </TouchableOpacity>
                 </View>

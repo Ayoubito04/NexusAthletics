@@ -99,3 +99,69 @@ export async function saveTokenToBackend(token) {
         // Error de red silencioso
     }
 }
+
+const INACTIVITY_MESSAGES = [
+    { title: '💪 ¡Tu cuerpo te necesita!', body: 'Llevas 3 días sin entrenar. Hoy es el momento de volver.' },
+    { title: '🔥 El progreso no espera', body: '3 días de descanso están bien, pero ya es hora de sudar.' },
+    { title: '⚡ Nexus te echa de menos', body: '¡Vuelve al gym! Tu siguiente PR está más cerca de lo que crees.' },
+    { title: '🏋️ ¿Seguimos?', body: 'Llevas 3 días sin entrenar. Un entreno rápido es mejor que ninguno.' },
+    { title: '🎯 Mantén el ritmo', body: 'La constancia es la clave. ¡Vuelve hoy y mantén tu racha!' },
+];
+
+const DAILY_MOTIVATION = [
+    '¡Buenos días, atleta! Hoy es un gran día para superar tus límites. 💪',
+    'Cada repetición te acerca a tu mejor versión. ¡A por ello! 🔥',
+    'Los campeones entrenan cuando no tienen ganas. ¿Eres uno de ellos? ⚡',
+    'Tu cuerpo puede aguantar casi cualquier cosa. Es tu mente la que debes convencer. 🧠',
+    'El dolor de hoy es la fuerza de mañana. ¡Vamos! 🏋️',
+    'No cuentes los días, haz que los días cuenten. 🎯',
+    'El único mal entreno es el que no se hace. ¡Hoy entrenas! 🚀',
+];
+
+export async function scheduleInactivityReminder() {
+    if (isExpoGo) return;
+    try {
+        const Notifications = require('expo-notifications');
+        await Notifications.cancelScheduledNotificationAsync('inactivity-reminder').catch(() => {});
+        const msg = INACTIVITY_MESSAGES[Math.floor(Math.random() * INACTIVITY_MESSAGES.length)];
+        await Notifications.scheduleNotificationAsync({
+            identifier: 'inactivity-reminder',
+            content: {
+                title: msg.title,
+                body: msg.body,
+                sound: true,
+                color: '#63ff15',
+            },
+            trigger: { seconds: 3 * 24 * 60 * 60 },
+        });
+    } catch (_) {}
+}
+
+export async function cancelInactivityReminder() {
+    if (isExpoGo) return;
+    try {
+        const Notifications = require('expo-notifications');
+        await Notifications.cancelScheduledNotificationAsync('inactivity-reminder').catch(() => {});
+    } catch (_) {}
+}
+
+export async function scheduleDailyMotivation() {
+    if (isExpoGo) return;
+    try {
+        const Notifications = require('expo-notifications');
+        const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+        const alreadySet = scheduled.some(n => n.identifier === 'daily-motivation');
+        if (alreadySet) return;
+        const day = new Date().getDay();
+        await Notifications.scheduleNotificationAsync({
+            identifier: 'daily-motivation',
+            content: {
+                title: '⚡ NEXUS ATHLETICS',
+                body: DAILY_MOTIVATION[day],
+                sound: true,
+                color: '#63ff15',
+            },
+            trigger: { hour: 9, minute: 0, repeats: true },
+        });
+    } catch (_) {}
+}

@@ -1,7 +1,9 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { LogBox } from 'react-native';
 import * as Updates from 'expo-updates';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, shadows, radius, rs } from './theme';
+import { scheduleInactivityReminder, scheduleDailyMotivation } from './services/NotificationService';
 
 // Ignorar advertencias de NativeEventEmitter y notificaciones en Expo Go
 LogBox.ignoreLogs([
@@ -49,6 +51,7 @@ import UserRanking from './screen/UserRanking';
 import Facturacion from './screen/Facturacion';
 import DigitalTwin from './screen/DigitalTwin';
 import FormAnalysis from './screen/FormAnalysis';
+import OnboardingScreen from './screen/OnboardingScreen';
 
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -246,7 +249,14 @@ const screenTransition = {
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
+  const [initialRoute, setInitialRoute] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem('token').then(token => {
+      setInitialRoute(token ? 'MainTabs' : 'Login');
+    }).catch(() => setInitialRoute('Login'));
+  }, []);
   const [loadingMsg, setLoadingMsg] = useState('');
   const [loadingSubMsg, setLoadingSubMsg] = useState('');
 
@@ -291,9 +301,17 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Notificaciones locales: motivación diaria + recordatorio de inactividad
+  useEffect(() => {
+    scheduleInactivityReminder();
+    scheduleDailyMotivation();
+  }, []);
+
   if (showSplash) {
     return <SplashScreen onFinish={() => setShowSplash(false)} />;
   }
+
+  if (!initialRoute) return null;
 
   return (
     <LoadingContext.Provider value={{ showLoading, hideLoading }}>
@@ -303,7 +321,7 @@ export default function App() {
       >
         <NavigationContainer>
           <Stack.Navigator
-            initialRouteName="Login"
+            initialRouteName={initialRoute}
             screenOptions={{
               headerShown: false,
               gestureEnabled: true,
@@ -378,6 +396,7 @@ export default function App() {
             <Stack.Screen name="Facturacion" component={Facturacion} />
             <Stack.Screen name="DigitalTwin" component={DigitalTwin} />
             <Stack.Screen name="FormAnalysis" component={FormAnalysis} />
+            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </StripeProvider>
