@@ -553,10 +553,19 @@ const getTrialStatus = async (req, res) => {
 
         const now = new Date();
         const isUltimate = user.plan === 'Ultimate';
+        const ultimateExpired = isUltimate && user.trialEndDate && user.trialEndDate < now;
         const trialExpired = !isUltimate && user.haUsadoTrial && user.trialEndDate && user.trialEndDate < now;
 
-        // Auto-downgrade si el trial expiró y no han renovado
+        // Auto-downgrade si el trial Pro expiró
         if (trialExpired && user.plan === 'Pro') {
+            user = await prisma.user.update({
+                where: { id: req.user.id },
+                data: { plan: 'Gratis' }
+            });
+        }
+
+        // Auto-downgrade si la suscripción Ultimate expiró
+        if (ultimateExpired) {
             user = await prisma.user.update({
                 where: { id: req.user.id },
                 data: { plan: 'Gratis' }
@@ -567,7 +576,9 @@ const getTrialStatus = async (req, res) => {
         const pricing = getNextDiscountInfo(invites);
 
         let daysLeft = null;
-        if (!isUltimate && user.haUsadoTrial && user.trialEndDate && user.trialEndDate > now) {
+        if (isUltimate && !ultimateExpired && user.trialEndDate) {
+            daysLeft = Math.ceil((new Date(user.trialEndDate) - now) / (1000 * 60 * 60 * 24));
+        } else if (!isUltimate && user.haUsadoTrial && user.trialEndDate && user.trialEndDate > now) {
             daysLeft = Math.ceil((new Date(user.trialEndDate) - now) / (1000 * 60 * 60 * 24));
         }
 
