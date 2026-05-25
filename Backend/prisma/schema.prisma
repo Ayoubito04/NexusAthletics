@@ -33,7 +33,6 @@ model User {
   invitacionesExitosas      Int      @default(0)
   haUsadoTrial              Boolean  @default(false)
   trialEndDate              DateTime?
-  ultimateActivatedAt       DateTime?
 
   // Datos Biométricos
   peso                      Float?
