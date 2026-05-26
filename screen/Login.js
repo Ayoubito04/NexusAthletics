@@ -474,6 +474,8 @@ export default function Login() {
                     return;
                 }
 
+                // Forzar selector de cuentas cerrando sesión previa
+                try { await GoogleSignin.signOut(); } catch (_) {}
                 const userInfo = await GoogleSignin.signIn();
                 const idToken = userInfo.data?.idToken || userInfo.idToken;
 
