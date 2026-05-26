@@ -64,6 +64,7 @@ model User {
   likes                     Like[]
   comments                  Comment[]
   savedPlans                SavedPlan[]
+  nutritionPlans            NutritionPlan[]
   workoutSessions           WorkoutSession[]
   muscleStrengths           MuscleStrength[]
   
@@ -216,6 +217,16 @@ model SavedPlan {
   userId    Int
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   planData  Json
+  createdAt DateTime @default(now())
+}
+
+model NutritionPlan {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planData  Json
+  objetivo  String?
+  calorias  String?
   createdAt DateTime @default(now())
 }
 

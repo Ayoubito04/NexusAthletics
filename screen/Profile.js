@@ -227,6 +227,7 @@ export default function Profile() {
                     {/* MENU */}
                     <MenuSection title="Mi Cuerpo">
                         <MenuItem icon="fitness-outline" label="Datos Biométricos" onPress={() => navigation.navigate('BiometricData')} />
+                        <MenuItem icon="nutrition-outline" label="Nutrición Vault" onPress={() => navigation.navigate('SavedNutritionPlans')} />
                     </MenuSection>
 
                     <MenuSection title="Suscripción">

@@ -54,6 +54,7 @@ import DigitalTwin from './screen/DigitalTwin';
 import FormAnalysis from './screen/FormAnalysis';
 import OnboardingScreen from './screen/OnboardingScreen';
 import NutritionPlanScreen from './screen/NutritionPlanScreen';
+import SavedNutritionPlans from './screen/SavedNutritionPlans';
 
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -403,6 +404,7 @@ function AppNavigator() {
             <Stack.Screen name="FormAnalysis" component={FormAnalysis} />
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
             <Stack.Screen name="NutritionPlan" component={NutritionPlanScreen} />
+            <Stack.Screen name="SavedNutritionPlans" component={SavedNutritionPlans} />
           </Stack.Navigator>
         </NavigationContainer>
       </StripeProvider>

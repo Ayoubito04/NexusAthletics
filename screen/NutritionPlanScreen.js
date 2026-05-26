@@ -46,11 +46,7 @@ export default function NutritionPlanScreen({ navigation }) {
     const pulseAnim = useRef(new Animated.Value(1)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
-    useEffect(() => {
-        AsyncStorage.getItem('nutritionPlan').then(data => {
-            if (data) setPlan(JSON.parse(data));
-        }).catch(() => {});
-    }, []);
+    useEffect(() => {}, []);
 
     useEffect(() => {
         if (loading) {
@@ -119,8 +115,18 @@ Genera los 7 días (Lunes a Domingo). Cada día debe tener exactamente ${numComi
 
     const savePlan = async () => {
         if (!plan) return;
-        await AsyncStorage.setItem('nutritionPlan', JSON.stringify(plan));
-        setSaved(true);
+        try {
+            const token = await AsyncStorage.getItem('token');
+            const res = await fetch(`${BACKEND_URL}/nutrition-plans`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ planData: plan, objetivo, calorias }),
+            });
+            if (!res.ok) throw new Error('Error al guardar');
+            setSaved(true);
+        } catch (e) {
+            alert('No se pudo guardar el plan. Inténtalo de nuevo.');
+        }
     };
 
     return (
@@ -133,7 +139,9 @@ Genera los 7 días (Lunes a Domingo). Cada día debe tener exactamente ${numComi
                     <Text style={[styles.headerTitle, { color: theme.text }]}>NUTRICIÓN IA</Text>
                     <Text style={[styles.headerSub, { color: theme.textSecondary }]}>Plan semanal personalizado</Text>
                 </View>
-                <MaterialCommunityIcons name="food-apple-outline" size={26} color="#63ff15" />
+                <TouchableOpacity onPress={() => navigation.navigate('SavedNutritionPlans')} style={styles.vaultBtn}>
+                    <Ionicons name="albums-outline" size={22} color={theme.primary} />
+                </TouchableOpacity>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
@@ -324,6 +332,7 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 },
     backBtn: { padding: 4 },
+    vaultBtn: { padding: 4 },
     headerTitle: { fontSize: 18, fontWeight: '800', letterSpacing: 2 },
     headerSub: { fontSize: 12, marginTop: 2 },
     scroll: { paddingHorizontal: 16, paddingBottom: 120 },
