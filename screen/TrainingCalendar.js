@@ -564,7 +564,7 @@ export default function TrainingCalendar({ navigation }) {
     const renderDayDetailModal = () => (
         <Modal visible={dayDetailVisible} transparent animationType="slide" onRequestClose={() => setDayDetailRoutine(null)}>
             <View style={styles.modalOverlay}>
-                <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFill} />
+                <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
                 <View style={[styles.modalContent, { borderTopColor: detailIsUltimate ? '#FFD700' : '#63ff15', borderTopWidth: 2 }]}>
                     <View style={styles.modalBar} />
 
@@ -603,7 +603,7 @@ export default function TrainingCalendar({ navigation }) {
 
                     {/* Exercise list */}
                     <Text style={[styles.label, { marginBottom: 8 }]}>EJERCICIOS ({(dayDetailRoutine?.exercises || []).length})</Text>
-                    <ScrollView style={{ flex: 1, marginBottom: 16 }} showsVerticalScrollIndicator={false}>
+                    <ScrollView style={{ flex: 1, marginBottom: 16 }} showsVerticalScrollIndicator={false} nestedScrollEnabled={true}>
                         {(dayDetailRoutine?.exercises || []).map((ex, idx) => (
                             <View key={idx} style={styles.detailExItem}>
                                 <Text style={styles.detailExName} numberOfLines={2}>{ex.name}</Text>
@@ -768,7 +768,7 @@ export default function TrainingCalendar({ navigation }) {
             {/* Manual edit modal (non-Elite days only) */}
             <Modal visible={modalVisible} transparent animationType="slide">
                 <View style={styles.modalOverlay}>
-                    <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFill} />
+                    <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
                     <View style={styles.modalContent}>
                         <View style={styles.modalBar} />
                         <View style={styles.modalHead}>
