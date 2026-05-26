@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Platform, ActivityIndicator, Switch } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -14,7 +14,7 @@ const BACKEND_URL = Config.BACKEND_URL;
 
 export default function AccountSettings() {
     const navigation = useNavigation();
-    const { theme, isDark, toggleTheme } = useTheme();
+    const { theme } = useTheme();
     const [loading, setLoading] = useState(false);
     const [user, setUser] = useState({ nombre: '', apellido: '', email: '', avatar: null, role: 'USER' });
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -258,20 +258,6 @@ export default function AccountSettings() {
                     <TouchableOpacity style={styles.saveBtn} onPress={handleUpdateProfile} disabled={loading}>
                         {loading ? <ActivityIndicator color="black" /> : <Text style={styles.saveBtnText}>Guardar Cambios</Text>}
                     </TouchableOpacity>
-                </View>
-
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Apariencia</Text>
-                    <View style={styles.menuItem}>
-                        <Ionicons name={isDark ? 'moon-outline' : 'sunny-outline'} size={20} color="#888" />
-                        <Text style={styles.menuText}>Modo Oscuro</Text>
-                        <Switch
-                            value={isDark}
-                            onValueChange={toggleTheme}
-                            trackColor={{ false: '#333', true: '#2FA80060' }}
-                            thumbColor={isDark ? '#63ff15' : '#888'}
-                        />
-                    </View>
                 </View>
 
                 <View style={styles.section}>
