@@ -90,7 +90,7 @@ Parámetros del usuario:
 - Restricción alimentaria: ${restriccion}
 - Número de comidas al día: ${numComidas}
 
-Genera los 7 días (Lunes a Domingo). Cada día debe tener exactamente ${numComidas} comidas. Los platos deben ser variados, realistas y deliciosos. Los macros deben estar correctamente calculados y sumar aproximadamente ${calorias} kcal por día.`;
+Genera los 7 días (Lunes a Domingo). Cada día debe tener exactamente ${numComidas} comidas. Los platos deben ser variados, realistas y deliciosos. Los macros deben estar correctamente calculados y sumar aproximadamente ${calorias} kcal por día. RESPONDE ÚNICAMENTE CON EL JSON, SIN NINGÚN TEXTO ANTES NI DESPUÉS. EMPIEZA DIRECTAMENTE CON {`;
 
             const response = await fetch(`${BACKEND_URL}/chat`, {
                 method: 'POST',
@@ -100,7 +100,7 @@ Genera los 7 días (Lunes a Domingo). Cada día debe tener exactamente ${numComi
 
             if (!response.ok) throw new Error('Error de red');
             const data = await response.json();
-            const raw = data.reply || data.message || '';
+            const raw = data.text || data.reply || data.message || '';
 
             // Extract JSON from response
             const jsonMatch = raw.match(/\{[\s\S]*\}/);
@@ -110,7 +110,8 @@ Genera los 7 días (Lunes a Domingo). Cada día debe tener exactamente ${numComi
 
             setPlan(parsed);
         } catch (e) {
-            alert('Error generando el plan. Inténtalo de nuevo.');
+            console.log('[NutritionPlan] Error:', e.message);
+            alert('No se pudo generar el plan. Verifica tu conexión e inténtalo de nuevo.');
         } finally {
             setLoading(false);
         }
