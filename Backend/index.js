@@ -117,6 +117,20 @@ async function startServer() {
         await prisma.$executeRawUnsafe(`ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "exerciseData" JSONB`);
         await prisma.$executeRawUnsafe(`ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "isPR" BOOLEAN NOT NULL DEFAULT false`);
         console.log('✅ Tablas WorkoutSession, MuscleStrength verificadas y Post actualizado');
+
+        // NutritionPlan para vault de nutrición
+        await prisma.$executeRawUnsafe(`
+            CREATE TABLE IF NOT EXISTS "NutritionPlan" (
+                "id" SERIAL PRIMARY KEY,
+                "userId" INTEGER NOT NULL,
+                "planData" JSONB NOT NULL,
+                "objetivo" TEXT,
+                "calorias" TEXT,
+                "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT "NutritionPlan_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
+            );
+        `);
+        console.log('✅ Tabla NutritionPlan verificada');
     } catch (e) {
         console.error('⚠️ Auto-migrate warning:', e.message);
     }
