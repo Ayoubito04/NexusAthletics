@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Config from '../constants/Config';
+import { useTheme } from '../context/ThemeContext';
 
 const BACKEND_URL = Config.BACKEND_URL;
 
@@ -101,6 +102,7 @@ function GlowPulse({ colors }) {
 }
 
 export default function Achievements() {
+    const { theme } = useTheme();
     const navigation = useNavigation();
     const [loading, setLoading]     = useState(true);
     const [stats, setStats]         = useState({ totalKm: 0, totalKcal: 0, count: 0, totalSegundos: 0 });
@@ -147,7 +149,7 @@ export default function Achievements() {
                     }],
                 }}
             >
-                <View style={[styles.card, unlocked && styles.cardUnlocked]}>
+                <View style={[styles.card, unlocked && styles.cardUnlocked, { backgroundColor: theme.card }]}>
                     {unlocked && <GlowPulse colors={item.colors} />}
 
                     {/* Icon */}
@@ -166,7 +168,7 @@ export default function Achievements() {
                     {/* Info */}
                     <View style={styles.cardBody}>
                         <View style={styles.cardTitleRow}>
-                            <Text style={[styles.cardTitle, !unlocked && styles.textLocked]}>
+                            <Text style={[styles.cardTitle, !unlocked && styles.textLocked, unlocked && { color: theme.text }]}>
                                 {item.title}
                             </Text>
                             {unlocked && (
@@ -176,7 +178,7 @@ export default function Achievements() {
                                 </LinearGradient>
                             )}
                         </View>
-                        <Text style={styles.cardDesc}>{item.desc}</Text>
+                        <Text style={[styles.cardDesc, { color: theme.textMuted }]}>{item.desc}</Text>
 
                         {/* Progress bar */}
                         {!unlocked && (
@@ -198,7 +200,7 @@ export default function Achievements() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
             <View style={styles.bgLayer} pointerEvents="none">
                 <LinearGradient colors={['rgba(255,215,0,0.10)','transparent']} style={styles.bgOrbTop} />
                 <LinearGradient colors={['rgba(99,255,21,0.08)','transparent']} style={styles.bgOrbBottom} />
@@ -209,7 +211,7 @@ export default function Achievements() {
                     <Ionicons name="arrow-back" size={24} color="#fff" />
                 </TouchableOpacity>
                 <View style={{ flex: 1 }}>
-                    <Text style={styles.headerTitle}>
+                    <Text style={[styles.headerTitle, { color: theme.text }]}>
                         Sala de <Text style={styles.headerGold}>Trofeos</Text>
                     </Text>
                     <Text style={styles.headerSub}>COLECCIÓN DE LOGROS</Text>

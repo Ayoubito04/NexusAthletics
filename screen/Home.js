@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { colors, typography, spacing, radius, shadows, rs, PAGE_PADDING, BOTTOM_PADDING } from '../theme';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,6 +28,7 @@ const { width } = Dimensions.get('window');
 export default function Home() {
     const navigation = useNavigation();
     const { showLoading } = useLoading();
+    const { theme } = useTheme();
     const [nombreUsuario, setNombreUsuario] = useState('Atleta');
     const [plan, setPlan] = useState('Gratis');
 
@@ -70,6 +72,10 @@ export default function Home() {
             case 'FoodScanner':
                 msg = 'ACCEDIENDO AL NUTRI SCANNER';
                 subMsg = 'CARGANDO BASE DE ALIMENTOS IA...';
+                break;
+            case 'NutritionPlan':
+                msg = 'NUTRICIÓN IA';
+                subMsg = 'CARGANDO PLANIFICADOR NUTRICIONAL...';
                 break;
             case 'FormAnalysis':
                 msg = 'ACCEDIENDO A FORM ANALYSIS';
@@ -434,7 +440,7 @@ export default function Home() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
             <View style={styles.backgroundLayer} pointerEvents="none">
                 <LinearGradient
                     colors={['rgba(99,255,21,0.08)', 'transparent']}
@@ -642,6 +648,7 @@ export default function Home() {
                         <FeatureCard title="Neural Assistant" icon="pulse" color="#A259FF" screen="EntrenadorIA" description="Optimización por IA" />
                         <FeatureCard title="Bio-Scanner" icon="scan" color="#FF00FF" screen="FoodScanner" description="Análisis molecular" />
                         <FeatureCard title="Body Scanner" icon="body" color="#00F0FF" screen="BodyScanner" description="Análisis corporal 3D" />
+                        <FeatureCard title="Nutrición IA" icon="nutrition" color="#63ff15" screen="NutritionPlan" description="Plan de comidas semanal" />
                     </View>
                 </View>
 

@@ -5,10 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Config from '../constants/Config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../context/ThemeContext';
 
 const BACKEND_URL = Config.BACKEND_URL;
 
 export default function BiometricData() {
+    const { theme } = useTheme();
     const navigation = useNavigation();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -94,34 +96,34 @@ export default function BiometricData() {
 
     if (loading) {
         return (
-            <View style={[styles.container, styles.centered]}>
+            <View style={[styles.container, styles.centered, { backgroundColor: theme.background }]}>
                 <ActivityIndicator size="large" color="#63ff15" />
             </View>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                         <Ionicons name="arrow-back" size={28} color="white" />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Perfil Biométrico</Text>
+                    <Text style={[styles.headerTitle, { color: theme.text }]}>Perfil Biométrico</Text>
                 </View>
 
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                    <View style={styles.infoCard}>
+                    <View style={[styles.infoCard, { backgroundColor: theme.card }]}>
                         <Ionicons name="information-circle-outline" size={24} color="#63ff15" />
                         <Text style={styles.infoText}>Estos datos permiten a Nexus AI calcular tu metabolismo y optimizar tus rutinas.</Text>
                     </View>
 
-                    <Text style={styles.label}>Medidas Corporales</Text>
+                    <Text style={[styles.label, { color: theme.text }]}>Medidas Corporales</Text>
                     <View style={styles.row}>
                         <View style={styles.inputGroup}>
                             <Text style={styles.subLabel}>Peso (kg)</Text>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, { backgroundColor: theme.inputBg }]}
                                 value={form.peso}
                                 onChangeText={(val) => setForm({ ...form, peso: val })}
                                 keyboardType="numeric"
@@ -132,7 +134,7 @@ export default function BiometricData() {
                         <View style={styles.inputGroup}>
                             <Text style={styles.subLabel}>Altura (cm)</Text>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, { backgroundColor: theme.inputBg }]}
                                 value={form.altura}
                                 onChangeText={(val) => setForm({ ...form, altura: val })}
                                 keyboardType="numeric"
@@ -143,7 +145,7 @@ export default function BiometricData() {
                         <View style={styles.inputGroup}>
                             <Text style={styles.subLabel}>Edad</Text>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, { backgroundColor: theme.inputBg }]}
                                 value={form.edad}
                                 onChangeText={(val) => setForm({ ...form, edad: val })}
                                 keyboardType="numeric"
@@ -153,21 +155,21 @@ export default function BiometricData() {
                         </View>
                     </View>
 
-                    <Text style={styles.label}>Género</Text>
+                    <Text style={[styles.label, { color: theme.text }]}>Género</Text>
                     <View style={styles.selectorRow}>
                         <SelectBtn label="Hombre" value="Hombre" current={form.genero} onSelect={(v) => setForm({ ...form, genero: v })} />
                         <SelectBtn label="Mujer" value="Mujer" current={form.genero} onSelect={(v) => setForm({ ...form, genero: v })} />
                         <SelectBtn label="Otro" value="Otro" current={form.genero} onSelect={(v) => setForm({ ...form, genero: v })} />
                     </View>
 
-                    <Text style={styles.label}>Objetivo Principal</Text>
+                    <Text style={[styles.label, { color: theme.text }]}>Objetivo Principal</Text>
                     <View style={styles.selectorWrap}>
                         {['Ganar músculo', 'Pérdida de Grasa', 'Tonificar', 'Rendimiento', 'Pilates / Yoga', 'Flexibilidad'].map(obj => (
                             <SelectBtn key={obj} label={obj} value={obj} current={form.objetivo} onSelect={(v) => setForm({ ...form, objetivo: v })} />
                         ))}
                     </View>
 
-                    <Text style={styles.label}>Nivel de Actividad Diaria</Text>
+                    <Text style={[styles.label, { color: theme.text }]}>Nivel de Actividad Diaria</Text>
                     <View style={styles.selectorWrap}>
                         {['Sedentario', 'Ligero', 'Moderado', 'Muy Activo'].map(lvl => (
                             <SelectBtn key={lvl} label={lvl} value={lvl} current={form.nivelActividad} onSelect={(v) => setForm({ ...form, nivelActividad: v })} />

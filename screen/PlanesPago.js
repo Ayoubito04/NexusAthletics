@@ -9,6 +9,7 @@ import { BlurView } from 'expo-blur';
 import NexusAlert from '../components/NexusAlert';
 import Config from '../constants/Config';
 import { colors } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 const BACKEND_URL = Config.BACKEND_URL;
 const PRO_BASE_PRICE = 4.99;
@@ -39,6 +40,7 @@ function getNextDiscountInfo(invites) {
 }
 
 export default function PlanesPago() {
+    const { theme } = useTheme();
     const navigation = useNavigation();
     const [user, setUser]           = useState(null);
     const [token, setToken]         = useState(null);
@@ -233,12 +235,12 @@ export default function PlanesPago() {
     ];
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={28} color="white" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Suscripciones</Text>
+                <Text style={[styles.headerTitle, { color: theme.text }]}>Suscripciones</Text>
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -402,6 +404,7 @@ export default function PlanesPago() {
                             styles.card,
                             p.recommended && styles.cardRecomendada,
                             showSubscribed && styles.currentPlanCard,
+                            { backgroundColor: theme.card },
                         ]}>
                             {isCurrentPlan && (
                                 <View style={styles.currentBadge}><Text style={styles.currentBadgeText}>TU PLAN ACTUAL</Text></View>
@@ -441,7 +444,7 @@ export default function PlanesPago() {
                             {p.caracteristicas.map((feat, idx) => (
                                 <View key={idx} style={styles.featureRow}>
                                     <Ionicons name="checkmark-circle" size={18} color={p.color} />
-                                    <Text style={styles.featureText}>{feat}</Text>
+                                    <Text style={[styles.featureText, { color: theme.textSecondary }]}>{feat}</Text>
                                 </View>
                             ))}
 

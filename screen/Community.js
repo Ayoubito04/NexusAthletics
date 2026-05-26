@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import Config from '../constants/Config';
+import { useTheme } from '../context/ThemeContext';
 
 const BACKEND_URL = Config.BACKEND_URL;
 
@@ -127,6 +128,7 @@ const PostItem = React.memo(({
     item, currentUserId, onLike, onShare, onChat,
     commentingPostId, setCommentingPostId, commentText, setCommentText, onComment
 }) => {
+    const { theme } = useTheme();
     const isWorkout = item.tipo === 'Entrenamiento' || item.isPR;
     const isLiked = item.likes?.some(l => l.userId === currentUserId);
     const likeCount = item._count?.likes || 0;
@@ -148,7 +150,7 @@ const PostItem = React.memo(({
 
     return (
         <View
-            style={[styles.postCard, isWorkout && styles.postCardWorkout, item.isPR && styles.postCardPR]}
+            style={[styles.postCard, isWorkout && styles.postCardWorkout, item.isPR && styles.postCardPR, { backgroundColor: theme.surface }]}
             accessible
             accessibilityLabel={`Publicación de ${authorName}${item.isPR ? ', récord personal' : ''}`}
         >
@@ -171,7 +173,7 @@ const PostItem = React.memo(({
                     }
                 </View>
                 <View style={{ flex: 1 }}>
-                    <Text style={styles.postUserName}>{authorName}</Text>
+                    <Text style={[styles.postUserName, { color: theme.text }]}>{authorName}</Text>
                     <View style={styles.badgeRow}>
                         <View style={[
                             styles.planChip,
@@ -199,7 +201,7 @@ const PostItem = React.memo(({
             </TouchableOpacity>
 
             {/* Content */}
-            {item.descripcion ? <Text style={styles.postText}>{item.descripcion}</Text> : null}
+            {item.descripcion ? <Text style={[styles.postText, { color: theme.text }]}>{item.descripcion}</Text> : null}
 
             {item.imagen ? (
                 <View style={styles.postImgWrap}>
@@ -312,6 +314,7 @@ const PostItem = React.memo(({
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 export default function Community() {
+    const { theme } = useTheme();
     const navigation = useNavigation();
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -563,14 +566,14 @@ export default function Community() {
     ), [suggestedFriends, posts.length, loading]);
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: theme.background }]}>
             {/* Header */}
             <View style={styles.header}>
                 <View>
-                    <Text style={styles.headerTitle}>
+                    <Text style={[styles.headerTitle, { color: theme.text }]}>
                         Comunidad <Text style={styles.headerGreen}>Elite</Text>
                     </Text>
-                    <Text style={styles.headerSub}>Conecta con otros atletas</Text>
+                    <Text style={[styles.headerSub, { color: theme.textSecondary }]}>Conecta con otros atletas</Text>
                 </View>
                 <TouchableOpacity
                     style={styles.friendsIconBtn}

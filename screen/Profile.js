@@ -9,6 +9,7 @@ import NexusAlert from '../components/NexusAlert';
 import Config from '../constants/Config';
 import AchievementsShowcase from '../components/AchievementsShowcase';
 import { colors, spacing, radius, rs } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 const BACKEND_URL = Config.BACKEND_URL;
 const { width } = Dimensions.get('window');
@@ -35,6 +36,7 @@ const PLAN_CONFIG = {
 };
 
 export default function Profile() {
+    const { theme } = useTheme();
     const navigation = useNavigation();
     const [user, setUser] = useState(null);
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -79,14 +81,27 @@ export default function Profile() {
 
     const handleLogout = () => {
         showAlert("Cerrar Sesión", "¿Estás seguro de que quieres salir?", "warning",
-            async () => { await AsyncStorage.clear(); navigation.navigate('Login'); },
+            async () => {
+                await AsyncStorage.clear();
+                navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+            },
             () => {}, "SALIR"
+        );
+    };
+
+    const handleSwitchAccount = () => {
+        showAlert("Cambiar de Cuenta", "Se cerrará la sesión actual para iniciar con otra cuenta.", "info",
+            async () => {
+                await AsyncStorage.multiRemove(['token', 'user']);
+                navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+            },
+            () => {}, "CAMBIAR"
         );
     };
 
     if (!user) {
         return (
-            <View style={styles.container}>
+            <View style={[styles.container, { backgroundColor: theme.background }]}>
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                     <Text style={{ color: '#63ff15', fontWeight: '900', letterSpacing: 2 }}>CARGANDO...</Text>
                 </View>
@@ -103,13 +118,13 @@ export default function Profile() {
         ? Math.max(0, Math.ceil((ultimateExpiry - new Date()) / (1000 * 60 * 60 * 24))) : null;
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
                     <Ionicons name="arrow-back" size={20} color="#63ff15" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>MI PERFIL</Text>
+                <Text style={[styles.headerTitle, { color: theme.text }]}>MI PERFIL</Text>
                 <TouchableOpacity onPress={handleLogout} style={[styles.headerBtn, { borderColor: 'rgba(255,77,77,0.25)' }]}>
                     <Ionicons name="log-out-outline" size={20} color="#ff4d4d" />
                 </TouchableOpacity>
@@ -119,7 +134,7 @@ export default function Profile() {
                 <Animated.View style={{ width: '100%', opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }}>
 
                     {/* HERO CARD */}
-                    <View style={styles.heroCard}>
+                    <View style={[styles.heroCard, { backgroundColor: theme.surface }]}>
                         {/* Cover gradient */}
                         <LinearGradient
                             colors={['rgba(10,10,14,0)', 'rgba(5,5,8,0.97)']}
@@ -169,8 +184,8 @@ export default function Profile() {
                         </View>
 
                         {/* Identity */}
-                        <Text style={styles.heroName}>{user.nombre} {user.apellido}</Text>
-                        <Text style={styles.heroEmail}>{user.email}</Text>
+                        <Text style={[styles.heroName, { color: theme.text }]}>{user.nombre} {user.apellido}</Text>
+                        <Text style={[styles.heroEmail, { color: theme.textSecondary }]}>{user.email}</Text>
 
                         {/* Divider */}
                         <View style={styles.heroDivider} />
@@ -274,6 +289,7 @@ export default function Profile() {
 
                     <MenuSection title="Configuración">
                         <MenuItem icon="settings-outline" label="Configuración de Cuenta" iconColor="#71717A" onPress={() => navigation.navigate('AccountSettings')} />
+                        <MenuItem icon="swap-horizontal-outline" label="Cambiar de Cuenta" iconColor="#71717A" onPress={handleSwitchAccount} />
                     </MenuSection>
 
                     <MenuSection title="Soporte">
@@ -301,17 +317,19 @@ export default function Profile() {
 }
 
 function MenuSection({ title, children }) {
+    const { theme } = useTheme();
     return (
         <View style={styles.menuSection}>
-            <Text style={styles.sectionTitle}>{title}</Text>
+            <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>{title}</Text>
             {children}
         </View>
     );
 }
 
 function MenuItem({ icon, label, sublabel, onPress, iconColor = '#63ff15', highlight = false }) {
+    const { theme } = useTheme();
     return (
-        <TouchableOpacity style={[styles.menuItem, highlight && styles.menuItemHighlight]} onPress={onPress}>
+        <TouchableOpacity style={[styles.menuItem, highlight && styles.menuItemHighlight, { backgroundColor: theme.card }]} onPress={onPress}>
             {highlight && (
                 <LinearGradient colors={['rgba(99,255,21,0.06)', 'transparent']} style={StyleSheet.absoluteFill} borderRadius={15} />
             )}
@@ -319,7 +337,7 @@ function MenuItem({ icon, label, sublabel, onPress, iconColor = '#63ff15', highl
                 <Ionicons name={icon} size={18} color={iconColor} />
             </View>
             <View style={{ flex: 1, marginLeft: 14 }}>
-                <Text style={[styles.menuText, highlight && { color: '#63ff15' }]}>{label}</Text>
+                <Text style={[styles.menuText, { color: theme.text }, highlight && { color: '#63ff15' }]}>{label}</Text>
                 {sublabel ? <Text style={styles.menuSub}>{sublabel}</Text> : null}
             </View>
             <Ionicons name="chevron-forward" size={16} color={highlight ? '#63ff15' : colors.textMuted} />

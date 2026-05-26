@@ -3,12 +3,14 @@ import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Animated, Platfor
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '../context/ThemeContext';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 const FAQItem = ({ question, answer }) => {
+    const { theme } = useTheme();
     const [expanded, setExpanded] = useState(false);
 
     const toggleExpand = () => {
@@ -17,9 +19,9 @@ const FAQItem = ({ question, answer }) => {
     };
 
     return (
-        <View style={[styles.faqCard, expanded && styles.faqCardExpanded]}>
+        <View style={[styles.faqCard, expanded && styles.faqCardExpanded, { backgroundColor: expanded ? theme.surfaceSecondary : theme.surface }]}>
             <TouchableOpacity style={styles.faqHeader} onPress={toggleExpand} activeOpacity={0.7}>
-                <Text style={[styles.questionText, expanded && styles.questionTextActive]}>{question}</Text>
+                <Text style={[styles.questionText, { color: theme.text }, expanded && styles.questionTextActive]}>{question}</Text>
                 <Ionicons
                     name={expanded ? "chevron-up" : "chevron-down"}
                     size={20}
@@ -36,6 +38,7 @@ const FAQItem = ({ question, answer }) => {
 };
 
 export default function FAQ({ navigation }) {
+    const { theme } = useTheme();
     const faqs = [
         {
             question: "¿Qué es Nexus AI?",
@@ -68,7 +71,7 @@ export default function FAQ({ navigation }) {
     ];
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
             <LinearGradient
                 colors={['rgba(99, 255, 21, 0.1)', 'transparent']}
                 style={StyleSheet.absoluteFill}
@@ -79,7 +82,7 @@ export default function FAQ({ navigation }) {
                     <Ionicons name="arrow-back" size={28} color="white" />
                 </TouchableOpacity>
                 <View>
-                    <Text style={styles.headerTitle}>PREGUNTAS <Text style={{ color: '#63ff15' }}>FRECUENTES</Text></Text>
+                    <Text style={[styles.headerTitle, { color: theme.text }]}>PREGUNTAS <Text style={{ color: '#63ff15' }}>FRECUENTES</Text></Text>
                     <Text style={styles.headerSub}>Soporte Nexus AI</Text>
                 </View>
             </View>
@@ -89,8 +92,8 @@ export default function FAQ({ navigation }) {
                     <View style={styles.iconCircle}>
                         <Ionicons name="help-buoy-outline" size={40} color="#63ff15" />
                     </View>
-                    <Text style={styles.introTitle}>¿En qué podemos ayudarte?</Text>
-                    <Text style={styles.introDesc}>Todo lo que necesitas saber sobre el ecosistema Nexus AI para maximizar tu rendimiento.</Text>
+                    <Text style={[styles.introTitle, { color: theme.text }]}>¿En qué podemos ayudarte?</Text>
+                    <Text style={[styles.introDesc, { color: theme.textSecondary }]}>Todo lo que necesitas saber sobre el ecosistema Nexus AI para maximizar tu rendimiento.</Text>
                 </View>
 
                 {faqs.map((faq, index) => (

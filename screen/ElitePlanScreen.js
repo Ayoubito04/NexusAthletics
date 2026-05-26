@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, Dimensions, Linking } from 'react-native';
 import NexusAlert from '../components/NexusAlert';
+import RestTimerModal from '../components/RestTimerModal';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as StoreReview from 'expo-store-review';
 import Config from '../constants/Config';
 import { EXERCISE_IMAGES } from '../utils/exerciseMedia';
+import { useTheme } from '../context/ThemeContext';
 
 const BACKEND_URL = Config.BACKEND_URL;
 
@@ -18,10 +20,12 @@ const { width, height } = Dimensions.get('window');
 const GIF_CACHE_KEY = 'nexus_exercise_gifs_v1';
 
 export default function ElitePlanScreen({ route, navigation }) {
+    const { theme } = useTheme();
     const { plan, diasDisponibles } = route.params;
     const [guardado, setGuardado] = useState(false);
     const [agendado, setAgendado] = useState(false);
     const [apiGifs, setApiGifs] = useState({});
+    const [restTimerVisible, setRestTimerVisible] = useState(false);
 
     useEffect(() => {
         (async () => {
@@ -88,7 +92,7 @@ export default function ElitePlanScreen({ route, navigation }) {
 
     if (!plan || !plan.dias) {
         return (
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()}><Ionicons name="arrow-back" size={24} color="white" /></TouchableOpacity>
                     <Text style={styles.headerTitle}>ERROR</Text>
@@ -215,10 +219,10 @@ export default function ElitePlanScreen({ route, navigation }) {
     // ─── Single unified render for both Pro and Ultimate ────────────────────
     const isUltimatePlan = !!(plan.analisis || plan.suplementacion?.length);
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
             <View style={styles.topNav}>
                 <TouchableOpacity onPress={() => navigation.goBack()}><Ionicons name="close" size={30} color="white" /></TouchableOpacity>
-                <Text style={styles.navTitle}>NEXUS <Text style={{ color: isUltimatePlan ? '#FFD700' : '#63ff15' }}>{isUltimatePlan ? 'ULTIMATE' : 'PRO'}</Text></Text>
+                <Text style={[styles.navTitle, { color: theme.text }]}>NEXUS <Text style={{ color: isUltimatePlan ? '#FFD700' : '#63ff15' }}>{isUltimatePlan ? 'ULTIMATE' : 'PRO'}</Text></Text>
                 <View style={{ width: 30 }} />
             </View>
 
@@ -295,7 +299,7 @@ export default function ElitePlanScreen({ route, navigation }) {
 
                         <View style={styles.exGrid}>
                             {(dia.ejercicios || []).map((ex, ei) => (
-                                <View key={ei} style={styles.exGridCard}>
+                                <View key={ei} style={[styles.exGridCard, { backgroundColor: theme.card }]}>
                                     <Image
                                         source={{ uri: apiGifs[ex.imgKey] ? `${BACKEND_URL}/exercises/gif/${apiGifs[ex.imgKey]}` : (EXERCISE_IMAGES[ex.imgKey] || EXERCISE_IMAGES.default) }}
                                         style={styles.exGridImage}
@@ -400,12 +404,42 @@ export default function ElitePlanScreen({ route, navigation }) {
             </ScrollView>
 
             <NexusAlert visible={alert.visible} title={alert.title} message={alert.message} type={alert.type} onConfirm={alert.onConfirm} />
+
+            {/* REST TIMER FAB */}
+            <TouchableOpacity
+                style={styles.restFab}
+                onPress={() => setRestTimerVisible(true)}
+                activeOpacity={0.85}
+            >
+                <Ionicons name="timer-outline" size={20} color="#000" />
+                <Text style={styles.restFabText}>REST</Text>
+            </TouchableOpacity>
+
+            <RestTimerModal visible={restTimerVisible} onClose={() => setRestTimerVisible(false)} />
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#000' },
+    restFab: {
+        position: 'absolute',
+        bottom: 28,
+        right: 20,
+        backgroundColor: '#63ff15',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 24,
+        elevation: 8,
+        shadowColor: '#63ff15',
+        shadowOpacity: 0.5,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 0 },
+    },
+    restFabText: { color: '#000', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
     topNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, height: 60 },
     navTitle: { color: 'white', fontSize: 18, fontWeight: '900', letterSpacing: 2 },
     slide: { width, height: height - 120, padding: 25 },

@@ -4,6 +4,7 @@ import * as Updates from 'expo-updates';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, shadows, radius, rs } from './theme';
 import { scheduleInactivityReminder, scheduleDailyMotivation } from './services/NotificationService';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 
 // Ignorar advertencias de NativeEventEmitter y notificaciones en Expo Go
 LogBox.ignoreLogs([
@@ -52,6 +53,7 @@ import Facturacion from './screen/Facturacion';
 import DigitalTwin from './screen/DigitalTwin';
 import FormAnalysis from './screen/FormAnalysis';
 import OnboardingScreen from './screen/OnboardingScreen';
+import NutritionPlanScreen from './screen/NutritionPlanScreen';
 
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -73,6 +75,7 @@ export const useLoading = () => useContext(LoadingContext);
 
 function TabNavigator() {
   const { showLoading } = useLoading();
+  const { theme, isDark } = useTheme();
 
   return (
     <Tab.Navigator
@@ -99,12 +102,12 @@ function TabNavigator() {
           borderRadius: radius.tab,
           borderTopWidth: 0,
           borderWidth: 1.2,
-          borderColor: 'rgba(99,255,21,0.35)',
+          borderColor: theme.borderStrong,
           ...shadows.tabBar,
           overflow: 'hidden',
           elevation: 20,
           zIndex: 999,
-          shadowColor: '#63ff15',
+          shadowColor: theme.primary,
           shadowOpacity: 0.15,
           shadowRadius: 10,
           shadowOffset: { width: 0, height: 4 },
@@ -113,19 +116,21 @@ function TabNavigator() {
           <View style={{ flex: 1 }}>
             <BlurView
               intensity={95}
-              tint="dark"
+              tint={isDark ? 'dark' : 'light'}
               style={{ ...StyleSheet.absoluteFillObject }}
             />
             <LinearGradient
-              colors={['rgba(15,15,18,0.96)', 'rgba(5,5,8,0.99)']}
+              colors={isDark
+                ? ['rgba(15,15,18,0.96)', 'rgba(5,5,8,0.99)']
+                : ['rgba(242,244,247,0.97)', 'rgba(255,255,255,0.99)']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={{ ...StyleSheet.absoluteFillObject }}
             />
           </View>
         ),
-        tabBarActiveTintColor: colors.tabBarActive,
-        tabBarInactiveTintColor: colors.tabBarInactive,
+        tabBarActiveTintColor: theme.primary,
+        tabBarInactiveTintColor: theme.textMuted,
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
           if (route.name === 'Dashboard') {
@@ -147,9 +152,9 @@ function TabNavigator() {
                   width: 16,
                   height: 3,
                   borderRadius: 1.5,
-                  backgroundColor: '#63ff15',
+                  backgroundColor: theme.primary,
                   marginTop: 4,
-                  shadowColor: '#63ff15',
+                  shadowColor: theme.primary,
                   shadowOpacity: 0.9,
                   shadowRadius: 5,
                   shadowOffset: { width: 0, height: 0 },
@@ -161,8 +166,8 @@ function TabNavigator() {
         },
       })}
     >
-      <Tab.Screen 
-        name="Dashboard" 
+      <Tab.Screen
+        name="Dashboard"
         component={Home}
         options={{ tabBarLabel: 'Home' }}
         listeners={({ navigation }) => ({
@@ -175,8 +180,8 @@ function TabNavigator() {
           },
         })}
       />
-      <Tab.Screen 
-        name="Nexus IA" 
+      <Tab.Screen
+        name="Nexus IA"
         component={NexusIA}
         options={{ tabBarLabel: 'Nexus' }}
         listeners={({ navigation }) => ({
@@ -189,8 +194,8 @@ function TabNavigator() {
           },
         })}
       />
-      <Tab.Screen 
-        name="Estadísticas" 
+      <Tab.Screen
+        name="Estadísticas"
         component={Analytics}
         options={{ tabBarLabel: 'Stats' }}
         listeners={({ navigation }) => ({
@@ -203,8 +208,8 @@ function TabNavigator() {
           },
         })}
       />
-      <Tab.Screen 
-        name="Comunidad" 
+      <Tab.Screen
+        name="Comunidad"
         component={Community}
         options={{ tabBarLabel: 'Social' }}
         listeners={({ navigation }) => ({
@@ -217,8 +222,8 @@ function TabNavigator() {
           },
         })}
       />
-      <Tab.Screen 
-        name="Perfil" 
+      <Tab.Screen
+        name="Perfil"
         component={Profile}
         options={{ tabBarLabel: 'Yo' }}
         listeners={({ navigation }) => ({
@@ -247,7 +252,7 @@ const screenTransition = {
   },
 };
 
-export default function App() {
+function AppNavigator() {
   const [showSplash, setShowSplash] = useState(true);
   const [initialRoute, setInitialRoute] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -397,6 +402,7 @@ export default function App() {
             <Stack.Screen name="DigitalTwin" component={DigitalTwin} />
             <Stack.Screen name="FormAnalysis" component={FormAnalysis} />
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+            <Stack.Screen name="NutritionPlan" component={NutritionPlanScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </StripeProvider>
@@ -406,5 +412,13 @@ export default function App() {
         </View>
       )}
     </LoadingContext.Provider>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppNavigator />
+    </ThemeProvider>
   );
 }

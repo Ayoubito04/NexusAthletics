@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Config from '../constants/Config';
 import NexusAlert from '../components/NexusAlert';
+import { useTheme } from '../context/ThemeContext';
 
 const BACKEND_URL = Config.BACKEND_URL;
 const { width: SW, height: SH } = Dimensions.get('window');
@@ -159,12 +160,6 @@ const PlanGeneratingScreen = ({ isUltimate }) => {
                     ))}
                 </View>
             </View>
-
-            <View style={{ position: 'absolute', bottom: 44, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Animated.View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: color, opacity: glowOp }} />
-                <Text style={{ fontSize: 9, color: '#3F3F46', fontWeight: '700', letterSpacing: 1.5 }}>NEXUS PERFORMANCE SYSTEM</Text>
-                <Animated.View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: color, opacity: glowOp }} />
-            </View>
         </View>
     );
 };
@@ -191,6 +186,7 @@ const Row = ({ label, options, value, onChange, color }) => {
 };
 
 export default function NexusIA() {
+    const { theme } = useTheme();
     const navigation = useNavigation();
     const [user, setUser] = useState(null);
     const [generandoPlan, setGenerandoPlan] = useState(false);
@@ -302,7 +298,7 @@ export default function NexusIA() {
     const planColor = isUltimate ? '#FFD700' : '#63ff15';
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
             <NexusAlert
                 visible={alert.visible} title={alert.title} message={alert.message}
                 type={alert.type} onConfirm={alert.onConfirm}
@@ -312,7 +308,7 @@ export default function NexusIA() {
             <View style={styles.header}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                     <LinearGradient colors={['#63ff15', '#00D1FF']} style={styles.headerDot} />
-                    <Text style={styles.headerTitle}>NEXUS IA</Text>
+                    <Text style={[styles.headerTitle, { color: theme.text }]}>NEXUS IA</Text>
                 </View>
                 {user?.plan && (
                     <View style={[styles.planBadge, { borderColor: planColor }]}>
@@ -325,9 +321,9 @@ export default function NexusIA() {
 
             <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
 
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>DIAS DISPONIBLES</Text>
-                    <Text style={styles.sectionSub}>Selecciona los dias que puedes entrenar</Text>
+                <View style={[styles.section, { backgroundColor: theme.surface }]}>
+                    <Text style={[styles.sectionTitle, { color: theme.text }]}>DIAS DISPONIBLES</Text>
+                    <Text style={[styles.sectionSub, { color: theme.textSecondary }]}>Selecciona los dias que puedes entrenar</Text>
                     <View style={styles.diasRow}>
                         {DIAS_LABELS.map((label, idx) => {
                             const active = diasDisponibles.includes(idx);
@@ -347,8 +343,8 @@ export default function NexusIA() {
                     </Text>
                 </View>
 
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>CONFIGURACION</Text>
+                <View style={[styles.section, { backgroundColor: theme.surface }]}>
+                    <Text style={[styles.sectionTitle, { color: theme.text }]}>CONFIGURACION</Text>
                     <Row label="Objetivo" options={['Ganar Musculo', 'Perder Grasa', 'Fuerza Maxima', 'Resistencia', 'Definicion', 'Bienestar']} value={objetivoPlan} onChange={setObjetivoPlan} />
                     <Row label="Nivel" options={['Principiante', 'Intermedio', 'Avanzado', 'Elite']} value={nivelPlan} onChange={setNivelPlan} />
                     <Row label="Alimentacion" options={['Equilibrada', 'Vegana', 'Vegetariana', 'Sin Gluten', 'Keto', 'Carnivora']} value={prefAlimenticia} onChange={setPrefAlimenticia} />

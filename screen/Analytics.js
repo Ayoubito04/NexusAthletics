@@ -11,10 +11,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { colors, spacing, radius, shadows, rs, PAGE_PADDING, BOTTOM_PADDING } from '../theme';
 import Config from '../constants/Config';
+import { useTheme } from '../context/ThemeContext';
 
 const BACKEND_URL = Config.BACKEND_URL;
 
 export default function Analytics() {
+    const { theme } = useTheme();
     const navigation = useNavigation();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -134,7 +136,7 @@ export default function Analytics() {
 
     if (loading) {
         return (
-            <View style={styles.loadingScreen}>
+            <View style={[styles.loadingScreen, { backgroundColor: theme.background }]}>
                 <ActivityIndicator size="large" color={colors.primary} />
                 <Text style={styles.loadingText}>Cargando datos...</Text>
             </View>
@@ -142,7 +144,7 @@ export default function Analytics() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
             {/* HEADER */}
             <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -151,8 +153,8 @@ export default function Analytics() {
                     </View>
                 </TouchableOpacity>
                 <View>
-                    <Text style={styles.headerTitle}>Nexus <Text style={{ color: colors.accentBlue }}>Stats</Text></Text>
-                    <Text style={styles.headerSub}>Tu evolución en tiempo real</Text>
+                    <Text style={[styles.headerTitle, { color: theme.text }]}>Nexus <Text style={{ color: colors.accentBlue }}>Stats</Text></Text>
+                    <Text style={[styles.headerSub, { color: theme.textSecondary }]}>Tu evolución en tiempo real</Text>
                 </View>
             </Animated.View>
 
@@ -175,7 +177,7 @@ export default function Analytics() {
                             }}
                         >
                             <TouchableOpacity
-                                style={styles.statCard}
+                                style={[styles.statCard, { backgroundColor: theme.surface }]}
                                 onPress={card.onPress}
                                 activeOpacity={card.onPress ? 0.75 : 1}
                             >
@@ -240,7 +242,7 @@ export default function Analytics() {
                 onRequestClose={() => setModalVisible(false)}
             >
                 <View style={styles.modalOverlay}>
-                    <View style={styles.aiModalContent}>
+                    <View style={[styles.aiModalContent, { backgroundColor: theme.surface }]}>
                         <View style={styles.aiModalHeader}>
                             <MaterialCommunityIcons name="brain" size={rs(26)} color={colors.primary} />
                             <Text style={styles.aiModalTitle}>NEXUS AI BRAIN</Text>
@@ -257,7 +259,7 @@ export default function Analytics() {
                             </View>
                         ) : (
                             <ScrollView showsVerticalScrollIndicator={false}>
-                                <View style={styles.analysisResult}>
+                                <View style={[styles.analysisResult, { backgroundColor: theme.background }]}>
                                     <Text style={styles.analysisLabel}>ANÁLISIS DE EVOLUCIÓN:</Text>
                                     <Text style={styles.analysisText}>{aiAnalysis}</Text>
                                     <View style={styles.analysisFooter}>
