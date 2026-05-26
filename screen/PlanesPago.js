@@ -243,7 +243,7 @@ export default function PlanesPago() {
                 <Text style={[styles.headerTitle, { color: theme.text }]}>Suscripciones</Text>
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+            <ScrollView contentContainerStyle={styles.scrollContent} style={{ backgroundColor: theme.background }}>
 
                 {/* ── Trial activo: banner de días restantes ── */}
                 {isInTrial && (

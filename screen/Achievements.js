@@ -292,6 +292,7 @@ export default function Achievements() {
                     keyExtractor={item => item.id.toString()}
                     contentContainerStyle={styles.list}
                     showsVerticalScrollIndicator={false}
+                    style={{ backgroundColor: theme.background }}
                 />
             )}
         </SafeAreaView>

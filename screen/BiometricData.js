@@ -104,7 +104,7 @@ export default function BiometricData() {
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, backgroundColor: theme.background }}>
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                         <Ionicons name="arrow-back" size={28} color="white" />
@@ -112,7 +112,7 @@ export default function BiometricData() {
                     <Text style={[styles.headerTitle, { color: theme.text }]}>Perfil Biométrico</Text>
                 </View>
 
-                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} style={{ backgroundColor: theme.background }}>
                     <View style={[styles.infoCard, { backgroundColor: theme.card }]}>
                         <Ionicons name="information-circle-outline" size={24} color="#63ff15" />
                         <Text style={styles.infoText}>Estos datos permiten a Nexus AI calcular tu metabolismo y optimizar tus rutinas.</Text>

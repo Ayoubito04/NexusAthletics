@@ -206,7 +206,7 @@ export default function AccountSettings() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={28} color="white" />
@@ -214,7 +214,7 @@ export default function AccountSettings() {
                 <Text style={styles.headerTitle}>Ajustes de Cuenta</Text>
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+            <ScrollView contentContainerStyle={styles.scrollContent} style={{ backgroundColor: theme.background }}>
                 <View style={styles.avatarSection}>
                     <TouchableOpacity onPress={pickImage} style={styles.avatarContainer} disabled={uploadingAvatar}>
                         {user.avatar ? (

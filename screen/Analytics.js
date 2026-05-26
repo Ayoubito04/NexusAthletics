@@ -161,6 +161,7 @@ export default function Analytics() {
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
+                style={{ backgroundColor: theme.background }}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor={colors.primary} />
                 }

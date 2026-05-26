@@ -130,7 +130,7 @@ export default function Profile() {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} style={{ backgroundColor: theme.background }}>
                 <Animated.View style={{ width: '100%', opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }}>
 
                     {/* HERO CARD */}

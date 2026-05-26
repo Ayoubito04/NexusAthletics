@@ -87,7 +87,7 @@ export default function FAQ({ navigation }) {
                 </View>
             </View>
 
-            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} style={{ backgroundColor: theme.background }}>
                 <View style={styles.introBox}>
                     <View style={styles.iconCircle}>
                         <Ionicons name="help-buoy-outline" size={40} color="#63ff15" />

@@ -647,6 +647,7 @@ export default function Community() {
                     keyExtractor={i => i.id.toString()}
                     ListHeaderComponent={ListHeader}
                     contentContainerStyle={styles.feedContent}
+                    style={{ backgroundColor: theme.background }}
                     initialNumToRender={5}
                     maxToRenderPerBatch={4}
                     windowSize={5}
