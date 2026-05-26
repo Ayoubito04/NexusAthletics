@@ -135,7 +135,7 @@ function WorkoutBriefing({ workoutMeta, exercises, onStart }) {
 
     return (
         <SafeAreaView style={s.container}>
-            <ScrollView contentContainerStyle={s.briefingScroll} showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={s.briefingScroll} showsVerticalScrollIndicator={false} nestedScrollEnabled={true}>
 
                 {/* Header dorado */}
                 <LinearGradient colors={['rgba(255,215,0,0.15)', 'transparent']} style={s.briefingHeader}>
