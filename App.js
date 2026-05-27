@@ -259,9 +259,24 @@ function AppNavigator() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem('token').then(token => {
-      setInitialRoute(token ? 'MainTabs' : 'Login');
-    }).catch(() => setInitialRoute('Login'));
+    const checkInitialRoute = async () => {
+      try {
+        const [token, onboarded] = await Promise.all([
+          AsyncStorage.getItem('token'),
+          AsyncStorage.getItem('onboardingCompleted'),
+        ]);
+        if (!onboarded) {
+          setInitialRoute('Onboarding');
+        } else if (token) {
+          setInitialRoute('MainTabs');
+        } else {
+          setInitialRoute('Login');
+        }
+      } catch {
+        setInitialRoute('Onboarding');
+      }
+    };
+    checkInitialRoute();
   }, []);
   const [loadingMsg, setLoadingMsg] = useState('');
   const [loadingSubMsg, setLoadingSubMsg] = useState('');
