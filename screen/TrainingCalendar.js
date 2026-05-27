@@ -74,6 +74,9 @@ export default function TrainingCalendar({ navigation }) {
     // Copy/Paste State
     const [copiedRoutine, setCopiedRoutine] = useState(null);
 
+    // Drag & Drop State
+    const [dragSource, setDragSource] = useState(null);
+
     // NexusAlert State
     const [alert, setAlert] = useState({ visible: false, title: '', message: '', type: 'info', onConfirm: null, onCancel: null, confirmText: 'ACEPTAR' });
 
@@ -152,6 +155,16 @@ export default function TrainingCalendar({ navigation }) {
         showAlert("Pegado", "Rutina aplicada correctamente.", "info");
     };
 
+    const moveRoutine = async (fromKey, toKey) => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        const newRoutines = { ...assignedRoutines };
+        newRoutines[toKey] = { ...newRoutines[fromKey] };
+        delete newRoutines[fromKey];
+        setAssignedRoutines(newRoutines);
+        await AsyncStorage.setItem('assigned_routines', JSON.stringify(newRoutines));
+        setDragSource(null);
+    };
+
     const removeRoutine = async (key) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         showAlert(
@@ -224,10 +237,18 @@ export default function TrainingCalendar({ navigation }) {
     };
 
     const openDayPicker = (key) => {
+        if (dragSource !== null) {
+            if (dragSource === key) {
+                setDragSource(null);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            } else {
+                moveRoutine(dragSource, key);
+            }
+            return;
+        }
         setSelectedDateKey(key);
         const existing = assignedRoutines[key];
         if (existing && existing.isElite) {
-            // Elite/Ultimate days → open read-only detail sheet
             setDayDetailRoutine(existing);
             return;
         }
@@ -311,6 +332,23 @@ export default function TrainingCalendar({ navigation }) {
         setSessionDataForReview(null);
     };
 
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+    const getRoutineStats = (routine) => {
+        if (!routine || !routine.exercises) return { muscles: [], volume: 0, sets: 0 };
+        const muscleSet = new Set();
+        let volume = 0;
+        let sets = 0;
+        routine.exercises.forEach(ex => {
+            if (ex.muscle) muscleSet.add(ex.muscle);
+            const s = parseInt(ex.sets) || 0;
+            const r = parseInt(ex.reps) || 0;
+            const w = parseFloat(ex.weight) || 0;
+            volume += s * r * w;
+            sets += s;
+        });
+        return { muscles: [...muscleSet].slice(0, 3), volume: Math.round(volume), sets };
+    };
+
     // ─── Stats bar helpers ───────────────────────────────────────────────────
     const getMonthStats = () => {
         const year = currentDate.getFullYear();
@@ -353,6 +391,60 @@ export default function TrainingCalendar({ navigation }) {
         );
     };
 
+    const getMonthlyStatsEnhanced = () => {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        let totalVolume = 0;
+        let completedCount = 0;
+        let daysWithRest = 0;
+
+        for (let i = 1; i <= daysInMonth; i++) {
+            const key = toLocalKey(new Date(year, month, i));
+            if (!assignedRoutines[key]) daysWithRest++;
+        }
+
+        Object.keys(assignedRoutines).forEach(key => {
+            const d = new Date(key);
+            if (d.getFullYear() === year && d.getMonth() === month && completedDays.includes(key)) {
+                completedCount++;
+                (assignedRoutines[key].exercises || []).forEach(ex => {
+                    totalVolume += (parseInt(ex.sets) || 0) * (parseInt(ex.reps) || 0) * (parseFloat(ex.weight) || 0);
+                });
+            }
+        });
+
+        return { completedCount, volumeKg: Math.round(totalVolume), restDays: daysWithRest };
+    };
+
+    const renderMonthlyStats = () => {
+        const { completedCount, volumeKg, restDays } = getMonthlyStatsEnhanced();
+        return (
+            <View style={styles.monthStatsSection}>
+                <Text style={styles.monthStatsTitle}>ESTADÍSTICAS DEL MES</Text>
+                <View style={styles.monthStatsRow}>
+                    <View style={styles.monthStatCard}>
+                        <Ionicons name="barbell-outline" size={22} color="#63ff15" />
+                        <Text style={styles.monthStatVal}>{completedCount}</Text>
+                        <Text style={styles.monthStatLabel}>SESIONES</Text>
+                    </View>
+                    <View style={[styles.monthStatCard, { borderLeftWidth: 1, borderRightWidth: 1, borderColor: 'rgba(255,255,255,0.06)' }]}>
+                        <Ionicons name="trending-up-outline" size={22} color="#00F0FF" />
+                        <Text style={[styles.monthStatVal, { color: '#00F0FF' }]}>
+                            {volumeKg > 0 ? (volumeKg >= 1000 ? `${(volumeKg / 1000).toFixed(1)}t` : `${volumeKg}kg`) : '—'}
+                        </Text>
+                        <Text style={styles.monthStatLabel}>VOLUMEN</Text>
+                    </View>
+                    <View style={styles.monthStatCard}>
+                        <Ionicons name="moon-outline" size={22} color="#A1A1AA" />
+                        <Text style={[styles.monthStatVal, { color: '#A1A1AA' }]}>{restDays}</Text>
+                        <Text style={styles.monthStatLabel}>DESCANSO</Text>
+                    </View>
+                </View>
+            </View>
+        );
+    };
+
     // ─── Month View ──────────────────────────────────────────────────────────
     const renderMonthView = () => {
         const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
@@ -389,9 +481,16 @@ export default function TrainingCalendar({ navigation }) {
                         isCompleted && styles.completedDay,
                         isToday && styles.todayDay,
                         isUltimate && { borderLeftWidth: 2, borderLeftColor: '#FFD700' },
+                        dragSource === key && styles.dragSourceDay,
+                        dragSource !== null && dragSource !== key && styles.dragTargetDay,
                     ]}
                     onPress={() => openDayPicker(key)}
-                    onLongPress={() => removeRoutine(key)}
+                    onLongPress={() => {
+                        if (routine && dragSource === null) {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                            setDragSource(key);
+                        }
+                    }}
                     accessibilityLabel={accessibilityLabel}
                     accessibilityRole="button"
                     activeOpacity={0.7}
@@ -443,6 +542,7 @@ export default function TrainingCalendar({ navigation }) {
                     const isUltimate = routine?.isUltimate;
                     const isElitePro = routine?.isElite && !isUltimate;
                     const faseColor = isUltimate ? (FASE_COLORS[routine.fase] || '#FFD700') : null;
+                    const routineStats = getRoutineStats(routine);
 
                     return (
                         <View
@@ -452,11 +552,19 @@ export default function TrainingCalendar({ navigation }) {
                                 isToday && styles.todayRow,
                                 isUltimate && styles.ultimateRow,
                                 isElitePro && styles.eliteRow,
+                                dragSource === key && styles.dragSourceWeekRow,
+                                dragSource !== null && dragSource !== key && styles.dragTargetWeekRow,
                             ]}
                         >
                             <TouchableOpacity
                                 style={styles.weekDateBox}
                                 onPress={() => openDayPicker(key)}
+                                onLongPress={() => {
+                                    if (routine && dragSource === null) {
+                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                                        setDragSource(key);
+                                    }
+                                }}
                                 accessibilityLabel={`Día ${d.getDate()}, ${d.toLocaleString('es-ES', { weekday: 'long' })}`}
                                 accessibilityRole="button"
                             >
@@ -488,6 +596,15 @@ export default function TrainingCalendar({ navigation }) {
                                             <Text style={{ color: '#888', fontSize: 11, marginTop: 3 }}>
                                                 {routine.exercises?.length || 0} ejercicios
                                             </Text>
+                                            {routineStats.muscles.length > 0 && (
+                                                <View style={{ flexDirection: 'row', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+                                                    {routineStats.muscles.map((m, mi) => (
+                                                        <View key={mi} style={{ backgroundColor: 'rgba(255,215,0,0.08)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                                                            <Text style={{ color: '#FFD700', fontSize: 9, fontWeight: '800' }}>{m.toUpperCase()}</Text>
+                                                        </View>
+                                                    ))}
+                                                </View>
+                                            )}
                                         </>
                                     ) : (
                                         <>
@@ -496,6 +613,15 @@ export default function TrainingCalendar({ navigation }) {
                                             <Text style={{ color: '#888', fontSize: 11, marginTop: 2 }}>
                                                 {routine.exercises?.length || 0} ejercicios
                                             </Text>
+                                            {routineStats.muscles.length > 0 && (
+                                                <View style={{ flexDirection: 'row', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+                                                    {routineStats.muscles.map((m, mi) => (
+                                                        <View key={mi} style={{ backgroundColor: 'rgba(99,255,21,0.08)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                                                            <Text style={{ color: '#63ff15', fontSize: 9, fontWeight: '800' }}>{m.toUpperCase()}</Text>
+                                                        </View>
+                                                    ))}
+                                                </View>
+                                            )}
                                         </>
                                     )
                                 ) : (
@@ -688,7 +814,13 @@ export default function TrainingCalendar({ navigation }) {
                         </TouchableOpacity>
                     </View>
                 </BlurView>
-                <View style={{ width: 28 }} />
+                {streak > 0 ? (
+                    <View style={styles.streakBadge}>
+                        <Text style={styles.streakBadgeText}>🔥{streak}</Text>
+                    </View>
+                ) : (
+                    <View style={{ width: 28 }} />
+                )}
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -729,6 +861,8 @@ export default function TrainingCalendar({ navigation }) {
 
                 {viewMode === 'month' ? renderMonthView() : renderWeekView()}
 
+                {viewMode === 'month' && renderMonthlyStats()}
+
                 <TouchableOpacity
                     style={styles.formAnalysisBtn}
                     onPress={() => navigation.navigate('FormAnalysis')}
@@ -758,12 +892,22 @@ export default function TrainingCalendar({ navigation }) {
                         <Text style={styles.guideT}>GESTOR NEXUS ELITE</Text>
                         <Text style={styles.guideS}>
                             • <Text style={{ color: '#63ff15' }}>Pulsa</Text> una fecha para ver/editar sesión.{"\n"}
-                            • <Text style={{ color: '#ff4d4d' }}>Manten pulsado</Text> para eliminar rutina.{"\n"}
+                            • <Text style={{ color: '#FF9500' }}>Manten pulsado</Text> para mover rutina a otro día.{"\n"}
                             • <Text style={{ color: '#FFD700' }}>Días Ultimate</Text> muestran fase y RPE del mesociclo.
                         </Text>
                     </View>
                 </BlurView>
             </ScrollView>
+
+            {dragSource !== null && (
+                <View style={styles.dragBanner}>
+                    <Ionicons name="move-outline" size={16} color="#FF9500" />
+                    <Text style={styles.dragBannerText}>Toca un día para mover la rutina</Text>
+                    <TouchableOpacity onPress={() => setDragSource(null)} style={{ padding: 4 }}>
+                        <Ionicons name="close-circle" size={18} color="#FF9500" />
+                    </TouchableOpacity>
+                </View>
+            )}
 
             {/* Manual edit modal (non-Elite days only) */}
             <Modal visible={modalVisible} transparent animationType="slide">
@@ -907,6 +1051,17 @@ export default function TrainingCalendar({ navigation }) {
                             </LinearGradient>
                         </TouchableOpacity>
                         <Text style={styles.hintText}>* Las rutinas manuales tienen prioridad sobre los planes generados por IA.</Text>
+                        {assignedRoutines[selectedDateKey] && (
+                            <TouchableOpacity
+                                style={{ alignItems: 'center', marginTop: 12 }}
+                                onPress={() => {
+                                    resetModal();
+                                    removeRoutine(selectedDateKey);
+                                }}
+                            >
+                                <Text style={{ color: '#ff4d4d', fontSize: 13, fontWeight: '700', letterSpacing: 0.5 }}>ELIMINAR RUTINA</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 </View>
             </Modal>
@@ -1173,6 +1328,98 @@ const styles = StyleSheet.create({
     animT: { color: '#63ff15', fontSize: 28, fontWeight: '900', letterSpacing: 4, marginBottom: 20 },
     animSub: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', letterSpacing: 2, marginTop: 15 },
 
+    // Streak badge in header
+    streakBadge: {
+        backgroundColor: 'rgba(255,200,0,0.12)',
+        borderRadius: 12,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderWidth: 1,
+        borderColor: 'rgba(255,200,0,0.3)',
+    },
+    streakBadgeText: {
+        color: '#FFD700',
+        fontSize: 13,
+        fontWeight: '900',
+    },
+    // Drag & drop
+    dragSourceDay: {
+        borderWidth: 2,
+        borderColor: '#FF9500',
+        backgroundColor: 'rgba(255,149,0,0.2)',
+    },
+    dragTargetDay: {
+        borderWidth: 1,
+        borderColor: 'rgba(255,149,0,0.3)',
+    },
+    dragSourceWeekRow: {
+        borderWidth: 2,
+        borderColor: '#FF9500',
+        backgroundColor: 'rgba(255,149,0,0.08)',
+    },
+    dragTargetWeekRow: {
+        borderColor: 'rgba(255,149,0,0.25)',
+    },
+    dragBanner: {
+        position: 'absolute',
+        bottom: 20,
+        left: 20,
+        right: 20,
+        backgroundColor: 'rgba(255,149,0,0.12)',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255,149,0,0.4)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        zIndex: 50,
+    },
+    dragBannerText: {
+        flex: 1,
+        color: '#FF9500',
+        fontSize: 13,
+        fontWeight: '700',
+    },
+    // Monthly stats section
+    monthStatsSection: {
+        marginTop: 24,
+        marginBottom: 4,
+    },
+    monthStatsTitle: {
+        color: '#444',
+        fontSize: 10,
+        fontWeight: '900',
+        letterSpacing: 2,
+        marginBottom: 12,
+        textAlign: 'center',
+    },
+    monthStatsRow: {
+        flexDirection: 'row',
+        backgroundColor: 'rgba(18,18,18,0.8)',
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.06)',
+        overflow: 'hidden',
+    },
+    monthStatCard: {
+        flex: 1,
+        alignItems: 'center',
+        paddingVertical: 16,
+        gap: 6,
+    },
+    monthStatVal: {
+        color: '#fff',
+        fontSize: 20,
+        fontWeight: '900',
+    },
+    monthStatLabel: {
+        color: '#555',
+        fontSize: 9,
+        fontWeight: '900',
+        letterSpacing: 1,
+    },
     // Day detail modal exercise rows
     detailExItem: {
         flexDirection: 'row',
