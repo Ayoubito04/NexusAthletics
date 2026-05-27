@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     StyleSheet, Text, View, TouchableOpacity,
     Animated, Vibration, Modal, FlatList, TextInput,
-    KeyboardAvoidingView, Platform, Image, ActivityIndicator, ScrollView,
+    KeyboardAvoidingView, Platform, Image, ActivityIndicator, ScrollView, StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -134,8 +134,8 @@ function WorkoutBriefing({ workoutMeta, exercises, onStart }) {
     const restTime = getRestTime(workoutMeta);
 
     return (
-        <SafeAreaView style={s.container}>
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={s.briefingScroll} showsVerticalScrollIndicator={false} nestedScrollEnabled={true}>
+        <View style={[s.container, { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 }]}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={s.briefingScroll} showsVerticalScrollIndicator={false}>
 
                 {/* Header dorado */}
                 <LinearGradient colors={['rgba(255,215,0,0.15)', 'transparent']} style={s.briefingHeader}>
@@ -225,7 +225,7 @@ function WorkoutBriefing({ workoutMeta, exercises, onStart }) {
                 </TouchableOpacity>
 
             </ScrollView>
-        </SafeAreaView>
+        </View>
     );
 }
 
