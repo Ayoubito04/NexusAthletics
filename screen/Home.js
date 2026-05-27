@@ -215,7 +215,9 @@ export default function Home() {
 
     const loadStreak = async () => {
         try {
-            const val = await AsyncStorage.getItem('streak_count');
+            const userStr = await AsyncStorage.getItem('user');
+            const uid = userStr ? String(JSON.parse(userStr).id || 'guest') : 'guest';
+            const val = await AsyncStorage.getItem(`streak_count_${uid}`);
             if (val) setStreak(parseInt(val) || 0);
         } catch (error) { }
     };

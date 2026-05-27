@@ -124,7 +124,9 @@ export default function ElitePlanScreen({ route, navigation }) {
 
     const handleScheduleToCalendar = async () => {
         try {
-            const savedRoutines = await AsyncStorage.getItem('assigned_routines');
+            const userStr = await AsyncStorage.getItem('user');
+            const uid = userStr ? String(JSON.parse(userStr).id || 'guest') : 'guest';
+            const savedRoutines = await AsyncStorage.getItem(`assigned_routines_${uid}`);
             let currentRoutines = savedRoutines ? JSON.parse(savedRoutines) : {};
 
             const toLocalKey = (d) =>
@@ -205,7 +207,7 @@ export default function ElitePlanScreen({ route, navigation }) {
                 });
             }
 
-            await AsyncStorage.setItem('assigned_routines', JSON.stringify(currentRoutines));
+            await AsyncStorage.setItem(`assigned_routines_${uid}`, JSON.stringify(currentRoutines));
             setAgendado(true);
             showAlert('🚀 Propagación Nexus Completada', `Tu rutina se ha inyectado para las próximas 4 semanas.`, 'success');
         } catch (error) {

@@ -50,7 +50,9 @@ export default function Analytics() {
     const loadData = async () => {
         try {
             const token = await AsyncStorage.getItem('token');
-            const streakVal = await AsyncStorage.getItem('streak_count');
+            const userStr = await AsyncStorage.getItem('user');
+            const uid = userStr ? String(JSON.parse(userStr).id || 'guest') : 'guest';
+            const streakVal = await AsyncStorage.getItem(`streak_count_${uid}`);
             if (streakVal) setStreak(parseInt(streakVal) || 0);
             if (token) {
                 const response = await fetch(`${BACKEND_URL}/activities/stats`, {

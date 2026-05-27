@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Animated, Dimensions, Modal, TextInput, Platform, FlatList } from 'react-native';
 import NexusAlert from '../components/NexusAlert';
 import { scheduleInactivityReminder } from '../services/NotificationService';
@@ -46,6 +46,8 @@ const FASE_SHORT = {
  * Enhanced UI with Elite Cyberpunk aesthetics, Ultimate mesocycle support, and improved accessibility.
  */
 export default function TrainingCalendar({ navigation }) {
+    const userIdRef = useRef('guest');
+
     const [viewMode, setViewMode] = useState('month');
     const [completedDays, setCompletedDays] = useState([]);
     const [assignedRoutines, setAssignedRoutines] = useState({});
@@ -107,11 +109,14 @@ export default function TrainingCalendar({ navigation }) {
 
     const loadData = async () => {
         try {
-            const savedDays = await AsyncStorage.getItem('completed_days');
+            const userStr = await AsyncStorage.getItem('user');
+            const uid = userStr ? String(JSON.parse(userStr).id || 'guest') : 'guest';
+            userIdRef.current = uid;
+            const savedDays = await AsyncStorage.getItem(`completed_days_${uid}`);
             if (savedDays) setCompletedDays(JSON.parse(savedDays));
-            const savedRoutines = await AsyncStorage.getItem('assigned_routines');
+            const savedRoutines = await AsyncStorage.getItem(`assigned_routines_${uid}`);
             if (savedRoutines) setAssignedRoutines(JSON.parse(savedRoutines));
-            const savedStreak = await AsyncStorage.getItem('streak_count');
+            const savedStreak = await AsyncStorage.getItem(`streak_count_${uid}`);
             if (savedStreak) setStreak(parseInt(savedStreak));
         } catch (e) { console.log(e); }
     };
@@ -131,7 +136,7 @@ export default function TrainingCalendar({ navigation }) {
             isElite: false // Manual override
         };
         setAssignedRoutines(newRoutines);
-        await AsyncStorage.setItem('assigned_routines', JSON.stringify(newRoutines));
+        await AsyncStorage.setItem(`assigned_routines_${userIdRef.current}`, JSON.stringify(newRoutines));
         resetModal();
     };
 
@@ -151,7 +156,7 @@ export default function TrainingCalendar({ navigation }) {
         const newRoutines = { ...assignedRoutines };
         newRoutines[key] = { ...copiedRoutine };
         setAssignedRoutines(newRoutines);
-        await AsyncStorage.setItem('assigned_routines', JSON.stringify(newRoutines));
+        await AsyncStorage.setItem(`assigned_routines_${userIdRef.current}`, JSON.stringify(newRoutines));
         showAlert("Pegado", "Rutina aplicada correctamente.", "info");
     };
 
@@ -161,7 +166,7 @@ export default function TrainingCalendar({ navigation }) {
         newRoutines[toKey] = { ...newRoutines[fromKey] };
         delete newRoutines[fromKey];
         setAssignedRoutines(newRoutines);
-        await AsyncStorage.setItem('assigned_routines', JSON.stringify(newRoutines));
+        await AsyncStorage.setItem(`assigned_routines_${userIdRef.current}`, JSON.stringify(newRoutines));
         setDragSource(null);
     };
 
@@ -175,7 +180,7 @@ export default function TrainingCalendar({ navigation }) {
                 const newRoutines = { ...assignedRoutines };
                 delete newRoutines[key];
                 setAssignedRoutines(newRoutines);
-                await AsyncStorage.setItem('assigned_routines', JSON.stringify(newRoutines));
+                await AsyncStorage.setItem(`assigned_routines_${userIdRef.current}`, JSON.stringify(newRoutines));
             },
             () => { },
             "BORRAR"
@@ -218,13 +223,13 @@ export default function TrainingCalendar({ navigation }) {
             }
         }
         setCompletedDays(newList);
-        await AsyncStorage.setItem('completed_days', JSON.stringify(newList));
+        await AsyncStorage.setItem(`completed_days_${userIdRef.current}`, JSON.stringify(newList));
 
         const todayKey = toLocalKey(new Date());
         if (dayKey === todayKey && index === -1) {
             const newStreak = streak + 1;
             setStreak(newStreak);
-            await AsyncStorage.setItem('streak_count', newStreak.toString());
+            await AsyncStorage.setItem(`streak_count_${userIdRef.current}`, newStreak.toString());
         }
     };
 
