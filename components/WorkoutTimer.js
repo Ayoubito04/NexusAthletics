@@ -132,6 +132,10 @@ function WorkoutBriefing({ workoutMeta, exercises, onStart }) {
     };
 
     const restTime = getRestTime(workoutMeta);
+    const [showAll, setShowAll] = useState(false);
+    const PREVIEW_COUNT = 4;
+    const visibleExercises = showAll ? exercises : exercises.slice(0, PREVIEW_COUNT);
+    const hiddenCount = exercises.length - PREVIEW_COUNT;
 
     return (
         <View style={[s.container, { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 }]}>
@@ -198,7 +202,7 @@ function WorkoutBriefing({ workoutMeta, exercises, onStart }) {
 
                 {/* Lista de ejercicios */}
                 <Text style={s.briefingExTitle}>HOY ({exercises.length} ejercicios)</Text>
-                {exercises.map((ex, i) => (
+                {visibleExercises.map((ex, i) => (
                     <View key={i} style={s.briefingExRow}>
                         <Text style={s.briefingExNum}>{i + 1}</Text>
                         <View style={{ flex: 1 }}>
@@ -216,6 +220,28 @@ function WorkoutBriefing({ workoutMeta, exercises, onStart }) {
                         </View>
                     </View>
                 ))}
+                {!showAll && hiddenCount > 0 && (
+                    <TouchableOpacity
+                        style={s.verMasBtn}
+                        onPress={() => setShowAll(true)}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons name="chevron-down" size={16} color="#FFD700" />
+                        <Text style={s.verMasText}>VER {hiddenCount} EJERCICIO{hiddenCount !== 1 ? 'S' : ''} MÁS</Text>
+                        <Ionicons name="chevron-down" size={16} color="#FFD700" />
+                    </TouchableOpacity>
+                )}
+                {showAll && exercises.length > PREVIEW_COUNT && (
+                    <TouchableOpacity
+                        style={s.verMasBtn}
+                        onPress={() => setShowAll(false)}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons name="chevron-up" size={16} color="#FFD700" />
+                        <Text style={s.verMasText}>VER MENOS</Text>
+                        <Ionicons name="chevron-up" size={16} color="#FFD700" />
+                    </TouchableOpacity>
+                )}
 
                 <TouchableOpacity style={s.startBtn} onPress={onStart}>
                     <LinearGradient colors={['#FFD700', '#FFA500']} style={s.startBtnGrad}>
@@ -799,6 +825,24 @@ const s = StyleSheet.create({
     briefingExMeta: { color: '#666', fontSize: 11 },
     briefingTecnicaPill: { backgroundColor: 'rgba(255,215,0,0.1)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, marginTop: 5, alignSelf: 'flex-start', borderWidth: 1, borderColor: 'rgba(255,215,0,0.25)' },
     briefingTecnicaText: { color: '#FFD700', fontSize: 10, fontWeight: '900' },
+    verMasBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        backgroundColor: 'rgba(255,215,0,0.08)',
+        borderRadius: 14,
+        paddingVertical: 12,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(255,215,0,0.2)',
+    },
+    verMasText: {
+        color: '#FFD700',
+        fontSize: 12,
+        fontWeight: '900',
+        letterSpacing: 1.5,
+    },
     startBtn: { borderRadius: 18, overflow: 'hidden', marginTop: 20 },
     startBtnGrad: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 12, padding: 20 },
     startBtnText: { color: 'black', fontWeight: '900', fontSize: 16 },
