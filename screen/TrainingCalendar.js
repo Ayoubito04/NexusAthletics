@@ -495,7 +495,8 @@ export default function TrainingCalendar({ navigation }) {
                     accessibilityRole="button"
                     activeOpacity={0.7}
                 >
-                    <Text style={[styles.dayText, isCompleted && styles.completedDayText, isToday && { color: '#63ff15' }]}>{i}</Text>
+                    <Text style={[styles.dayText, isCompleted && styles.completedDayText, isToday && styles.todayDayText]}>{i}</Text>
+                    {isToday && <Text style={styles.todayLabel}>HOY</Text>}
                     {routine && (
                         <>
                             <View style={styles.routineIndicator}>
@@ -569,7 +570,8 @@ export default function TrainingCalendar({ navigation }) {
                                 accessibilityRole="button"
                             >
                                 <Text style={styles.weekDayName}>{d.toLocaleString('es-ES', { weekday: 'short' }).toUpperCase()}</Text>
-                                <Text style={styles.weekDayNum}>{d.getDate()}</Text>
+                                <Text style={[styles.weekDayNum, isToday && { color: '#63ff15' }]}>{d.getDate()}</Text>
+                                {isToday && <Text style={styles.todayLabel}>HOY</Text>}
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.weekInfo}
@@ -1181,13 +1183,25 @@ const styles = StyleSheet.create({
     completedDay: { backgroundColor: '#63ff15', borderColor: '#63ff15' },
     completedDayText: { color: '#000' },
     todayDay: {
-        borderWidth: 1.5,
+        borderWidth: 2,
         borderColor: '#63ff15',
-        backgroundColor: 'rgba(99,255,21,0.1)',
+        backgroundColor: 'rgba(99,255,21,0.15)',
         shadowColor: '#63ff15',
-        shadowOpacity: 0.5,
-        shadowRadius: 10,
-        elevation: 5
+        shadowOpacity: 0.7,
+        shadowRadius: 14,
+        elevation: 8,
+    },
+    todayDayText: {
+        color: '#63ff15',
+        fontSize: 16,
+        fontWeight: '900',
+    },
+    todayLabel: {
+        color: '#63ff15',
+        fontSize: 7,
+        fontWeight: '900',
+        letterSpacing: 1,
+        marginTop: 1,
     },
     routineIndicator: { position: 'absolute', bottom: 6 },
     weekContainer: { gap: 16 },
