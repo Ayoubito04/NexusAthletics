@@ -1,4 +1,7 @@
 const { prisma } = require('../config/prisma');
+const { getOnlineCount } = require('../services/activityTracker');
+
+const VALID_PLANS = ['Gratis', 'Pro', 'Ultimate'];
 
 const getUsers = async (req, res) => {
     try {
@@ -12,9 +15,16 @@ const getUsers = async (req, res) => {
     }
 };
 
+const getOnlineUsers = (req, res) => {
+    res.json({ count: getOnlineCount() });
+};
+
 const updateUserPlan = async (req, res) => {
     const { id } = req.params;
     const { plan } = req.body;
+    if (!VALID_PLANS.includes(plan)) {
+        return res.status(400).json({ error: "Plan inválido" });
+    }
     try {
         const user = await prisma.user.update({
             where: { id: parseInt(id) },
@@ -36,4 +46,4 @@ const deleteUser = async (req, res) => {
     }
 };
 
-module.exports = { getUsers, updateUserPlan, deleteUser };
+module.exports = { getUsers, getOnlineUsers, updateUserPlan, deleteUser };

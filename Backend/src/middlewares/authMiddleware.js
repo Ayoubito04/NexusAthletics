@@ -1,6 +1,7 @@
 'use strict';
 
 const jwt = require('jsonwebtoken');
+const { trackUser } = require('../services/activityTracker');
 
 // SECURITY: Use JWT_SECRET from env, fail if not set (validated by validateEnv.js)
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -44,6 +45,7 @@ const authenticateToken = (req, res, next) => {
         }
 
         req.user = user;
+        trackUser(user.id);
         next();
     });
 };
