@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, Dimensions, Linking } from 'react-native';
 import NexusAlert from '../components/NexusAlert';
-import RestTimerModal from '../components/RestTimerModal';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,7 +24,6 @@ export default function ElitePlanScreen({ route, navigation }) {
     const [guardado, setGuardado] = useState(false);
     const [agendado, setAgendado] = useState(false);
     const [apiGifs, setApiGifs] = useState({});
-    const [restTimerVisible, setRestTimerVisible] = useState(false);
 
     useEffect(() => {
         (async () => {
@@ -405,41 +403,12 @@ export default function ElitePlanScreen({ route, navigation }) {
 
             <NexusAlert visible={alert.visible} title={alert.title} message={alert.message} type={alert.type} onConfirm={alert.onConfirm} />
 
-            {/* REST TIMER FAB */}
-            <TouchableOpacity
-                style={styles.restFab}
-                onPress={() => setRestTimerVisible(true)}
-                activeOpacity={0.85}
-            >
-                <Ionicons name="timer-outline" size={20} color="#000" />
-                <Text style={styles.restFabText}>REST</Text>
-            </TouchableOpacity>
-
-            <RestTimerModal visible={restTimerVisible} onClose={() => setRestTimerVisible(false)} />
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#000' },
-    restFab: {
-        position: 'absolute',
-        bottom: 28,
-        right: 20,
-        backgroundColor: '#63ff15',
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderRadius: 24,
-        elevation: 8,
-        shadowColor: '#63ff15',
-        shadowOpacity: 0.5,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 0 },
-    },
-    restFabText: { color: '#000', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
     topNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, height: 60 },
     navTitle: { color: 'white', fontSize: 18, fontWeight: '900', letterSpacing: 2 },
     slide: { width, height: height - 120, padding: 25 },
