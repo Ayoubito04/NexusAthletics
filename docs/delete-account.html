@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eliminar Cuenta - Nexus Athletics</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0a0a0a; color: #fff; font-family: -apple-system, sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px 20px; }
+        .logo { color: #63ff15; font-size: 28px; font-weight: 900; letter-spacing: 4px; margin-bottom: 8px; }
+        .subtitle { color: #555; font-size: 13px; letter-spacing: 2px; margin-bottom: 48px; }
+        .card { background: #121212; border: 1px solid #222; border-radius: 20px; padding: 36px; max-width: 560px; width: 100%; }
+        h1 { font-size: 20px; font-weight: 900; margin-bottom: 8px; color: #fff; }
+        .warning { color: #ff4d4d; font-size: 12px; font-weight: 700; letter-spacing: 1px; margin-bottom: 24px; }
+        p { color: #888; font-size: 14px; line-height: 22px; margin-bottom: 20px; }
+        .steps { background: #0a0a0a; border-radius: 14px; padding: 20px; margin-bottom: 24px; }
+        .step { display: flex; gap: 14px; margin-bottom: 16px; align-items: flex-start; }
+        .step:last-child { margin-bottom: 0; }
+        .step-num { background: #63ff15; color: #000; width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; flex-shrink: 0; }
+        .step-text { color: #ccc; font-size: 13px; line-height: 20px; padding-top: 2px; }
+        .data-section { margin-bottom: 24px; }
+        .data-section h3 { color: #63ff15; font-size: 11px; font-weight: 900; letter-spacing: 2px; margin-bottom: 12px; }
+        .tag { display: inline-block; background: rgba(255,77,77,0.1); border: 1px solid rgba(255,77,77,0.2); color: #ff4d4d; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px; margin: 3px; }
+        .tag.keep { background: rgba(99,255,21,0.08); border-color: rgba(99,255,21,0.2); color: #63ff15; }
+        .email-btn { display: block; background: linear-gradient(135deg, #63ff15, #00D1FF); color: #000; text-align: center; padding: 16px; border-radius: 14px; text-decoration: none; font-weight: 900; font-size: 14px; letter-spacing: 1px; margin-bottom: 16px; }
+        .note { color: #444; font-size: 11px; text-align: center; line-height: 18px; }
+        .divider { border: none; border-top: 1px solid #1a1a1a; margin: 24px 0; }
+    </style>
+</head>
+<body>
+    <div class="logo">NEXUS ATHLETICS</div>
+    <div class="subtitle">ACCOUNT DELETION REQUEST</div>
+
+    <div class="card">
+        <h1>Delete Your Account</h1>
+        <div class="warning">⚠️ THIS ACTION IS PERMANENT AND CANNOT BE UNDONE</div>
+
+        <p>You can request the deletion of your Nexus Athletics account and all associated data by following the steps below or by sending an email to our support team.</p>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-text"><strong>From the app:</strong> Go to Profile → Account Settings → scroll to the bottom → tap "Delete Account"</div>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-text"><strong>Confirm:</strong> You will be asked to confirm the deletion. Once confirmed, the process starts immediately.</div>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-text"><strong>By email:</strong> Send a request to <strong style="color:#63ff15">support@nexusathletics.com</strong> with the subject "Account Deletion Request" and your registered email address.</div>
+            </div>
+        </div>
+
+        <div class="data-section">
+            <h3>DATA THAT WILL BE DELETED</h3>
+            <span class="tag">Account & profile</span>
+            <span class="tag">Workout history</span>
+            <span class="tag">AI chat sessions</span>
+            <span class="tag">Nutrition plans</span>
+            <span class="tag">Body scan data</span>
+            <span class="tag">Health & steps data</span>
+            <span class="tag">Social posts & comments</span>
+            <span class="tag">Payment history</span>
+        </div>
+
+        <div class="data-section">
+            <h3>DATA RETAINED (LEGAL OBLIGATION)</h3>
+            <span class="tag keep">Transaction records — 5 years (tax law)</span>
+            <span class="tag keep">Anonymized analytics — indefinitely</span>
+        </div>
+
+        <hr class="divider">
+
+        <a class="email-btn" href="mailto:support@nexusathletics.com?subject=Account%20Deletion%20Request">
+            REQUEST DELETION BY EMAIL
+        </a>
+
+        <div class="note">
+            Requests are processed within 30 days.<br>
+            Active subscriptions must be cancelled before account deletion.
+        </div>
+    </div>
+</body>
+</html>
