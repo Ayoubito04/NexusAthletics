@@ -502,7 +502,7 @@ export default function Login() {
                 } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
                     showAlert("Servicios", "Google Play Services no está disponible", "error");
                 } else {
-                    showAlert("Error", "No se pudo iniciar sesión con Google nativo. Verifica tu configuración.", "error");
+                    showAlert("Error", `Error ${error.code || 'desconocido'}: ${error.message || 'No se pudo iniciar sesión con Google'}`, "error");
                 }
                 setIsLoading(false);
             }
