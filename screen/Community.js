@@ -125,9 +125,10 @@ const WorkoutStats = React.memo(({ exerciseData, tiempo }) => (
 
 // ─── Post card ───────────────────────────────────────────────────────────────
 const PostItem = React.memo(({
-    item, currentUserId, onLike, onShare, onChat,
+    item, currentUserId, onLike, onShare, onChat, onDelete,
     commentingPostId, setCommentingPostId, commentText, setCommentText, onComment
 }) => {
+    const isOwner = item.userId === currentUserId || item.user?.id === currentUserId;
     const { theme } = useTheme();
     const isWorkout = item.tipo === 'Entrenamiento' || item.isPR;
     const isLiked = item.likes?.some(l => l.userId === currentUserId);
@@ -253,16 +254,29 @@ const PostItem = React.memo(({
                     </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity
-                    style={styles.shareBtn}
-                    onPress={() => onShare(item)}
-                    activeOpacity={0.75}
-                    accessibilityLabel="Compartir publicación"
-                    accessibilityRole="button"
-                >
-                    <Ionicons name="share-social-outline" size={17} color="#888" />
-                    <Text style={styles.shareBtnText}>Compartir</Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity
+                        style={styles.shareBtn}
+                        onPress={() => onShare(item)}
+                        activeOpacity={0.75}
+                        accessibilityLabel="Compartir publicación"
+                        accessibilityRole="button"
+                    >
+                        <Ionicons name="share-social-outline" size={17} color="#888" />
+                        <Text style={styles.shareBtnText}>Compartir</Text>
+                    </TouchableOpacity>
+                    {isOwner && (
+                        <TouchableOpacity
+                            style={styles.shareBtn}
+                            onPress={() => onDelete(item.id)}
+                            activeOpacity={0.75}
+                            accessibilityLabel="Eliminar publicación"
+                            accessibilityRole="button"
+                        >
+                            <Ionicons name="trash-outline" size={17} color="#ff4d4d" />
+                        </TouchableOpacity>
+                    )}
+                </View>
             </View>
 
             {/* Comments preview */}
@@ -397,6 +411,24 @@ export default function Community() {
         } catch (_) { Alert.alert('Error', 'Error de conexión'); }
     }, []);
 
+    const handleDeletePost = useCallback(async (postId) => {
+        Alert.alert('Eliminar publicación', '¿Seguro que quieres eliminar esta publicación?', [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+                text: 'Eliminar', style: 'destructive', onPress: async () => {
+                    setPosts(prev => prev.filter(p => p.id !== postId));
+                    try {
+                        const token = await AsyncStorage.getItem('token');
+                        await fetch(`${BACKEND_URL}/posts/${postId}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                    } catch (_) { loadPosts(); }
+                }
+            }
+        ]);
+    }, []);
+
     const handleLike = useCallback(async (postId) => {
         setPosts(prev => prev.map(p => {
             if (p.id !== postId) return p;
@@ -498,13 +530,14 @@ export default function Community() {
             onLike={handleLike}
             onShare={handleShare}
             onChat={navigateToChat}
+            onDelete={handleDeletePost}
             commentingPostId={commentingPostId}
             setCommentingPostId={setCommentingPostId}
             commentText={commentText}
             setCommentText={setCommentText}
             onComment={handleComment}
         />
-    ), [currentUserId, handleLike, handleShare, navigateToChat, commentingPostId, commentText, handleComment]);
+    ), [currentUserId, handleLike, handleShare, navigateToChat, handleDeletePost, commentingPostId, commentText, handleComment]);
 
     const ListHeader = useCallback(() => (
         <>
