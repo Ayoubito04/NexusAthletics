@@ -483,16 +483,15 @@ export default function Login() {
                     throw new Error('No se pudo obtener el ID Token de Google');
                 }
 
-                try {
-                    const { error: authError } = await supabase.auth.signInWithIdToken({
-                        provider: 'google',
-                        token: idToken,
-                    });
+                // Llamar directamente al backend con el idToken — no depender de Supabase
+                await handleSocialAuth('google', idToken, 'idToken');
 
-                    if (authError) throw authError;
+                // Supabase sync en segundo plano (para features de realtime)
+                try {
+                    await supabase.auth.signInWithIdToken({ provider: 'google', token: idToken });
                 } catch (internalError) {
                     if (!internalError.message?.includes('setAuth')) {
-                        throw internalError;
+                        console.warn('Supabase sync error:', internalError.message);
                     }
                 }
 
