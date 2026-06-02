@@ -22,9 +22,30 @@
         .data-section h3 { color: #63ff15; font-size: 11px; font-weight: 900; letter-spacing: 2px; margin-bottom: 12px; }
         .tag { display: inline-block; background: rgba(255,77,77,0.1); border: 1px solid rgba(255,77,77,0.2); color: #ff4d4d; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px; margin: 3px; }
         .tag.keep { background: rgba(99,255,21,0.08); border-color: rgba(99,255,21,0.2); color: #63ff15; }
-        .email-btn { display: block; background: linear-gradient(135deg, #63ff15, #00D1FF); color: #000; text-align: center; padding: 16px; border-radius: 14px; text-decoration: none; font-weight: 900; font-size: 14px; letter-spacing: 1px; margin-bottom: 16px; }
-        .note { color: #444; font-size: 11px; text-align: center; line-height: 18px; }
         .divider { border: none; border-top: 1px solid #1a1a1a; margin: 24px 0; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; color: #63ff15; font-size: 10px; font-weight: 900; letter-spacing: 1.5px; margin-bottom: 8px; }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%; background: #0a0a0a; border: 1px solid #222; border-radius: 10px;
+            padding: 12px 14px; color: #fff; font-size: 14px; font-family: inherit; outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: #63ff15; }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .form-group select option { background: #121212; }
+        .submit-btn {
+            width: 100%; background: linear-gradient(135deg, #63ff15, #00D1FF);
+            color: #000; border: none; padding: 16px; border-radius: 14px;
+            font-weight: 900; font-size: 14px; letter-spacing: 1px; cursor: pointer;
+            margin-top: 8px; transition: opacity 0.2s;
+        }
+        .submit-btn:hover { opacity: 0.9; }
+        .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .success-msg { display: none; background: rgba(99,255,21,0.1); border: 1px solid rgba(99,255,21,0.3); border-radius: 14px; padding: 20px; text-align: center; margin-top: 16px; }
+        .success-msg p { color: #63ff15; font-weight: 700; margin: 0; }
+        .error-msg { display: none; background: rgba(255,77,77,0.1); border: 1px solid rgba(255,77,77,0.3); border-radius: 14px; padding: 16px; text-align: center; margin-top: 16px; }
+        .error-msg p { color: #ff4d4d; font-weight: 700; margin: 0; font-size: 13px; }
+        .note { color: #444; font-size: 11px; text-align: center; line-height: 18px; margin-top: 16px; }
     </style>
 </head>
 <body>
@@ -35,20 +56,20 @@
         <h1>Delete Your Account</h1>
         <div class="warning">⚠️ THIS ACTION IS PERMANENT AND CANNOT BE UNDONE</div>
 
-        <p>You can request the deletion of your Nexus Athletics account and all associated data by following the steps below or by sending an email to our support team.</p>
+        <p>Fill in the form below to request the deletion of your Nexus Athletics account and all associated data.</p>
 
         <div class="steps">
             <div class="step">
                 <div class="step-num">1</div>
-                <div class="step-text"><strong>From the app:</strong> Go to Profile → Account Settings → scroll to the bottom → tap "Delete Account"</div>
+                <div class="step-text"><strong>Fill the form</strong> with your registered email and reason.</div>
             </div>
             <div class="step">
                 <div class="step-num">2</div>
-                <div class="step-text"><strong>Confirm:</strong> You will be asked to confirm the deletion. Once confirmed, the process starts immediately.</div>
+                <div class="step-text"><strong>Submit</strong> — we will process your request within 30 days.</div>
             </div>
             <div class="step">
                 <div class="step-num">3</div>
-                <div class="step-text"><strong>By email:</strong> Send a request to <strong style="color:#63ff15">ayoubarramdani091@gmail.com</strong> with the subject "Account Deletion Request" and your registered email address.</div>
+                <div class="step-text"><strong>Confirmation</strong> will be sent to your email once deletion is complete.</div>
             </div>
         </div>
 
@@ -72,14 +93,85 @@
 
         <hr class="divider">
 
-        <a class="email-btn" href="mailto:ayoubarramdani091@gmail.com?subject=Account%20Deletion%20Request">
-            REQUEST DELETION BY EMAIL
-        </a>
+        <form id="deleteForm">
+            <div class="form-group">
+                <label>YOUR NAME</label>
+                <input type="text" id="name" placeholder="John Doe" required />
+            </div>
+            <div class="form-group">
+                <label>REGISTERED EMAIL</label>
+                <input type="email" id="email" placeholder="you@example.com" required />
+            </div>
+            <div class="form-group">
+                <label>REASON (OPTIONAL)</label>
+                <select id="reason">
+                    <option value="No longer using the app">No longer using the app</option>
+                    <option value="Privacy concerns">Privacy concerns</option>
+                    <option value="Switching to another app">Switching to another app</option>
+                    <option value="Technical issues">Technical issues</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>ADDITIONAL COMMENTS</label>
+                <textarea id="message" placeholder="Any additional information..."></textarea>
+            </div>
+            <button type="submit" class="submit-btn" id="submitBtn">REQUEST ACCOUNT DELETION</button>
+        </form>
+
+        <div class="success-msg" id="successMsg">
+            <p>✅ Request submitted successfully!<br>We will process your deletion within 30 days.</p>
+        </div>
+        <div class="error-msg" id="errorMsg">
+            <p>❌ Something went wrong. Please email us directly at<br>ayoubarramdani091@gmail.com</p>
+        </div>
 
         <div class="note">
             Requests are processed within 30 days.<br>
             Active subscriptions must be cancelled before account deletion.
         </div>
     </div>
+
+    <script>
+        document.getElementById('deleteForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.textContent = 'SENDING...';
+
+            const name    = document.getElementById('name').value;
+            const email   = document.getElementById('email').value;
+            const reason  = document.getElementById('reason').value;
+            const message = document.getElementById('message').value;
+
+            const body = {
+                access_key: 'REPLACE_WITH_WEB3FORMS_KEY',
+                subject: 'Account Deletion Request - Nexus Athletics',
+                from_name: name,
+                email: email,
+                message: `Name: ${name}\nEmail: ${email}\nReason: ${reason}\nComments: ${message || 'None'}`
+            };
+
+            try {
+                const res = await fetch('https://api.web3forms.com/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('deleteForm').style.display = 'none';
+                    document.getElementById('successMsg').style.display = 'block';
+                } else {
+                    throw new Error('Failed');
+                }
+            } catch {
+                document.getElementById('errorMsg').style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'REQUEST ACCOUNT DELETION';
+            }
+        });
+    </script>
 </body>
 </html>
