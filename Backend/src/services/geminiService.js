@@ -30,7 +30,7 @@ async function tryGeminiWithFallback(contents, generationConfig = {}) {
             console.log(`[Nexus AI] ✗ ${model} → ${status || 'timeout'}: ${msg.slice(0, 80)}`);
 
             const isQuotaExhausted = msg.includes('Quota exceeded') || msg.includes('quota');
-            const isUnavailable = status === 503 || status === 500 || status === 429;
+            const isUnavailable = status === 503 || status === 500 || status === 429 || status === 404;
             const isTimeout = error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT';
 
             if (isQuotaExhausted || isUnavailable || isTimeout) {
