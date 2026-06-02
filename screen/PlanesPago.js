@@ -395,7 +395,7 @@ export default function PlanesPago() {
                     const showSubscribed = isCurrentPlan || isIncluded;
 
                     // Botón Pro: estados
-                    const trialAvailable   = p.key === 'Pro' && !trialUsed;
+                    const trialAvailable   = false;
                     const inTrialPro       = p.key === 'Pro' && isInTrial;
                     const renewPro         = p.key === 'Pro' && trialExpired && !isCurrentPlan;
 
@@ -501,22 +501,6 @@ export default function PlanesPago() {
 
 function ProPricing({ trialUsed, isInTrial, hasDiscount, proPrice, invites }) {
     const pricing = getNextDiscountInfo(invites || 0);
-    if (!trialUsed) {
-        return (
-            <View>
-                <Text style={styles.planPriceFree}>1er mes GRATIS</Text>
-                <Text style={styles.planPriceSub}>Luego {pricing.currentPrice.toFixed(2)}€/mes</Text>
-            </View>
-        );
-    }
-    if (isInTrial) {
-        return (
-            <View>
-                <Text style={styles.planPriceFree}>En prueba gratuita</Text>
-                <Text style={styles.planPriceSub}>Renovación: {pricing.currentPrice.toFixed(2)}€/mes</Text>
-            </View>
-        );
-    }
     return (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             {invites > 0 && (
